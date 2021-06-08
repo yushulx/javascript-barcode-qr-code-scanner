@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Dynamsoft JavaScript Barcode Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@8.2.5/dist/dbr.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #barcodeScanner {
+            text-align: center;
+            font-size: medium;
+            height: 40vh;
+            width: 40vw;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        Barcode Result: <a id='result'>N/A</a>
+    </div>
+    <div id="barcodeScanner">
+        <span id='loading-status' style='font-size:x-large'>Loading Library...</span>
+    </div>
+    <script>
+        Dynamsoft.DBR.BarcodeScanner.showDialog = function () { };
+        window.onload = async function () {
+            try {
+                await Dynamsoft.DBR.BarcodeScanner.loadWasm();
+                await initBarcodeScanner();
+            } catch (ex) {
+                alert(ex.message);
+                throw ex;
+            }
+        };
+        let scanner = null;
+        async function initBarcodeScanner() {
+            scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
+            scanner.onFrameRead = results => {
+                console.log(results);
+                for (let result of results) {
+                    document.getElementById('result').innerHTML = result.barcodeFormatString + ", " + result.barcodeText;
+                }
+            };
+            scanner.onUnduplicatedRead = (txt, result) => { };
+            document.getElementById('barcodeScanner').appendChild(scanner.getUIElement());
+            document.getElementById('loading-status').hidden = true;
+            document.getElementsByClassName('dbrScanner-sel-camera')[0].hidden = true;
+            document.getElementsByClassName('dbrScanner-sel-resolution')[0].hidden = true;
+            document.getElementsByClassName('dbrScanner-btn-close')[0].hidden = true;
+            await scanner.show();
+        }
+    </script>
+</body>
+
+</html>
