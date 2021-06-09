@@ -6,7 +6,7 @@ The samples show how to use [Dynamsoft JavaScript Barcode SDK](https://www.dynam
 
 ## Try Example
 
-![JavaScript Barcode Scanner](https://www.dynamsoft.com/codepool/img/2021/06/javascript-barcode-scanner-qr-code.gif)
+![JavaScript Barcode Scanner](https://www.dynamsoft.com/codepool/img/2021/06/barcode-scanner-overlay.png)
 
 ## Blog
 [Diving into Dynamsoft JavaScript Barcode Scanner](https://www.dynamsoft.com/codepool/javascript-barcode-scanner.html)
