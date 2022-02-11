@@ -8,6 +8,9 @@
     </head>
 <body>
     <script>
+        // Make sure to set the key before you call any other APIs under Dynamsoft.DBR
+        Dynamsoft.DBR.BarcodeReader.productKeys = "LICENSE-KEY";
+                        
         let scanner = null;
         (async()=>{
             scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();

@@ -30,7 +30,9 @@
         <span id='loading-status' style='font-size:x-large'>Loading Library...</span>
     </div>
     <script>
-        Dynamsoft.DBR.BarcodeScanner.showDialog = function () { };
+        // Make sure to set the key before you call any other APIs under Dynamsoft.DBR
+        Dynamsoft.DBR.BarcodeReader.productKeys = "LICENSE-KEY";
+
         window.onload = async function () {
             try {
                 await Dynamsoft.DBR.BarcodeScanner.loadWasm();
