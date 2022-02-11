@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Dynamsoft JavaScript Barcode Scanner</title>
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@8.2.5/dist/dbr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@8.8.7/dist/dbr.js"></script>
     <style>
         body {
             display: flex;
@@ -55,9 +55,9 @@
             scanner.onUnduplicatedRead = (txt, result) => { };
             document.getElementById('barcodeScanner').appendChild(scanner.getUIElement());
             document.getElementById('loading-status').hidden = true;
-            document.getElementsByClassName('dbrScanner-sel-camera')[0].hidden = true;
-            document.getElementsByClassName('dbrScanner-sel-resolution')[0].hidden = true;
-            document.getElementsByClassName('dbrScanner-btn-close')[0].hidden = true;
+            document.getElementsByClassName('dce-sel-camera')[0].hidden = true;
+            document.getElementsByClassName('dce-sel-resolution')[0].hidden = true;
+            document.getElementsByClassName('dce-btn-close')[0].hidden = true;
             await scanner.show();
         }
     </script>
