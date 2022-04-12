@@ -1,6 +1,13 @@
 # Javascript Barcode and QR Code Scanner
 The samples show how to use [Dynamsoft JavaScript Barcode SDK](https://www.dynamsoft.com/barcode-reader/sdk-javascript/) to create web barcode reader and QR code scanner.
 
+## License Activation
+Get a [trial license](https://www.dynamsoft.com/customer/license/trialLicense?product=dbr) to activate the JavaScript barcode SDK:
+
+```
+Dynamsoft.DBR.BarcodeReader.productKeys = "LICENSE-KEY";
+```
+
 ## Documentation
 [JavaScript Barcode Scanner API](https://www.dynamsoft.com/barcode-reader/programming/javascript/api-reference/BarcodeScanner.html?ver=latest)
 
