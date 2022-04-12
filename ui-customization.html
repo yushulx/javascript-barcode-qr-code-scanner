@@ -5,8 +5,31 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Dynamsoft JavaScript Barcode Scanner</title>
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@8.8.7/dist/dbr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.0/dist/dbr.js"></script>
     <style>
+
+        #videoview {
+        position: relative;
+        display: none
+        }
+
+        #videoContainer {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        z-index: 1
+        }
+
+        #overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2
+        }
+
+
         body {
             display: flex;
             flex-direction: column;

@@ -1,4 +1,4 @@
-# Javascript Barcode Scanner
+# Javascript Barcode and QR Code Scanner
 The samples show how to use [Dynamsoft JavaScript Barcode SDK](https://www.dynamsoft.com/barcode-reader/sdk-javascript/) to create web barcode reader and QR code scanner.
 
 ## Documentation
