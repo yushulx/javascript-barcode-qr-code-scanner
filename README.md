@@ -5,6 +5,11 @@ The samples show how to use [Dynamsoft JavaScript Barcode SDK](https://www.dynam
 [JavaScript Barcode Scanner API](https://www.dynamsoft.com/barcode-reader/programming/javascript/api-reference/BarcodeScanner.html?ver=latest)
 
 ## Try Example
+- [barcode-result-overlay.html](https://yushulx.me/javascript-barcode-qr-code-scanner/barcode-result-overlay.html)
+- [hello-world.html](https://yushulx.me/javascript-barcode-qr-code-scanner/hello-world.html)
+- [manually-load.html](https://yushulx.me/javascript-barcode-qr-code-scanner/manually-load.html)
+- [qr-code-scanner.html](https://yushulx.me/javascript-barcode-qr-code-scanner/qr-code-scanner.html)
+- [ui-customization.html](https://yushulx.me/javascript-barcode-qr-code-scanner/ui-customization.html)
 
 ![JavaScript Barcode Scanner](https://www.dynamsoft.com/codepool/img/2021/06/barcode-scanner-overlay.png)
 
