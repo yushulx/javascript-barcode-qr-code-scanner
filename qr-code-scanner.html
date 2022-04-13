@@ -66,7 +66,7 @@
     <script>
         // Make sure to set the key before you call any other APIs under Dynamsoft.DBR
         //You can register for a free 30-day trial here: https://www.dynamsoft.com/customer/license/trialLicense?product=dbr&deploymenttype=browser.
-        Dynamsoft.DBR.BarcodeReader.productKeys = "LICENSE-KEY";
+        Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
         var videoSelect = document.querySelector('select#videoSource');
         var overlay = document.getElementById('overlay');
         var overlayContext = overlay.getContext('2d');
@@ -184,7 +184,7 @@
             };
             scanner.onUnduplicatedRead = (txt, result) => { };
             document.getElementById('loading-status').hidden = true;
-            scanner.onPlayed = function() {
+            scanner.onPlayed = function () {
                 updateResolution();
             }
             await scanner.show();

@@ -5,7 +5,7 @@ The samples show how to use [Dynamsoft JavaScript Barcode SDK](https://www.dynam
 Get a [trial license](https://www.dynamsoft.com/customer/license/trialLicense?product=dbr) to activate the JavaScript barcode SDK:
 
 ```
-Dynamsoft.DBR.BarcodeReader.productKeys = "LICENSE-KEY";
+Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
 ```
 
 ## Documentation
