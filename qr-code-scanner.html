@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Dynamsoft JavaScript Barcode Scanner</title>
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.0/dist/dbr.js"></script>
+    <script src="overlay.js"></script>
     <style>
         body {
             display: flex;
@@ -68,10 +69,9 @@
         //You can register for a free 30-day trial here: https://www.dynamsoft.com/customer/license/trialLicense?product=dbr&deploymenttype=browser.
         Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
         var videoSelect = document.querySelector('select#videoSource');
-        var overlay = document.getElementById('overlay');
-        var overlayContext = overlay.getContext('2d');
         var cameraInfo = {};
         var scanner = null;
+        initOverlay(document.getElementById('overlay'));
 
         async function openCamera() {
             clearOverlay();
@@ -96,8 +96,7 @@
         function updateResolution() {
             if (scanner) {
                 let resolution = scanner.getResolution();
-                overlay.width = resolution[0];
-                overlay.height = resolution[1];
+                updateOverlay(resolution[0], resolution[1]);
             }
         }
 
@@ -106,31 +105,6 @@
             overlayContext.strokeStyle = '#ff0000';
             overlayContext.lineWidth = 5;
             return overlayContext;
-        }
-
-        function drawResult(context, localization, text) {
-            context.beginPath();
-            context.moveTo(localization.x1, localization.y1);
-            context.lineTo(localization.x2, localization.y2);
-            context.lineTo(localization.x3, localization.y3);
-            context.lineTo(localization.x4, localization.y4);
-            context.lineTo(localization.x1, localization.y1);
-            context.stroke();
-
-            context.font = '18px Verdana';
-            context.fillStyle = '#ff0000';
-            let x = [localization.x1, localization.x2, localization.x3, localization.x4];
-            let y = [localization.y1, localization.y2, localization.y3, localization.y4];
-            x.sort(function (a, b) {
-                return a - b;
-            });
-            y.sort(function (a, b) {
-                return b - a;
-            });
-            let left = x[0];
-            let top = y[0];
-
-            context.fillText(text, left, top + 50);
         }
 
         function listCameras(deviceInfos) {
@@ -145,7 +119,7 @@
         }
 
         function showResults(results) {
-            let context = clearOverlay();
+            clearOverlay();
 
             let txts = [];
             try {
@@ -154,7 +128,7 @@
                     for (var i = 0; i < results.length; ++i) {
                         txts.push(results[i].barcodeText);
                         localization = results[i].localizationResult;
-                        drawResult(context, localization, results[i].barcodeText);
+                        drawOverlay(localization, results[i].barcodeText);
                     }
                     document.getElementById('result').innerHTML = txts.join(', ');
                 }
