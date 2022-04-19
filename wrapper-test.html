@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Dynamsoft JavaScript Barcode Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.0/dist/dbr.js"></script>
+    <script src="dbr-wrapper.js"></script>
+
+</head>
+
+<body>
+    <button onclick="show()">Show Overlay</button>
+    <button onclick="hide()">Hide Overlay</button>
+    <div>
+        Barcode Result: <a id='result'>N/A</a>
+    </div>
+    <div id="barcodeScanner">
+        <span id='loading-status' style='font-size:x-large'>Loading Library...</span>
+    </div>
+
+    <div id="camerasource"></div>
+    <div id="cameraview"></div>
+    <script>
+        var wrapper = new DBRWrapper("DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==");
+        var camerasource = document.getElementById('camerasource');
+        camerasource.appendChild(wrapper.getCameraSource());
+        var videoview = document.getElementById('cameraview')
+        videoview.appendChild(wrapper.getCameraView());
+
+        window.onload = async function () {
+
+            await wrapper.initScanner((result) => {
+                document.getElementById('result').innerHTML = result;
+            });
+
+            document.getElementById('loading-status').hidden = true;
+        };
+
+        function show() {
+            wrapper.showOverlay();
+        }
+
+        function hide() {
+            wrapper.hideOverlay();
+        }
+    </script>
+</body>
+
+</html>
