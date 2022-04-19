@@ -100,13 +100,6 @@
             }
         }
 
-        function clearOverlay() {
-            overlayContext.clearRect(0, 0, overlay.width, overlay.height);
-            overlayContext.strokeStyle = '#ff0000';
-            overlayContext.lineWidth = 5;
-            return overlayContext;
-        }
-
         function listCameras(deviceInfos) {
             for (var i = deviceInfos.length - 1; i >= 0; --i) {
                 var deviceInfo = deviceInfos[i];

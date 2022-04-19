@@ -1,8 +1,8 @@
 var overlay = null;
 var context = null;
 
-function initOverlay(overlay) {
-    overlay = overlay;
+function initOverlay(ol) {
+    overlay = ol;
     context = overlay.getContext('2d');
 }
 
