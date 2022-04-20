@@ -186,4 +186,8 @@ class DBRWrapper {
             this.scanner.hide();
         }
     }
+
+    static createInstance() {
+        return new DBRWrapper();
+    }
 }
