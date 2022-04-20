@@ -1,7 +1,6 @@
 class DBRWrapper {
-    constructor(licenseKey) {
+    constructor() {
         try {
-            Dynamsoft.DBR.BarcodeReader.license = licenseKey;
             this.scanner = null;
             this.videoContainer = null;
             this.cameraSourceElement = null;
@@ -23,7 +22,6 @@ class DBRWrapper {
     }
 
     async initScanner(callback) {
-
         await Dynamsoft.DBR.BarcodeScanner.loadWasm();
         this.scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
         await this.scanner.updateRuntimeSettings("speed");
@@ -175,5 +173,17 @@ class DBRWrapper {
     hideOverlay() {
         this.overlay.style.display = 'none';
         document.getElementsByClassName('cvs-scan-region-overlay-0')[0].style.display = 'none';
+    }
+
+    showCamera() {
+        if (this.scanner) {
+            this.scanner.show();
+        }
+    }
+
+    hideCamera() {
+        if (this.scanner) {
+            this.scanner.hide();
+        }
     }
 }

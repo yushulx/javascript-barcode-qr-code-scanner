@@ -22,7 +22,8 @@
     <div id="camerasource"></div>
     <div id="cameraview"></div>
     <script>
-        var wrapper = new DBRWrapper("DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==");
+        Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+        var wrapper = new DBRWrapper();
         var camerasource = document.getElementById('camerasource');
         camerasource.appendChild(wrapper.getCameraSource());
         var videoview = document.getElementById('cameraview')
