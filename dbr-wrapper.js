@@ -9,11 +9,8 @@ class DBRWrapper {
             this.context = null;
             this.selectElement = null;
             this.cameraInfo = {};
-            this.Dynamsoft = null;
-            this.callback = null;
             this.openCamera = this.openCamera.bind(this);
             this.onCameraReady = this.onCameraReady.bind(this);
-            this.onDBRLoaded = this.onDBRLoaded.bind(this);
             this.initCameraSource();
             this.initCameraView();
         }
@@ -24,8 +21,8 @@ class DBRWrapper {
     }
 
     async initScanner(callback) {
-        await this.Dynamsoft.DBR.BarcodeScanner.loadWasm();
-        this.scanner = await this.Dynamsoft.DBR.BarcodeScanner.createInstance();
+        await Dynamsoft.DBR.BarcodeScanner.loadWasm();
+        this.scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
         await this.scanner.updateRuntimeSettings("speed");
         await this.scanner.setUIElement(this.videoContainer);
         let cameras = await this.scanner.getAllCameras();
@@ -194,16 +191,12 @@ class DBRWrapper {
     }
 
     // Dynamically load Dynamsoft Barcode Reader JS library
-    onDBRLoaded() {
-        this.Dynamsoft = Dynamsoft;
-        if (this.callback) this.callback(Dynamsoft);
-    }
-
     loadDBR(callback) {
-        this.callback = callback;
         let script = document.createElement('script');
         script.src = "https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.0/dist/dbr.js";
-        script.onload = this.onDBRLoaded;
+        script.onload = function () {
+            callback(Dynamsoft);
+        };
         document.head.appendChild(script);
     }
 }
