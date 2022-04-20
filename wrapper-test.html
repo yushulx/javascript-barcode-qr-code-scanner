@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Dynamsoft JavaScript Barcode Scanner</title>
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.0/dist/dbr.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.0/dist/dbr.js"></script> -->
     <script src="dbr-wrapper.js"></script>
 
 </head>
@@ -22,28 +23,26 @@
     <div id="camerasource"></div>
     <div id="cameraview"></div>
     <script>
-        Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
-        var wrapper = DBRWrapper.createInstance();
-        var camerasource = document.getElementById('camerasource');
-        camerasource.appendChild(wrapper.getCameraSource());
-        var videoview = document.getElementById('cameraview')
-        videoview.appendChild(wrapper.getCameraView());
-
-        window.onload = async function () {
-
+        var wrapper = new DBRWrapper();
+        wrapper.loadDBR(async (Dynamsoft) => {
+            Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+            let camerasource = document.getElementById('camerasource');
+            camerasource.appendChild(wrapper.getCameraSource());
+            let videoview = document.getElementById('cameraview')
+            videoview.appendChild(wrapper.getCameraView());
             await wrapper.initScanner((result) => {
                 document.getElementById('result').innerHTML = result;
             });
 
             document.getElementById('loading-status').hidden = true;
-        };
+        })
 
         function show() {
-            wrapper.showOverlay();
+            if (wrapper) wrapper.showOverlay();
         }
 
         function hide() {
-            wrapper.hideOverlay();
+            if (wrapper) wrapper.hideOverlay();
         }
     </script>
 </body>
