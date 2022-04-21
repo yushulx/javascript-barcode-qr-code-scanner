@@ -18,6 +18,12 @@ Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2N
 - [qr-code-scanner.html](https://yushulx.me/javascript-barcode-qr-code-scanner/qr-code-scanner.html)
 - [ui-customization.html](https://yushulx.me/javascript-barcode-qr-code-scanner/ui-customization.html)
 - [wrapper-test.html](https://yushulx.me/javascript-barcode-qr-code-scanner/wrapper-test.html)
+    
+    Build the ts file:
+
+    ```bash
+    tsc --target ES5 dbr-scanner-wrapper.ts
+    ```
 
 ![JavaScript Barcode Scanner](https://www.dynamsoft.com/codepool/img/2021/06/barcode-scanner-overlay.png)
 

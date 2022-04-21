@@ -56,6 +56,51 @@ class DBRWrapper {
 
     }
 
+    async defaultScanner(callback) {
+        this.scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
+        await this.scanner.updateRuntimeSettings("speed");
+        this.scanner.onFrameRead = results => {
+            this.clearOverlay();
+
+            let txts = [];
+            let localization;
+            if (results.length > 0) {
+                for (var i = 0; i < results.length; ++i) {
+                    txts.push(results[i].barcodeText);
+                    localization = results[i].localizationResult;
+                    this.drawOverlay(localization, results[i].barcodeText);
+                }
+
+                if (callback) {
+                    callback(txts.join(', '));
+                }
+            }
+            else {
+                if (callback) {
+                    callback("No barcode found");
+                }
+            }
+        };
+        this.scanner.onUnduplicatedRead = (txt, result) => { };
+        this.scanner.onPlayed = this.onCameraReady;
+        await this.scanner.show();
+        // this.overlayPatch();
+    }
+
+    overlayPatch() {
+        let container = document.getElementsByClassName("dce-video-container")[0];
+        this.overlay = document.createElement('canvas');
+        this.overlay.style.position = 'absolute';
+        this.overlay.style.top = '0';
+        this.overlay.style.left = '0';
+        // this.overlay.style.zIndex = '2';
+        this.overlay.style.width = '100%';
+        this.overlay.style.height = '100%';
+        this.overlay.style.objectFit = 'contain';
+        this.context = this.overlay.getContext('2d');
+        container.appendChild(this.overlay);
+    }
+
     appendCameraSource(deviceInfos) {
         for (var i = 0; i < deviceInfos.length; ++i) {
             var deviceInfo = deviceInfos[i];

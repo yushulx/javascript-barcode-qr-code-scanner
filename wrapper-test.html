@@ -5,46 +5,43 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Dynamsoft JavaScript Barcode Scanner</title>
-    <!-- <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.0/dist/dbr.js"></script> -->
-    <script src="dbr-wrapper.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.0/dist/dbr.js"></script>
+    <script src="dbr-scanner-wrapper.js"></script>
 
 </head>
 
 <body>
-    <button onclick="show()">Show Overlay</button>
+    <!-- <button onclick="show()">Show Overlay</button>
     <button onclick="hide()">Hide Overlay</button>
     <div>
         Barcode Result: <a id='result'>N/A</a>
     </div>
     <div id="barcodeScanner">
         <span id='loading-status' style='font-size:x-large'>Loading Library...</span>
-    </div>
+    </div> -->
 
     <!-- <div id="camerasource"></div>
     <div id="cameraview"></div> -->
     <script>
+        Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+
         var wrapper = new DBRWrapper();
-        wrapper.loadDBR(async (Dynamsoft) => {
-            Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
-            wrapper.constructView()
-            // let camerasource = document.getElementById('camerasource');
-            // camerasource.appendChild(wrapper.getCameraSource());
-            // let videoview = document.getElementById('cameraview')
-            // videoview.appendChild(wrapper.getCameraView());
-            await wrapper.initScanner((result) => {
-                document.getElementById('result').innerHTML = result;
+        (async () => {
+            await wrapper.defaultScanner((result) => {
+                console.log(result);
+                // document.getElementById('result').innerHTML = result;
             });
+            wrapper.overlayPatch();
+        })();
+        
 
-            document.getElementById('loading-status').hidden = true;
-        })
+        // function show() {
+        //     if (wrapper) wrapper.showOverlay();
+        // }
 
-        function show() {
-            if (wrapper) wrapper.showOverlay();
-        }
-
-        function hide() {
-            if (wrapper) wrapper.hideOverlay();
-        }
+        // function hide() {
+        //     if (wrapper) wrapper.hideOverlay();
+        // }
     </script>
 </body>
 
