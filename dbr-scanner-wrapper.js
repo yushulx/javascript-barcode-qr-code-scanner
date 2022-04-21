@@ -132,14 +132,9 @@ var DBRWrapper = /** @class */ (function () {
                                     localization = results[i].localizationResult;
                                     _this.drawOverlay(localization, results[i].barcodeText);
                                 }
-                                if (callback) {
-                                    callback(txts.join(', '));
-                                }
                             }
-                            else {
-                                if (callback) {
-                                    callback("No barcode found");
-                                }
+                            if (callback) {
+                                callback(results);
                             }
                         };
                         this.scanner.onUnduplicatedRead = function (txt, result) { };
