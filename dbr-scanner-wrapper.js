@@ -146,19 +146,21 @@ var DBRWrapper = /** @class */ (function () {
         });
     };
     DBRWrapper.prototype.patchOverlay = function () {
-        if (this.context == null) {
-            var container = document.getElementsByClassName("dce-video-container")[0];
-            this.overlay = document.createElement('canvas');
-            this.overlay.style.position = 'absolute';
-            this.overlay.style.top = '0';
-            this.overlay.style.left = '0';
-            // this.overlay.style.zIndex = '2';
-            this.overlay.style.width = '100%';
-            this.overlay.style.height = '100%';
-            this.overlay.style.objectFit = 'contain';
-            this.context = this.overlay.getContext('2d');
-            container.appendChild(this.overlay);
-        }
+        var container = document.getElementsByClassName("dce-video-container")[0];
+        var lastElement = container.lastElementChild;
+        if (lastElement && lastElement.id === "custom-overlay")
+            container.removeChild(lastElement);
+        this.overlay = document.createElement('canvas');
+        this.overlay.id = "custom-overlay";
+        this.overlay.style.position = 'absolute';
+        this.overlay.style.top = '0';
+        this.overlay.style.left = '0';
+        // this.overlay.style.zIndex = '2';
+        this.overlay.style.width = '100%';
+        this.overlay.style.height = '100%';
+        this.overlay.style.objectFit = 'contain';
+        this.context = this.overlay.getContext('2d');
+        container.appendChild(this.overlay);
     };
     DBRWrapper.prototype.appendCameraSource = function (deviceInfos) {
         for (var i = 0; i < deviceInfos.length; ++i) {
