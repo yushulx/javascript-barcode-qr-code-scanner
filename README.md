@@ -12,6 +12,7 @@ Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2N
 [JavaScript Barcode Scanner API](https://www.dynamsoft.com/barcode-reader/programming/javascript/api-reference/BarcodeScanner.html?ver=latest)
 
 ## Try Example
+- [barcode-reader.html](https://yushulx.me/javascript-barcode-qr-code-scanner/barcode-reader.html)
 - [barcode-result-overlay.html](https://yushulx.me/javascript-barcode-qr-code-scanner/barcode-result-overlay.html)
 - [hello-world.html](https://yushulx.me/javascript-barcode-qr-code-scanner/hello-world.html)
 - [manually-load.html](https://yushulx.me/javascript-barcode-qr-code-scanner/manually-load.html)
@@ -25,7 +26,7 @@ Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2N
     tsc --target ES5 dbr-scanner-wrapper.ts
     ```
 
-![JavaScript Barcode Scanner](https://www.dynamsoft.com/codepool/img/2021/06/barcode-scanner-overlay.png)
+![JavaScript Barcode Scanner](https://www.dynamsoft.com/codepool/img/2022/04/flutter-web-qr-code-scanner.png)
 
 ## Blog
 [Build a Barcode Scanner Using JavaScript and HTML5](https://www.dynamsoft.com/codepool/html5-barcode-reader-javascript-webassembly.html)
