@@ -47,8 +47,6 @@ var DBRWrapper = /** @class */ (function () {
             this.cameraInfo = {};
             this.openCamera = this.openCamera.bind(this);
             this.onCameraReady = this.onCameraReady.bind(this);
-            this.initCameraSource();
-            this.initCameraView();
         }
         catch (ex) {
             alert(ex.message);
@@ -61,7 +59,10 @@ var DBRWrapper = /** @class */ (function () {
             var _this = this;
             return __generator(this, function (_b) {
                 switch (_b.label) {
-                    case 0: return [4 /*yield*/, Dynamsoft.DBR.BarcodeScanner.loadWasm()];
+                    case 0:
+                        this.initCameraSource();
+                        this.initCameraView();
+                        return [4 /*yield*/, Dynamsoft.DBR.BarcodeScanner.loadWasm()];
                     case 1:
                         _b.sent();
                         _a = this;
@@ -145,17 +146,19 @@ var DBRWrapper = /** @class */ (function () {
         });
     };
     DBRWrapper.prototype.patchOverlay = function () {
-        var container = document.getElementsByClassName("dce-video-container")[0];
-        this.overlay = document.createElement('canvas');
-        this.overlay.style.position = 'absolute';
-        this.overlay.style.top = '0';
-        this.overlay.style.left = '0';
-        // this.overlay.style.zIndex = '2';
-        this.overlay.style.width = '100%';
-        this.overlay.style.height = '100%';
-        this.overlay.style.objectFit = 'contain';
-        this.context = this.overlay.getContext('2d');
-        container.appendChild(this.overlay);
+        if (this.context == null) {
+            var container = document.getElementsByClassName("dce-video-container")[0];
+            this.overlay = document.createElement('canvas');
+            this.overlay.style.position = 'absolute';
+            this.overlay.style.top = '0';
+            this.overlay.style.left = '0';
+            // this.overlay.style.zIndex = '2';
+            this.overlay.style.width = '100%';
+            this.overlay.style.height = '100%';
+            this.overlay.style.objectFit = 'contain';
+            this.context = this.overlay.getContext('2d');
+            container.appendChild(this.overlay);
+        }
     };
     DBRWrapper.prototype.appendCameraSource = function (deviceInfos) {
         for (var i = 0; i < deviceInfos.length; ++i) {

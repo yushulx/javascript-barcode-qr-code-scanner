@@ -20,8 +20,6 @@ class DBRWrapper {
             this.cameraInfo = {};
             this.openCamera = this.openCamera.bind(this);
             this.onCameraReady = this.onCameraReady.bind(this);
-            this.initCameraSource();
-            this.initCameraView();
         }
         catch (ex) {
             alert(ex.message);
@@ -30,6 +28,9 @@ class DBRWrapper {
     }
 
     async createCustomScanner(callback) {
+        this.initCameraSource();
+        this.initCameraView();
+
         await Dynamsoft.DBR.BarcodeScanner.loadWasm();
         this.scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
         await this.scanner.updateRuntimeSettings("speed");
@@ -90,17 +91,19 @@ class DBRWrapper {
     }
 
     patchOverlay() {
-        let container = document.getElementsByClassName("dce-video-container")[0];
-        this.overlay = document.createElement('canvas');
-        this.overlay.style.position = 'absolute';
-        this.overlay.style.top = '0';
-        this.overlay.style.left = '0';
-        // this.overlay.style.zIndex = '2';
-        this.overlay.style.width = '100%';
-        this.overlay.style.height = '100%';
-        this.overlay.style.objectFit = 'contain';
-        this.context = this.overlay.getContext('2d');
-        container.appendChild(this.overlay);
+        if (this.context == null) {
+            let container = document.getElementsByClassName("dce-video-container")[0];
+            this.overlay = document.createElement('canvas');
+            this.overlay.style.position = 'absolute';
+            this.overlay.style.top = '0';
+            this.overlay.style.left = '0';
+            // this.overlay.style.zIndex = '2';
+            this.overlay.style.width = '100%';
+            this.overlay.style.height = '100%';
+            this.overlay.style.objectFit = 'contain';
+            this.context = this.overlay.getContext('2d');
+            container.appendChild(this.overlay);
+        }
     }
 
     appendCameraSource(deviceInfos) {

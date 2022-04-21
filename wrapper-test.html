@@ -11,6 +11,7 @@
 </head>
 
 <body>
+    <button onclick="show()">Scanner</button>
     <!-- <button onclick="show()">Show Overlay</button>
     <button onclick="hide()">Hide Overlay</button>
     <div>
@@ -24,17 +25,26 @@
     <div id="cameraview"></div> -->
     <script>
         Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
-
+        var scanner = null;
         var wrapper = new DBRWrapper();
         (async () => {
-            var scanner = await wrapper.createDefaultScanner((result) => {
+            scanner = await wrapper.createDefaultScanner((result) => {
                 console.log(result);
                 // document.getElementById('result').innerHTML = result;
             });
+            wrapper.clearOverlay()
             await scanner.show();
             wrapper.patchOverlay();
         })();
-        
+
+        function show() {
+            (async () => {
+                wrapper.clearOverlay()
+                await scanner.show();
+                wrapper.patchOverlay();
+            })();
+        }
+
 
         // function show() {
         //     if (wrapper) wrapper.showOverlay();
