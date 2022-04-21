@@ -55,7 +55,7 @@ var DBRWrapper = /** @class */ (function () {
             throw ex;
         }
     }
-    DBRWrapper.prototype.initScanner = function (callback) {
+    DBRWrapper.prototype.createCustomScanner = function (callback) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, cameras;
             var _this = this;
@@ -103,15 +103,12 @@ var DBRWrapper = /** @class */ (function () {
                         };
                         this.scanner.onUnduplicatedRead = function (txt, result) { };
                         this.scanner.onPlayed = this.onCameraReady;
-                        return [4 /*yield*/, this.scanner.show()];
-                    case 7:
-                        _b.sent();
-                        return [2 /*return*/];
+                        return [2 /*return*/, this.scanner];
                 }
             });
         });
     };
-    DBRWrapper.prototype.defaultScanner = function (callback) {
+    DBRWrapper.prototype.createDefaultScanner = function (callback) {
         return __awaiter(this, void 0, void 0, function () {
             var _a;
             var _this = this;
@@ -147,15 +144,12 @@ var DBRWrapper = /** @class */ (function () {
                         };
                         this.scanner.onUnduplicatedRead = function (txt, result) { };
                         this.scanner.onPlayed = this.onCameraReady;
-                        return [4 /*yield*/, this.scanner.show()];
-                    case 3:
-                        _b.sent();
-                        return [2 /*return*/];
+                        return [2 /*return*/, this.scanner];
                 }
             });
         });
     };
-    DBRWrapper.prototype.overlayPatch = function () {
+    DBRWrapper.prototype.patchOverlay = function () {
         var container = document.getElementsByClassName("dce-video-container")[0];
         this.overlay = document.createElement('canvas');
         this.overlay.style.position = 'absolute';

@@ -29,7 +29,7 @@ class DBRWrapper {
         }
     }
 
-    async initScanner(callback) {
+    async createCustomScanner(callback) {
         await Dynamsoft.DBR.BarcodeScanner.loadWasm();
         this.scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
         await this.scanner.updateRuntimeSettings("speed");
@@ -61,11 +61,10 @@ class DBRWrapper {
         };
         this.scanner.onUnduplicatedRead = (txt, result) => { };
         this.scanner.onPlayed = this.onCameraReady;
-        await this.scanner.show();
-
+        return this.scanner;
     }
 
-    async defaultScanner(callback) {
+    async createDefaultScanner(callback) {
         this.scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
         await this.scanner.updateRuntimeSettings("speed");
         this.scanner.onFrameRead = results => {
@@ -92,11 +91,10 @@ class DBRWrapper {
         };
         this.scanner.onUnduplicatedRead = (txt, result) => { };
         this.scanner.onPlayed = this.onCameraReady;
-        await this.scanner.show();
-        // this.overlayPatch();
+        return this.scanner;
     }
 
-    overlayPatch() {
+    patchOverlay() {
         let container = document.getElementsByClassName("dce-video-container")[0];
         this.overlay = document.createElement('canvas');
         this.overlay.style.position = 'absolute';

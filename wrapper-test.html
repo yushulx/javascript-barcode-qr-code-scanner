@@ -27,11 +27,12 @@
 
         var wrapper = new DBRWrapper();
         (async () => {
-            await wrapper.defaultScanner((result) => {
+            var scanner = await wrapper.createDefaultScanner((result) => {
                 console.log(result);
                 // document.getElementById('result').innerHTML = result;
             });
-            wrapper.overlayPatch();
+            await scanner.show();
+            wrapper.patchOverlay();
         })();
         
 
