@@ -146,7 +146,12 @@ var DBRWrapper = /** @class */ (function () {
         });
     };
     DBRWrapper.prototype.patchOverlay = function () {
-        var container = document.getElementsByClassName("dce-video-container")[0];
+        var containers = document.getElementsByClassName("dce-video-container");
+        if (containers == null || containers.length == 0) {
+            return;
+        }
+        // Always select last element.
+        var container = document.getElementsByClassName("dce-video-container")[containers.length - 1];
         var lastElement = container.lastElementChild;
         if (lastElement && lastElement.id === "custom-overlay")
             container.removeChild(lastElement);

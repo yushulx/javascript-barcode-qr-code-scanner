@@ -91,7 +91,14 @@ class DBRWrapper {
     }
 
     patchOverlay() {
-        let container = document.getElementsByClassName("dce-video-container")[0];
+        let containers = document.getElementsByClassName("dce-video-container");
+
+        if (containers == null || containers.length == 0) {
+            return;
+        }
+
+        // Always select last element.
+        let container = document.getElementsByClassName("dce-video-container")[containers.length - 1];
         let lastElement = container.lastElementChild;
 
         if (lastElement && lastElement.id === "custom-overlay")
