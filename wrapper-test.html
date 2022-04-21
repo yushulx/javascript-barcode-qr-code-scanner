@@ -20,16 +20,17 @@
         <span id='loading-status' style='font-size:x-large'>Loading Library...</span>
     </div>
 
-    <div id="camerasource"></div>
-    <div id="cameraview"></div>
+    <!-- <div id="camerasource"></div>
+    <div id="cameraview"></div> -->
     <script>
         var wrapper = new DBRWrapper();
         wrapper.loadDBR(async (Dynamsoft) => {
             Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
-            let camerasource = document.getElementById('camerasource');
-            camerasource.appendChild(wrapper.getCameraSource());
-            let videoview = document.getElementById('cameraview')
-            videoview.appendChild(wrapper.getCameraView());
+            wrapper.constructView()
+            // let camerasource = document.getElementById('camerasource');
+            // camerasource.appendChild(wrapper.getCameraSource());
+            // let videoview = document.getElementById('cameraview')
+            // videoview.appendChild(wrapper.getCameraView());
             await wrapper.initScanner((result) => {
                 document.getElementById('result').innerHTML = result;
             });

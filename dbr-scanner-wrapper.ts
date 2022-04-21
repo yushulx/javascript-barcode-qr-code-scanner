@@ -208,4 +208,9 @@ class DBRWrapper {
         };
         document.head.appendChild(script);
     }
+
+    constructView() {
+        document.body.appendChild(this.getCameraSource());
+        document.body.appendChild(this.getCameraView());
+    }
 }
