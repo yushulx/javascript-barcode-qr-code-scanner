@@ -187,6 +187,7 @@ class DBRWrapper {
         if (this.overlay) {
             this.overlay.width = width;
             this.overlay.height = height;
+            this.clearOverlay();
         }
     }
 

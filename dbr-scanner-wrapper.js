@@ -238,6 +238,7 @@ var DBRWrapper = /** @class */ (function () {
         if (this.overlay) {
             this.overlay.width = width;
             this.overlay.height = height;
+            this.clearOverlay();
         }
     };
     DBRWrapper.prototype.clearOverlay = function () {

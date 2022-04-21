@@ -10,6 +10,7 @@ function updateOverlay(width, height) {
     if (overlay) {
         overlay.width = width;
         overlay.height = height;
+        clearOverlay();
     }
 }
 
