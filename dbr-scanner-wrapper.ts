@@ -248,14 +248,14 @@ class DBRWrapper {
         }
     }
 
-    static createInstance() {
+    static createInstance() : DBRWrapper {
         return new DBRWrapper();
     }
 
     // Dynamically load Dynamsoft Barcode Reader JS library
     loadDBR(callback) {
         let script = document.createElement('script');
-        script.src = "https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.0/dist/dbr.js";
+        script.src = "https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.2/dist/dbr.js";
         script.onload = function () {
             callback(Dynamsoft);
         };

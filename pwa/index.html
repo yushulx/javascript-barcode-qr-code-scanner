@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Dynamsoft Barcode Reader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Add to home screen for Safari on iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="BarcodeReader PWA">
+  <link rel="apple-touch-icon" href="icons/icon-152.png">
+
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.2/dist/dbr.js"></script>
+  <script src="overlay.js"></script>
+</head>
+
+<body>
+  <div>
+    Barcode Result: <a id='result'>N/A</a>
+  </div>
+  <div id="barcodeScanner">
+    <span id='loading-status' style='font-size:x-large'>Loading Library...</span>
+  </div>
+
+  <div class="select">
+    <label for="videoSource">Video source: </label>
+    <select id="videoSource"></select>
+  </div>
+
+  <div id="videoview">
+    <div class="dce-video-container" id="videoContainer"></div>
+    <canvas id="overlay"></canvas>
+  </div>
+  <script>
+    // Make sure to set the key before you call any other APIs under Dynamsoft.DBR
+    // You can register for a free 30-day trial here: https://www.dynamsoft.com/customer/license/trialLicense?product=dbr&deploymenttype=browser.
+    Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+    var videoSelect = document.querySelector('select#videoSource');
+    var cameraInfo = {};
+    var scanner = null;
+    initOverlay(document.getElementById('overlay'));
+    async function openCamera() {
+      clearOverlay();
+      let deviceId = videoSelect.value;
+      if (scanner) {
+        await scanner.setCurrentCamera(cameraInfo[deviceId]);
+      }
+    }
+
+    videoSelect.onchange = openCamera;
+
+    window.onload = async function () {
+      try {
+        await Dynamsoft.DBR.BarcodeScanner.loadWasm();
+        await initBarcodeScanner();
+      } catch (ex) {
+        alert(ex.message);
+        throw ex;
+      }
+    };
+
+    function updateResolution() {
+      if (scanner) {
+        let resolution = scanner.getResolution();
+        updateOverlay(resolution[0], resolution[1]);
+      }
+    }
+
+    function listCameras(deviceInfos) {
+      for (var i = 0; i < deviceInfos.length; ++i) {
+        var deviceInfo = deviceInfos[i];
+        var option = document.createElement('option');
+        option.value = deviceInfo.deviceId;
+        option.text = deviceInfo.label;
+        cameraInfo[deviceInfo.deviceId] = deviceInfo;
+        videoSelect.appendChild(option);
+      }
+    }
+
+    async function initBarcodeScanner() {
+      scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
+      await scanner.updateRuntimeSettings("speed");
+      await scanner.setUIElement(document.getElementById('videoContainer'));
+
+      let cameras = await scanner.getAllCameras();
+      listCameras(cameras);
+      await openCamera();
+      scanner.onFrameRead = results => {
+        clearOverlay();
+
+        let txts = [];
+        try {
+          let localization;
+          if (results.length > 0) {
+            for (var i = 0; i < results.length; ++i) {
+              txts.push(results[i].barcodeText);
+              localization = results[i].localizationResult;
+              drawOverlay(localization, results[i].barcodeText);
+            }
+            document.getElementById('result').innerHTML = txts.join(', ');
+          }
+          else {
+            document.getElementById('result').innerHTML = "No barcode found";
+          }
+
+        } catch (e) {
+          alert(e);
+        }
+      };
+      scanner.onUnduplicatedRead = (txt, result) => { };
+      document.getElementById('loading-status').hidden = true;
+      scanner.onPlayed = function () {
+        updateResolution();
+      }
+      await scanner.show();
+
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('./service-worker.js')
+        .then(function () {
+          console.log('Service Worker Registered');
+        });
+    }
+  </script>
+</body>
+
+</html>

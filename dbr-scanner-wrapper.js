@@ -53,6 +53,9 @@ var DBRWrapper = /** @class */ (function () {
             throw ex;
         }
     }
+    DBRWrapper.createInstance = function () {
+        return new DBRWrapper();
+    };
     DBRWrapper.prototype.createCustomScanner = function (callback) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, cameras;
@@ -290,13 +293,10 @@ var DBRWrapper = /** @class */ (function () {
             this.scanner.hide();
         }
     };
-    DBRWrapper.createInstance = function () {
-        return new DBRWrapper();
-    };
     // Dynamically load Dynamsoft Barcode Reader JS library
     DBRWrapper.prototype.loadDBR = function (callback) {
         var script = document.createElement('script');
-        script.src = "https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.0/dist/dbr.js";
+        script.src = "https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.2/dist/dbr.js";
         script.onload = function () {
             callback(Dynamsoft);
         };
