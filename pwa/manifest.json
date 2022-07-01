@@ -1,6 +1,6 @@
 {
-    "name": "BarcodeReader",
-    "short_name": "BarcodeReader",
+    "name": "BarcodeScanner",
+    "short_name": "BarcodeScanner",
     "description": "A progressive web app for reading barcode and QR code.",
     "icons": [
         {
