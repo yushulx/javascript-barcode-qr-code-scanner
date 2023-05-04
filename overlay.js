@@ -49,3 +49,15 @@ function drawOverlay(localization, text) {
     }
 }
 
+function drawQuad(points) {
+    if (context) {
+        context.beginPath();
+        context.moveTo(points[0].x, points[0].y);
+        context.lineTo(points[1].x, points[1].y);
+        context.lineTo(points[2].x, points[2].y);
+        context.lineTo(points[3].x, points[3].y);
+        context.lineTo(points[0].x, points[0].y);
+        context.stroke();
+    }
+}
+

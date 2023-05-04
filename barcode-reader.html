@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Dynamsoft JavaScript Barcode Reader</title>
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.0.2/dist/dbr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.20/dist/dbr.js"></script>
     <script src="overlay.js"></script>
     <style>
         #imageview {
@@ -27,24 +27,83 @@
             height: 100%;
             object-fit: contain
         }
+
+        .row {
+            display: flex;
+            flex-direction: row;
+            justify-content: left;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        #left-panel {
+            width: 40%;
+            float: left;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* Style the right panel */
+        #right-panel {
+            width: 60%;
+            float: right;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #editable {
+            width: 600px;
+        }
+
+        textarea {
+            width: 30vw;
+            /* set the width of the textarea */
+            height: 80vh;
+            /* set the height of the textarea */
+            overflow: auto;
+            /* enable scrolling */
+        }
     </style>
 </head>
 
 <body>
-    <span id='loading-status' style='font-size:x-large'>Loading Library...</span>
-    <br>
+    <div id="left-panel">
+        <h2>Parameter Panel</h2>
+        <a href="https://www.dynamsoft.com/barcode-reader/docs/web/programming/javascript/api-reference/enum/EnumBarcodeColourMode.html"
+            target="_blank">Online Documentation</a>
+        <button onclick="reset()">Reset</button>
+        <button onclick="saveChanges()">Commit changes</button>
+        <div id="editable" contenteditable="true">
+            <!-- parameter JSON object -->
+            <!-- <pre id="json-data">
+            </pre> -->
+            <textarea id="json-data"></textarea>
+        </div>
+    </div>
+    <div id="right-panel">
+        <h2>Image Panel</h2>
+        <span id='loading-status' style='font-size:x-large'>Loading Library...</span>
+        <br>
 
-    <input type="file" id="file" accept="image/*" />
-    <div>
-        <a id='result'></a>
+        <input type="file" id="file" accept="image/*" />
+        <div>
+            <a id='result'></a>
+        </div>
+
+        <div id="imageview">
+            <img id="image" src="https://via.placeholder.com/640x480" />
+            <canvas id="overlay"></canvas>
+        </div>
+
+
     </div>
 
-    <div id="imageview">
-        <img id="image" />
-        <canvas id="overlay"></canvas>
-    </div>
+
+
     <script>
         var reader = null;
+        let defaultSettings = null;
+        let currentFile = null;
         // Make sure to set the key before you call any other APIs under Dynamsoft.DBR
         // You can register for a free 30-day trial here: https://www.dynamsoft.com/customer/license/trialLicense?product=dbr&deploymenttype=browser.
         Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
@@ -53,12 +112,15 @@
         (async () => {
             reader = await Dynamsoft.DBR.BarcodeReader.createInstance();
             document.getElementById('loading-status').hidden = true;
+            let runtimeSettings = await reader.getRuntimeSettings();
+            defaultSettings = await reader.outputRuntimeSettingsToString();
+            document.getElementById("json-data").value = defaultSettings; //JSON.stringify(runtimeSettings, null, 2);
         })();
 
         document.getElementById("file").addEventListener("change", function () {
             clearOverlay();
             document.getElementById('result').innerHTML = '';
-            let file = this.files[0];
+            currentFile = this.files[0];
             var fr = new FileReader();
             fr.onload = function () {
                 let image = document.getElementById('image');
@@ -67,38 +129,60 @@
                 const img = new Image()
                 img.onload = () => {
                     updateOverlay(img.width, img.height);
-                    if (reader) {
-                        reader.decode(file).then(function (results) {
-                            let txts = [];
-                            try {
-                                let localization;
-                                if (results.length > 0) {
-                                    for (var i = 0; i < results.length; ++i) {
-                                        txts.push(results[i].barcodeText);
-                                        localization = results[i].localizationResult;
-                                        drawOverlay(localization, results[i].barcodeText);
-                                    }
-                                    document.getElementById('result').innerHTML = txts.join(', ');
-                                }
-                                else {
-                                    document.getElementById('result').innerHTML = "No barcode found";
-                                }
-
-                            } catch (e) {
-                                alert(e);
-                            }
-                        });
-
-                    }
+                    decode(currentFile);
                 }
                 img.src = fr.result
 
 
             }
-            fr.readAsDataURL(file);
-
-
+            fr.readAsDataURL(currentFile);
         });
+
+        function decode(file) {
+            if (reader) {
+                reader.decode(file).then(function (results) {
+                    let txts = [];
+                    try {
+                        let localization;
+                        if (results.length > 0) {
+                            for (var i = 0; i < results.length; ++i) {
+                                txts.push(results[i].barcodeText);
+                                localization = results[i].localizationResult;
+                                drawOverlay(localization, results[i].barcodeText);
+                            }
+                            document.getElementById('result').innerHTML = txts.join(', ');
+                        }
+                        else {
+                            document.getElementById('result').innerHTML = "No barcode found";
+                        }
+
+                    } catch (e) {
+                        alert(e);
+                    }
+                });
+
+            }
+        }
+
+        async function saveChanges() {
+            let editedHTML = document.getElementById("json-data").value;
+            try {
+                await reader.initRuntimeSettingsWithString(editedHTML);
+                console.log("Settings updated successfully");
+
+                if (currentFile != null) {
+                    clearOverlay();
+                    decode(currentFile);
+                }
+            } catch (error) {
+                console.log(error);
+            }
+
+        }
+
+        function reset() {
+            document.getElementById("json-data").value = defaultSettings;
+        }
     </script>
 </body>
 
