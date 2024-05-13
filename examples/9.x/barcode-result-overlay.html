@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Dynamsoft JavaScript Barcode Scanner</title>
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.20/dist/dbr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.42/dist/dbr.js"></script>
     <script src="overlay.js"></script>
     <style>
         body {
@@ -97,7 +97,7 @@
                 updateOverlay(resolution[0], resolution[1]);
             }
         }
-        
+
         function listCameras(deviceInfos) {
             for (var i = 0; i < deviceInfos.length; ++i) {
                 var deviceInfo = deviceInfos[i];
@@ -141,11 +141,11 @@
             };
             scanner.onUnduplicatedRead = (txt, result) => { };
             document.getElementById('loading-status').hidden = true;
-            scanner.onPlayed = function() {
+            scanner.onPlayed = function () {
                 updateResolution();
             }
             await scanner.show();
-            
+
         }
     </script>
 </body>

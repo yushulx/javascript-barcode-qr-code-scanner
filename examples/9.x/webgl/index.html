@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    #videoview {
+      position: relative;
+      display: none
+    }
+
+    #videoContainer {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      z-index: 1
+    }
+
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2
+    }
+
+    .row {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      justify-content: left;
+    }
+  </style>
+
+</head>
+
+<body>
+  <h1>Web Barcode Scanning with WebGL</h1>
+  <img src="loading.gif" style="margin-top:10px" id="anim-loading">
+  <div class="select">
+    <label for="videoSource">Video source: </label>
+    <select id="videoSource"></select>
+  </div>
+  <button id="bt-webgl">GPU Optimization</button>
+  <button id="bt-canvas">CPU Only</button>
+  <div class="row">
+
+    <div id="videoview">
+      <video muted autoplay id="videoContainer" playsinline="true"></video>
+      <canvas id="overlay"></canvas>
+    </div>
+    <div><canvas id="pcCanvas"></canvas></div>
+  </div>
+  <div id="barcode_result"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.42/dist/dbr.js"></script>
+  <script src="webgl-utils.js"></script>
+  <script src="m4.js"></script>
+  <script id="drawImage-vertex-shader" type="x-shader/x-vertex">
+  attribute vec4 a_position;
+  attribute vec2 a_texcoord;
+  
+  uniform mat4 u_matrix;
+  
+  varying vec2 v_texcoord;
+  
+  void main() {
+     gl_Position = u_matrix * a_position;
+     v_texcoord = a_texcoord;
+  }
+  </script>
+  <!-- https://gist.github.com/Volcanoscar/4a9500d240497d3c0228f663593d167a -->
+  <script id="drawImage-fragment-shader" type="x-shader/x-fragment">
+  precision mediump float;
+  
+  varying vec2 v_texcoord;
+  
+  uniform sampler2D u_texture;
+  uniform float u_colorFactor;
+  
+  void main() {
+    vec4 sample =  texture2D(u_texture, v_texcoord);
+    float grey = 0.21 * sample.r + 0.71 * sample.g + 0.07 * sample.b;
+    gl_FragColor = vec4(sample.r * u_colorFactor + grey * (1.0 - u_colorFactor), sample.g * u_colorFactor + grey * (1.0 - u_colorFactor), sample.b * u_colorFactor + grey * (1.0 - u_colorFactor), 1.0);
+  }
+  </script>
+  <script src="util.js"></script>
+</body>
+
+</html>
