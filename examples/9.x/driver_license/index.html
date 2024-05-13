@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.42/dist/dbr.js"></script>
+    <script src="driverlicense.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #videoview {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #videoContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 1
+        }
+
+        #div-licenseInfo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="barcodeScanner">
+        <span id='loading-status' style='font-size:x-large'>Loading Library...</span>
+    </div>
+
+    <div class="select">
+        <label for="videoSource">Video source: </label>
+        <select id="videoSource"></select>
+    </div>
+
+    <div id="videoview">
+        <div class="dce-video-container" id="videoContainer"></div>
+        <div id="div-licenseInfo"></div>
+    </div>
+
+    <script>
+        // Please visit https://www.dynamsoft.com/customer/license/trialLicense/?product=dbr to get trial license.
+        Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+        var videoSelect = document.querySelector('select#videoSource');
+        var cameraInfo = {};
+        var scanner = null;
+
+        async function openCamera() {
+            let deviceId = videoSelect.value;
+            if (scanner) {
+                await scanner.setCurrentCamera(cameraInfo[deviceId]);
+            }
+        }
+
+        videoSelect.onchange = openCamera;
+
+        window.onload = async function () {
+            try {
+                await Dynamsoft.DBR.BarcodeScanner.loadWasm();
+                await initBarcodeScanner();
+            } catch (ex) {
+                alert(ex.message);
+                throw ex;
+            }
+        };
+
+        function listCameras(deviceInfos) {
+            for (var i = deviceInfos.length - 1; i >= 0; --i) {
+                var deviceInfo = deviceInfos[i];
+                var option = document.createElement('option');
+                option.value = deviceInfo.deviceId;
+                option.text = deviceInfo.label;
+                cameraInfo[deviceInfo.deviceId] = deviceInfo;
+                videoSelect.appendChild(option);
+            }
+        }
+
+        async function initBarcodeScanner() {
+            scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
+            await scanner.setUIElement(document.getElementById('videoContainer'));
+            let settings = await scanner.getRuntimeSettings();
+            settings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_PDF417;
+            settings.LocalizationModes = [2, 8, 0, 0, 0, 0, 0, 0];
+            settings.deblurLevel = 7;
+            settings.expectedBarcodesCount = 1;
+            await scanner.updateRuntimeSettings(settings);
+
+            let cameras = await scanner.getAllCameras();
+            listCameras(cameras);
+            await openCamera();
+            scanner.onFrameRead = results => {
+                let txts = [];
+                try {
+                    if (results.length > 0) {
+                        for (var i = 0; i < results.length; ++i) {
+                            txts.push(results[i].barcodeText);
+                            // Get infos
+                            let licenseInfo = parseDriverLicense(results[i].barcodeText);
+                            if (licenseInfo) {
+                                let div = document.getElementById("div-licenseInfo");
+                                div.innerHTML = '';
+                                let p = document.createElement('p');
+                                p.innerText = 'Document Type: DL';
+                                div.appendChild(p);
+                                for (let key in licenseInfo) {
+                                    let info = licenseInfo[key];
+                                    let p = document.createElement('p');
+                                    p.innerText = info.description + ': ' + info.content;
+                                    div.appendChild(p);
+                                }
+                            }
+                            else {
+                                document.getElementById("div-licenseInfo").innerHTML = '<p>No license info found.</p>';
+                            }
+                        }
+                    }
+                    else {
+                        document.getElementById("div-licenseInfo").innerHTML = '<p>No license info found.</p>';
+                    }
+
+                } catch (e) {
+                    console.log(e);
+                }
+            };
+            scanner.onUnduplicatedRead = (txt, result) => {
+
+            };
+            document.getElementById('loading-status').hidden = true;
+            await scanner.show();
+        }
+    </script>
+</body>
+
+</html>
