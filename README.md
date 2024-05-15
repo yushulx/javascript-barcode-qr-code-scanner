@@ -30,6 +30,7 @@ Dynamsoft.DBR.BarcodeReader.license = "LICENSE-KEY";
 
 - [WebGL](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/webgl/)
 - [Driver License PDF417 Scanner](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/driver_license/)
+- [Scan 1D Barcode and OCR Text](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/10.x/barcode_ocr_text)
 
 ## Blog
 - [How to Use WebGL to Accelerate Web Barcode and QR Code Decoding Speed](https://www.dynamsoft.com/codepool/webgl-accelerate-web-barcode-decoding-speed.html)

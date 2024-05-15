@@ -11,14 +11,33 @@
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader@10.2.10/dist/dbr.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-router@2.2.30/dist/cvr.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-camera-enhancer@4.0.2/dist/dce.js"></script>
-    <script src="main.js"></script>
+
     <title>Dynamsoft Capture Vision Example</title>
     <link rel="stylesheet" href="main.css">
 </head>
 
 <body>
-    <div id="cameraViewContainer" style="width: 100%; height: 60vh"></div>
-    <textarea id="results"></textarea>
+    <div id="loading-indicator" class="loading-indicator">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="connection">
+
+        <div class="row">
+            <label>Get a License key from <a href="https://www.dynamsoft.com/customer/license/trialLicense?product=dbr"
+                    target="_blank">here</a> </label>
+            <div class="filler"></div>
+            <input type="text" id="inputText"
+                placeholder="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==">
+            <button id="activate-button">Activate SDK</button>
+        </div>
+    </div>
+
+    <div class="container" id="container">
+        <div id="cameraViewContainer" style="width: 100%; height: 60vh"></div>
+        <textarea id="results"></textarea>
+    </div>
+    <script src="main.js"></script>
 </body>
 
 </html>
