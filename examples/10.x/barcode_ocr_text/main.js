@@ -116,6 +116,7 @@ Dynamsoft.Core.CoreModule.loadWasm(["cvr", "dbr", "dlr",]);
                         1000,
                         1
                     ],
+                    "Direction": "HORIZONTAL",
                     "Sensitivity": 7
                 }
             }
@@ -124,8 +125,6 @@ Dynamsoft.Core.CoreModule.loadWasm(["cvr", "dbr", "dlr",]);
             {
                 "Name": "tls-11007",
                 "CharacterModelName": "Letter",
-                "StringRegExPattern": "(SerialNumber){(12)}|(LotNumber){(9)}",
-                "StringLengthRange": [9, 12],
                 "CharHeightRange": [5, 1000, 1],
                 "BinarizationModes": [
                     {
