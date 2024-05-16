@@ -185,6 +185,7 @@ activateButton.onclick = async () => {
     }
     catch (ex) {
         alert(ex.message);
+        loadingIndicator.style.display = "none";
     }
 }
 
