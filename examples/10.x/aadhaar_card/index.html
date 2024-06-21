@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-core@3.2.30/dist/core.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader@10.2.10/dist/dbr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-router@2.2.30/dist/cvr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-code-parser@2.2.10/dist/dcp.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-license@3.2.21/dist/license.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-utility@1.2.20/dist/utility.js"></script>
+
+    <input id="input-file" type="file" multiple accept=".jpg,.jpeg,.icon,.gif,.svg,.webp,.png,.bmp" /><br />
+    Results:<br />
+    <div id="results"></div>
+    <div id="parsedrResults" style="width: 100%; min-height: 10vh; font-size: 3vh; overflow: auto"></div>
+
+    <script>
+      /** LICENSE ALERT - README
+       * To use the library, you need to first specify a license key using the API "initLicense()" as shown below.
+       */
+
+      Dynamsoft.License.LicenseManager.initLicense("DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==");
+
+      /**
+       * You can visit https://www.dynamsoft.com/customer/license/trialLicense?utm_source=github&product=dbr&package=js to get your own trial license good for 30 days.
+       * Note that if you downloaded this sample from Dynamsoft while logged in, the above license key may already be your own 30-day trial license.
+       * For more information, see https://www.dynamsoft.com/barcode-reader/programming/javascript/user-guide/?ver=10.2.10&utm_source=github#specify-the-license or contact support@dynamsoft.com.
+       * LICENSE ALERT - THE END
+       */
+
+      // Optional. Preload "BarcodeReader" module for reading barcodes. It will save time on the initial decoding by skipping the module loading.
+      Dynamsoft.Core.CoreModule.loadWasm(["DBR","DCP"]);
+      Dynamsoft.DCP.CodeParserModule.loadSpec("AADHAAR");
+
+      const resultsContainer = document.querySelector("#results");
+      const parsedResultsContainer = document.querySelector("#parsedrResults");
+
+      let cvRouter; // an instance of CaptureVisionRouter
+      let pCvRouter; // promise of CaptureVisionRouter
+      let parser = null; // an instance of CodeParser
+
+      document.querySelector("#input-file").addEventListener("change", async function () {
+        let files = [...this.files];
+        this.value = "";
+        resultsContainer.innerText = "";
+        try {
+          cvRouter = cvRouter || (await (pCvRouter = pCvRouter || Dynamsoft.CVR.CaptureVisionRouter.createInstance()));
+
+          for (let file of files) {
+            // Decode selected image with 'ReadSingleBarcode' template.
+            const result = await cvRouter.capture(file, "ReadSingleBarcode");
+
+            if (files.length > 1) {
+              resultsContainer.innerText += `\n${file.name}:\n`;
+            }
+            for (let item of result.items) {
+              if (item.type !== Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE) {
+                continue;
+              }
+              resultsContainer.innerText += item.text + "\n";
+              console.log(item.text);
+
+              let AADHAAR_Str = item.text;
+              parser = await Dynamsoft.DCP.CodeParser.createInstance();
+              let parsedResultItem = await parser.parse(AADHAAR_Str);
+              let parsedResult = JSON.parse(parsedResultItem.jsonString);
+              let parsedLines = parsedResult.ResultInfo;
+              console.log(parsedLines)
+              parsedResultsContainer.innerHTML = "";
+              parsedLines.forEach((element) => {
+                resultsContainer.innerHTML +=
+                "<hr><strong>" + element.FieldName + "</strong><br /><hr>" + element.Value;
+             });
+            }
+            if (!result.items.length) resultsContainer.innerText += "No barcode found\n";
+          }
+        } catch (ex) {
+          let errMsg = ex.message || ex;
+          console.error(errMsg);
+          alert(errMsg);
+        }
+      });
+    </script>
+</body>
+
+</html>
