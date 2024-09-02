@@ -1,0 +1,87 @@
+<apex:page >
+<html>
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.42/dist/dbr.js"></script>
+</head>
+
+<body>
+    <h1>Dynamsoft JavaScript Barcode SDK</h1>
+    <p></p>
+    <div id="performance"></div>
+    <input type="file" id="barcode-file" onchange="loadfile()" accept=".jpg,.jpeg,.png,.bmp" />
+    <div>
+        <img id='image' />
+    </div>
+
+    <script>
+        Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+        var performanceReport = document.getElementById('performance');
+        var barcodereader;
+        (async () => {
+            barcodereader = await Dynamsoft.DBR.BarcodeReader.createInstance();
+        })();
+
+        var ratio = 0.6;
+        function loadfile() {
+            let name = document.getElementById('barcode-file');
+            var img = document.getElementById('image');
+
+            var reader = new FileReader();
+            reader.onload = function (evt) {
+                img.onload = function () {
+                    console.log(img.width, img.height);
+                    // load image to canvas
+                    var canvas = document.createElement('canvas');
+                    if (img.width > 1000 || img.height > 1000) {
+                        canvas.width = img.width * ratio;
+                        canvas.height = img.height * ratio;
+                    }
+                    else {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                    }
+                    var context = canvas.getContext('2d');
+                    context.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
+                    var buffer = context.getImageData(0, 0, canvas.width, canvas.height).data;
+                    let decoding_start = Date.now();
+                    barcodereader
+                        .decodeBuffer(
+                            buffer,
+                            canvas.width,
+                            canvas.height,
+                            canvas.width * 4,
+                            Dynamsoft.DBR.EnumImagePixelFormat.IPF_ARGB_8888
+                        )
+                        .then((results) => {
+                            let decoding_end = Date.now();
+                            performanceReport.innerHTML = "File name: " + name.files[0].name + ", time cost: " + (decoding_end - decoding_start) + " ms <br>";
+                            console.log("File name: " + name.files[0].name + ", time cost: " + (decoding_end - decoding_start) + " ms");
+                            let txts = [];
+                            try {
+                                let localization;
+                                for (var i = 0; i < results.length; ++i) {
+                                    performanceReport.innerHTML += "Result: " + results[i].barcodeText + " <br>"
+                                    txts.push(results[i].barcodeText);
+                                }
+                                let out = txts.join(', ');
+                                if (txts.length > 0) {
+                                    console.log(out);
+                                }
+                                else {
+                                    performanceReport.innerHTML += 'No barcode found'
+                                    console.log('No barcode found');
+                                }
+                            } catch (e) {
+                            }
+                        });
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(name.files[0]);
+        };
+    </script>
+</body>
+
+</html>
+</apex:page>

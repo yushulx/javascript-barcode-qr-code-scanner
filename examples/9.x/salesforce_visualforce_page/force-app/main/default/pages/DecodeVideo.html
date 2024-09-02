@@ -1,0 +1,138 @@
+<html>
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.42/dist/dbr.js"></script>
+    <style>
+        #videoview {
+            position: relative;
+            width: 90%;
+            height: 64vh;
+        }
+
+        #videoContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 1
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Dynamsoft JavaScript Barcode SDK</h1>
+    <p></p>
+    <div class="select">
+        <a>Video source: </a>
+        <select id="videoSource"></select>
+    </div>
+    <div>
+        <button id="bt_start">Start</button>
+        <button id="bt_stop">Stop</button>
+    </div>
+    <div id="performance">N/A</div>
+    <div id="videoview">
+        <div class="dce-video-container" id="videoContainer"></div>
+    </div>
+    <script>
+        Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+        var resWidth = 1280, resHeight = 720;
+        var performanceReport = document.getElementById('performance');
+        var btStart = document.getElementById("bt_start");
+        var btStop = document.getElementById("bt_stop");
+        var decoding_start = 0;
+        var count = 0;
+        var averageTime = 0;
+        var total = 0;
+        var videoSelect = document.getElementById('videoSource');
+        var scanner = null;
+        var cameras = null;
+        var camerainfo = {};
+
+        (async () => {
+            scanner = await Dynamsoft.DBR.BarcodeScanner.createInstance();
+            scanner.setUIElement(document.getElementById('videoContainer'));
+            scanner._canvasMaxWH = 640;
+
+            // get camera source
+            cameras = await scanner.getAllCameras();
+            for (var i = 0; i < cameras.length; i++) {
+                let option = document.createElement('option');
+                option.text = cameras[i].label || 'camera ' + i;
+                camerainfo[option.text] = i;
+                videoSelect.appendChild(option);
+            }
+
+            scanner.onFrameRead = results => {
+                let decoding_end = Date.now();
+                if (decoding_start == 0) {
+                    decoding_start = decoding_end;
+                    count = 0;
+                    total = 0;
+                    averageTime = 0;
+                    return;
+                }
+                let time_cost = decoding_end - decoding_start;
+                if (count == 60) {
+                    count = 0;
+                    total = 0;
+                    averageTime = 0;
+                };
+                count += 1;
+                total += time_cost;
+                averageTime = total / count;
+
+                decoding_start = decoding_end;
+
+                // performanceReport.innerHTML = "";
+                if (results.length > 0) {
+                    let txts = [];
+                    try {
+                        let localization;
+                        for (var i = 0; i < results.length; ++i) {
+                            performanceReport.innerHTML = "Type: " + results[i].barcodeFormatString + ", Value: " + results[i].barcodeText + ", average time cost: " + averageTime + " ms <br>";
+                            txts.push(results[i].barcodeText);
+                            console.log("Type: " + results[i].barcodeFormatString + ", Value: " + results[i].barcodeText + ", average time cost: " + averageTime + " ms");
+                        }
+                        let out = txts.join(', ');
+                    } catch (e) {
+                    }
+                }
+                else {
+                    // console.log("No barcode found");
+                }
+            };
+            scanner.onUnduplicatedRead = (txt, result) => {
+                // console.log(txt, result);
+            };
+
+            await scanner.open();
+        })();
+
+        btStart.onclick = function () {
+            decoding_start = 0;
+            (async () => {
+                await scanner.open();
+                scanner.setResolution(resWidth, resHeight);
+            })();
+        }
+
+        btStop.onclick = function () {
+            (async () => {
+                await scanner.stop();
+            })();
+        }
+
+        videoSelect.onchange = function () {
+            decoding_start = 0;
+            (async () => {
+                if (scanner.isOpen()) {
+                    await scanner.setCurrentCamera(cameras[camerainfo[videoSelect.value]]);
+                    scanner.setResolution(resWidth, resHeight);
+                }
+            })();
+        }
+    </script>
+
+</body>
+
+</html>
