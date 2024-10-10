@@ -23,4 +23,4 @@ Follow these steps to set up the project:
 
 
 ## Blog
-[How to Build a Barcode Reader App for Salesforce AppExchange](https://www.dynamsoft.com/codepool/salesforce-appexchange-barcode-reader-app.html)
+[Step-by-Step Guide to Creating a Barcode Reader App for Salesforce AppExchange](https://www.dynamsoft.com/codepool/salesforce-appexchange-barcode-reader-app.html)
