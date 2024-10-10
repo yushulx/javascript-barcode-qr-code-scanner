@@ -3,7 +3,7 @@
 The sample demonstrates how to integrate [Dynamsoft JavaScript Barcode SDK](https://www.dynamsoft.com/barcode-reader/sdk-javascript/) into a progressive web app.
 
 ## License
-Get a [30-day FREE trial license](https://www.dynamsoft.com/customer/license/trialLicense?product=dbr).
+Get a [30-day FREE trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform).
 
 ## Usage
 1. Set a valid license key:

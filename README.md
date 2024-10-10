@@ -4,7 +4,7 @@ The samples demonstrate how to use the [Dynamsoft JavaScript Barcode SDK](https:
 ![JavaScript Barcode Scanner](https://www.dynamsoft.com/codepool/img/2022/04/flutter-web-qr-code-scanner.png)
 
 ## License Activation
-Obtain a [trial license](https://www.dynamsoft.com/customer/license/trialLicense?product=dbr) to activate the JavaScript barcode SDK:
+Obtain a [trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform) to activate the JavaScript barcode SDK:
 
 ```javascript
 Dynamsoft.DBR.BarcodeReader.license = "LICENSE-KEY";

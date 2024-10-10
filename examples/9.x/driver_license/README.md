@@ -2,7 +2,7 @@
 This sample demonstrates how to read and extract driver's license information from PDF417 barcodes using the Dynamsoft [JavaScript barcode SDK](https://www.dynamsoft.com/barcode-reader/sdk-javascript/).
 
 ## Usage
-1. Obtain a [free trial license](https://www.dynamsoft.com/customer/license/trialLicense?product=dbr) and update the following code:
+1. Obtain a [free trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform) and update the following code:
 
     ```js
     Dynamsoft.DBR.BarcodeReader.license = "LICENSE-KEY";

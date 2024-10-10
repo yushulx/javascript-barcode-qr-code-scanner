@@ -3,7 +3,7 @@
 This sample demonstrates how to integrate the [Dynamsoft JavaScript Barcode SDK](https://www.dynamsoft.com/barcode-reader/sdk-javascript/) into **Salesforce Visualforce pages** for efficient barcode detection.
 
 ## Prerequisites
-- Obtain a [30-day FREE trial license](https://www.dynamsoft.com/customer/license/trialLicense?product=dbr) to try out the SDK.
+- Obtain a [30-day FREE trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform) to try out the SDK.
 
 ## Getting Started
 Follow these steps to set up the project:

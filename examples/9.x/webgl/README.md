@@ -2,7 +2,7 @@
 Use WebGL to convert color images to grayscale, speeding up barcode and QR code decoding in JavaScript.
 
 ## License Activation
-Get a [trial license](https://www.dynamsoft.com/customer/license/trialLicense?product=dbr) to activate the [JavaScript barcode SDK](https://www.dynamsoft.com/barcode-reader/sdk-javascript/):
+Get a [trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform) to activate the [JavaScript barcode SDK](https://www.dynamsoft.com/barcode-reader/sdk-javascript/):
 
 ```javascript
 Dynamsoft.DBR.BarcodeReader.license = "LICENSE-KEY";
