@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@2.6.1000/dist/dcv.bundle.min.js"></script>
+    <title>Dynamsoft Capture Vision SDKs</title>
+</head>
+
+<body>
+    <h1>MRZ/VIN Scanner</h1>
+    <div id="loading-indicator" class="loading-indicator">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Get Dynamsoft Products -->
+    <div class="container">
+        <div class="row">
+            <div>
+                <label>
+                    Get a License key from <a
+                        href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                        target="_blank">here</a>
+                </label>
+                <input type="text" id="license_key"
+                    value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=="
+                    placeholder="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==">
+                <button onclick="activate()">Activate SDK</button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+                <select onchange="selectChanged()" id="dropdown">
+                    <option value="file">File</option>
+                    <option value="camera">Camera</option>
+                </select>
+                <form id="modeSelector">
+                    <label>
+                        <input type="radio" name="scanMode" value="mrz" checked>
+                        MRZ
+                    </label>
+                    <label>
+                        <input type="radio" name="scanMode" value="vin">
+                        VIN
+                    </label>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image File -->
+    <div class="container" id="file_container">
+        <div>
+            <input type="file" id="pick_file" accept="image/*" />
+        </div>
+
+        <div class="row">
+            <div class="imageview">
+                <img id="image_file" src="default.png" />
+                <canvas id="overlay_canvas" class="overlay"></canvas>
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+                <textarea id="detection_result"></textarea>
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+                <img id="document-rectified-image" />
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Camera Stream -->
+    <div class="container" id="camera_container">
+        <div>
+            <select onchange="cameraChanged()" id="camera_source">
+            </select>
+            <button onclick="scan()" id="scan_button">Start</button>
+            <div id="videoview">
+                <div id="camera_view"></div>
+            </div>
+
+            <div class="row">
+                <div>
+                    <textarea id="scan_result"></textarea>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>

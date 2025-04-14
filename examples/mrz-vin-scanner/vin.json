@@ -1,0 +1,213 @@
+{
+    "CaptureVisionTemplates": [
+        {
+            "Name": "ReadVINText",
+            "ImageROIProcessingNameArray": [
+                "roi-read-vin-text"
+            ],
+            "ImageSource": "",
+            "MaxParallelTasks": 4,
+            "MinImageCaptureInterval": 0,
+            "OutputOriginalImage": 0,
+            "Timeout": 10000
+        }
+    ],
+    "TargetROIDefOptions": [
+        {
+            "Name": "roi-read-vin-text",
+            "TaskSettingNameArray": [
+                "task-read-vin-text"
+            ]
+        }
+    ],
+    "CharacterModelOptions": [
+        {
+            "CharSet": {
+                "ExcludeChars": [
+                    "O",
+                    "Q",
+                    "I"
+                ]
+            },
+            "DirectoryPath": "",
+            "Name": "VIN"
+        }
+    ],
+    "ImageParameterOptions": [
+        {
+            "BaseImageParameterName": "",
+            "BinarizationModes": [
+                {
+                    "BinarizationThreshold": -1,
+                    "BlockSizeX": 0,
+                    "BlockSizeY": 0,
+                    "EnableFillBinaryVacancy": 1,
+                    "GrayscaleEnhancementModesIndex": -1,
+                    "Mode": "BM_LOCAL_BLOCK",
+                    "MorphOperation": "Close",
+                    "MorphOperationKernelSizeX": -1,
+                    "MorphOperationKernelSizeY": -1,
+                    "MorphShape": "Rectangle",
+                    "ThresholdCompensation": 10
+                }
+            ],
+            "ColourConversionModes": [
+                {
+                    "BlueChannelWeight": -1,
+                    "GreenChannelWeight": -1,
+                    "Mode": "CICM_GENERAL",
+                    "RedChannelWeight": -1,
+                    "ReferChannel": "H_CHANNEL"
+                }
+            ],
+            "GrayscaleEnhancementModes": [
+                {
+                    "Mode": "GEM_GENERAL",
+                    "Sensitivity": -1,
+                    "SharpenBlockSizeX": -1,
+                    "SharpenBlockSizeY": -1,
+                    "SmoothBlockSizeX": -1,
+                    "SmoothBlockSizeY": -1
+                }
+            ],
+            "GrayscaleTransformationModes": [
+                {
+                    "Mode": "GTM_ORIGINAL"
+                },
+                {
+                    "Mode": "GTM_INVERTED"
+                }
+            ],
+            "IfEraseTextZone": 0,
+            "Name": "ip_recognize_text",
+            "RegionPredetectionModes": [
+                {
+                    "AspectRatioRange": "[]",
+                    "FindAccurateBoundary": 0,
+                    "ForeAndBackgroundColours": "[]",
+                    "HeightRange": "[]",
+                    "ImageParameterName": "",
+                    "MeasuredByPercentage": 1,
+                    "MinImageDimension": 262144,
+                    "Mode": "RPM_GENERAL",
+                    "RelativeRegions": "[]",
+                    "Sensitivity": 1,
+                    "SpatialIndexBlockSize": 5,
+                    "WidthRange": "[]"
+                }
+            ],
+            "ScaleDownThreshold": 2300,
+            "ScaleUpModes": [
+                {
+                    "AcuteAngleWithXThreshold": -1,
+                    "LetterHeightThreshold": 0,
+                    "Mode": "SUM_AUTO",
+                    "ModuleSizeThreshold": 0,
+                    "TargetLetterHeight": 0,
+                    "TargetModuleSize": 0
+                }
+            ],
+            "TextDetectionMode": {
+                "CharHeightRange": [
+                    5,
+                    1000,
+                    1
+                ],
+                "Direction": "HORIZONTAL",
+                "MaxSpacingInALine": -1,
+                "Mode": "TTDM_LINE",
+                "Sensitivity": 7,
+                "StringLengthRange": null
+            },
+            "TextureDetectionModes": [
+                {
+                    "Mode": "TDM_GENERAL_WIDTH_CONCENTRATION",
+                    "Sensitivity": 5
+                }
+            ]
+        }
+    ],
+    "LabelRecognizerTaskSettingOptions": [
+        {
+            "Name": "task-read-vin-text",
+            "TextLineSpecificationNameArray": [
+                "tls_vin_text"
+            ],
+            "SectionImageParameterArray": [
+                {
+                    "ContinueWhenPartialResultsGenerated": 1,
+                    "ImageParameterName": "ip_recognize_text",
+                    "Section": "ST_REGION_PREDETECTION"
+                },
+                {
+                    "ContinueWhenPartialResultsGenerated": 1,
+                    "ImageParameterName": "ip_recognize_text",
+                    "Section": "ST_TEXT_LINE_LOCALIZATION"
+                },
+                {
+                    "ContinueWhenPartialResultsGenerated": 1,
+                    "ImageParameterName": "ip_recognize_text",
+                    "Section": "ST_TEXT_LINE_RECOGNITION"
+                }
+            ]
+        }
+    ],
+    "TextLineSpecificationOptions": [
+        {
+            "BinarizationModes": [
+                {
+                    "BinarizationThreshold": -1,
+                    "BlockSizeX": 11,
+                    "BlockSizeY": 11,
+                    "EnableFillBinaryVacancy": 1,
+                    "GrayscaleEnhancementModesIndex": -1,
+                    "Mode": "BM_LOCAL_BLOCK",
+                    "MorphOperation": "Erode",
+                    "MorphOperationKernelSizeX": -1,
+                    "MorphOperationKernelSizeY": -1,
+                    "MorphShape": "Rectangle",
+                    "ThresholdCompensation": 10
+                }
+            ],
+            "CharHeightRange": [
+                5,
+                1000,
+                1
+            ],
+            "CharacterModelName": "VIN",
+            "CharacterNormalizationModes": [
+                {
+                    "Mode": "CNM_AUTO",
+                    "MorphArgument": "3",
+                    "MorphOperation": "Close"
+                }
+            ],
+            "ConcatResults": 0,
+            "ConcatSeparator": "\n",
+            "ConcatStringLengthRange": [
+                3,
+                200
+            ],
+            "ExpectedGroupsCount": 1,
+            "GrayscaleEnhancementModes": [
+                {
+                    "Mode": "GEM_GENERAL",
+                    "Sensitivity": -1,
+                    "SharpenBlockSizeX": -1,
+                    "SharpenBlockSizeY": -1,
+                    "SmoothBlockSizeX": -1,
+                    "SmoothBlockSizeY": -1
+                }
+            ],
+            "Name": "tls_vin_text",
+            "OutputResults": 1,
+            "StringLengthRange": [
+                17,
+                17
+            ],
+            "StringRegExPattern": "[0-9A-HJ-NPR-Z]{9}[1-9A-HJ-NPR-TV-Y][0-9A-HJ-NPR-Z]{2}[0-9]{5}",
+            "SubGroups": null,
+            "TextLinesCount": 1
+        }
+    ]
+}
