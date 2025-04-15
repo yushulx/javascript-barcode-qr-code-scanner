@@ -194,14 +194,14 @@ async function activate() {
         await Dynamsoft.DLR.LabelRecognizerModule.loadRecognitionData("MRZ");
 
         mrzRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
-        await mrzRouter.initSettings("./mrz.json");
+        await mrzRouter.initSettings("./full.json");
         mrzRouter.addResultReceiver({
             onCapturedResultReceived: (result) => {
                 showCameraResult(result);
             },
         });
         vinRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
-        await vinRouter.initSettings("./vin.json");
+        await vinRouter.initSettings("./full.json");
         vinRouter.addResultReceiver({
             onCapturedResultReceived: (result) => {
                 showCameraResult(result);
@@ -448,13 +448,13 @@ function extractMrzInfo(result) {
 function extractVinInfo(result) {
     const parseResultInfo = {};
 
-    let wmi = result.getFieldValue("wmi");
+    let wmi = result.getFieldValue("WMI");
     parseResultInfo['WMI'] = wmi;
 
     let region = result.getFieldValue("region");
     parseResultInfo['Region'] = region;
 
-    let vds = result.getFieldValue("vds");
+    let vds = result.getFieldValue("VDS");
     parseResultInfo['VDS'] = vds;
 
     let checkDigit = result.getFieldValue("checkDigit");

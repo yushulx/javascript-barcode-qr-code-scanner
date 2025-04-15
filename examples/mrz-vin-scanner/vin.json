@@ -183,7 +183,7 @@
                 }
             ],
             "ConcatResults": 0,
-            "ConcatSeparator": "\n",
+            "ConcatSeparator": "\\n",
             "ConcatStringLengthRange": [
                 3,
                 200

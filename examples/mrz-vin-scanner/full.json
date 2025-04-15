@@ -255,7 +255,7 @@
                 }
             ],
             "ConcatResults": 0,
-            "ConcatSeparator": "\n",
+            "ConcatSeparator": "\\n",
             "ConcatStringLengthRange": [
                 3,
                 200
@@ -291,7 +291,7 @@
             "OutputResults": 1,
             "ExpectedGroupsCount": 1,
             "ConcatResults": 1,
-            "ConcatSeparator": "\n",
+            "ConcatSeparator": "\\n",
             "SubGroups": [
                 {
                     "StringRegExPattern": "(P[A-Z<][A-Z<]{3}[A-Z<]{39}){(44)}",
@@ -321,7 +321,7 @@
             "OutputResults": 1,
             "ExpectedGroupsCount": 1,
             "ConcatResults": 1,
-            "ConcatSeparator": "\n",
+            "ConcatSeparator": "\\n",
             "SubGroups": [
                 {
                     "StringRegExPattern": "(V[A-Z<][A-Z<]{3}[A-Z<]{39}){(44)}",
@@ -351,7 +351,7 @@
             "OutputResults": 1,
             "ExpectedGroupsCount": 1,
             "ConcatResults": 1,
-            "ConcatSeparator": "\n",
+            "ConcatSeparator": "\\n",
             "SubGroups": [
                 {
                     "StringRegExPattern": "(V[A-Z<][A-Z<]{3}[A-Z<]{31}){(36)}",
@@ -381,7 +381,7 @@
             "OutputResults": 1,
             "ExpectedGroupsCount": 1,
             "ConcatResults": 1,
-            "ConcatSeparator": "\n",
+            "ConcatSeparator": "\\n",
             "SubGroups": [
                 {
                     "StringRegExPattern": "([ACI][A-Z<][A-Z<]{3}[A-Z<]{31}){(36)}",
@@ -411,7 +411,7 @@
             "OutputResults": 1,
             "ExpectedGroupsCount": 1,
             "ConcatResults": 1,
-            "ConcatSeparator": "\n",
+            "ConcatSeparator": "\\n",
             "SubGroups": [
                 {
                     "StringRegExPattern": "([ACI][A-Z<][A-Z<]{3}[A-Z0-9<]{9}[0-9][A-Z0-9<]{15}){(30)}",
