@@ -149,6 +149,7 @@ function loadImage2Canvas(base64Image) {
 async function showCameraResult(result) {
     let selectedMode = document.querySelector('input[name="scanMode"]:checked').value;
     let items = result.items;
+    let scan_result = document.getElementById('scan_result');
 
     if (items != null && items.length > 0) {
         let item = items[0];
