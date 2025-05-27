@@ -5,12 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-camera-enhancer@3.3.9/dist/dce.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.32/dist/dbr.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-document-normalizer@1.0.12/dist/ddn.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-label-recognizer@2.2.31/dist/dlr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@2.6.1000/dist/dcv.bundle.min.js"></script>
     <script src="utils.js"></script>
-    <script src="mrz-parser.js"></script>
     <title>Dynamsoft Vision SDKs</title>
 </head>
 
@@ -25,7 +21,8 @@
         <div class="row">
             <div>
                 <label>
-                    Get a License key from <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                    Get a License key from <a
+                        href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
                         target="_blank">here</a>
                 </label>
                 <input type="text" id="license_key"
@@ -41,9 +38,21 @@
                     <option value="file">File</option>
                     <option value="camera">Camera</option>
                 </select>
-                <input type="checkbox" id="barcode_checkbox" checked>Barcode
-                <input type="checkbox" id="mrz_checkbox">MRZ
-                <input type="checkbox" id="document_checkbox" onchange="checkChanged()">Document
+
+                <form id="modeSelector">
+                    <label>
+                        <input type="radio" name="scanMode" value="barcode" checked>
+                        Barcode
+                    </label>
+                    <label>
+                        <input type="radio" name="scanMode" value="mrz">
+                        MRZ
+                    </label>
+                    <label>
+                        <input type="radio" name="scanMode" value="document">
+                        Document
+                    </label>
+                </form>
             </div>
         </div>
     </div>
@@ -52,10 +61,7 @@
     <div class="container" id="file_container">
         <div>
             <input type="file" id="pick_file" accept="image/*" />
-            <button onclick="detect()">Detect</button>
-            <!-- <input type="checkbox" id="barcode_checkbox" checked>Barcode
-            <input type="checkbox" id="mrz_checkbox" checked>MRZ
-            <input type="checkbox" id="document_checkbox" checked>Document -->
+            <!-- <button onclick="detect()">Detect</button> -->
         </div>
 
         <div class="row">
