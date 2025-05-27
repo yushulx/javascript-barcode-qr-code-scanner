@@ -46,13 +46,13 @@ overlayCanvas.addEventListener('drop', function (event) {
     }
 }, false);
 
-function selectChanged() {
+async function selectChanged() {
     if (dropdown.value === 'file') {
         if (cameraEnhancer != null) {
             closeCamera(cameraEnhancer);
 
             if (cvr != null) {
-                cvr.stopCapturing();
+                await cvr.stopCapturing();
             }
 
             scanButton.innerHTML = "Scan";
@@ -480,7 +480,7 @@ async function scan() {
         scanButton.innerHTML = "Scan";
         isDetecting = false;
 
-        cvr.stopCapturing();
+        await cvr.stopCapturing();
 
         cameraView.clearAllInnerDrawingItems();
     }
@@ -688,6 +688,7 @@ async function showCameraResult(result) {
                 if (selectedMode == "document") {
                     if (isCaptured) {
                         isCaptured = false;
+                        await scan();
                         targetCanvas.width = resolution.width;
                         targetCanvas.height = resolution.height;
                         openEditor(item.imageData.toCanvas().toDataURL());
