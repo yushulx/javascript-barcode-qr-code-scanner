@@ -10,7 +10,6 @@ https://github.com/user-attachments/assets/e205a602-b838-46fa-ac8e-45a009e64ae0
 https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_mrz_document
 
 ## Blog
-- [Making Web Passport MRZ Reader and Scanner in HTML5 and JavaScript](https://www.dynamsoft.com/codepool/web-javascript-passport-mrz-scanner.html)
 - [How to Build a Web App to Scan Barcode, Document, and MRZ with JavaScript APIs](https://www.dynamsoft.com/codepool/javascript-scan-barcode-mrz-document.html)
 
 
