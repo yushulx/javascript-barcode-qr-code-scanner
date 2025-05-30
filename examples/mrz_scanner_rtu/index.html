@@ -178,6 +178,7 @@
                                 renderAnnotations: "loadAnnotations"
                             }
                         };
+                        currentDoc.deleteAllPages();
                         await currentDoc.loadSource([source]);
                         const settings = {
                             quality: 100,
