@@ -5,93 +5,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dynamsoft MRZ Scanner - Hello World</title>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-document-viewer@2.1.0/dist/ddv.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-mrz-scanner@2.1.0/dist/mrz-scanner.bundle.js"></script>
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: top;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-            overflow-y: auto;
-            height: 100%;
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-            width: 100%;
-            max-width: 600px;
-        }
-
-        #scan {
-            padding: 10px 20px;
-            font-size: 16px;
-            flex: 1;
-            min-width: 120px;
-        }
-
-        #file {
-            flex: 1;
-            min-width: 120px;
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            background-color: #fff;
-            cursor: pointer;
-        }
-
-        #divScanner {
-            border: 1px solid #ccc;
-            transition: all 0.3s ease;
-        }
-
-        #container {
-            width: 100%;
-            height: 100%;
-        }
-
-        #result {
-            height: 150px;
-            margin-top: 20px;
-            border: 1px solid #ccc;
-            font-size: 14px;
-            resize: vertical;
-        }
-
-        .license-row {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-            width: 100%;
-            max-width: 800px;
-            text-align: center;
-        }
-
-        .license-row label {
-            font-size: 14px;
-            white-space: nowrap;
-        }
-
-        .license-row input[type="text"] {
-            flex: 1;
-            min-width: 200px;
-            padding: 8px;
-            font-size: 14px;
-        }
-    </style>
+    <link rel="stylesheet" href="main.css">
 </head>
 
 <body>
+    <div id="loading-indicator" class="loading-indicator">
+        <div class="spinner"></div>
+    </div>
+
     <h1 style="font-size: large">Dynamsoft MRZ Scanner</h1>
     <div class="license-row">
         <label>
@@ -99,9 +22,9 @@
                 href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
                 target="_blank">here</a>:
         </label>
-        <input type="text" id="licenseKey"
-            value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=="
+        <input type="text" id="licenseKey" value=""
             placeholder="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==">
+        <button id="activateButton">Activate SDK</button>
     </div>
     <div class="controls">
         <button id="scan">Scan</button>
@@ -115,9 +38,9 @@
 
     <script>
         let mrzScanner;
+        let currentDoc;
         const divScanner = document.getElementById("divScanner");
         const container = document.getElementById("container");
-        const scanButton = document.getElementById("scan");
         const resultArea = document.getElementById("result");
         const resultContainer = document.querySelector("#results");
         const imageContainer = document.getElementById("imageContainer");
@@ -130,8 +53,55 @@
         }
 
         window.addEventListener("resize", resizeScanner);
+        resizeScanner();
 
-        scanButton.onclick = async function () {
+        function toggleLoading(isLoading) {
+            if (isLoading) {
+                document.getElementById("loading-indicator").style.display = "flex";
+            } else {
+                document.getElementById("loading-indicator").style.display = "none";
+            }
+        }
+
+        document.getElementById('activateButton').addEventListener('click', async () => {
+            toggleLoading(true);
+            let licenseElement = document.getElementById('licenseKey');
+            let licenseKey = licenseElement.value == "" ? licenseElement.placeholder : licenseElement.value;
+
+            try {
+                mrzScanner = new Dynamsoft.MRZScanner({
+                    license: licenseKey,
+                    container: container,
+                    scannerViewConfig: {
+                        showScanGuide: false,
+                        uploadAcceptedTypes: "image/*,application/pdf",
+                        uploadFileConverter: async (file) => {
+                            if (file.type === "application/pdf") {
+                                const pdfData = await convertPDFToImage(file);
+                                return pdfData;
+                            }
+                            throw new Error("Unsupported file type");
+                        },
+                    },
+                    resultViewConfig: {
+                        allowResultEditing: true,
+                    },
+                    showResultView: true
+                });
+
+                await Dynamsoft.DDV.Core.init();
+                currentDoc = Dynamsoft.DDV.documentManager.createDocument({
+                    name: Date.now().toString(),
+                    author: "DDV",
+                });
+
+            } catch (error) {
+                console.error(error);
+            }
+            toggleLoading(false);
+        });
+
+        document.getElementById("scan").addEventListener('click', async () => {
             if (mrzScanner) {
                 try {
                     resultArea.value = "";
@@ -144,35 +114,7 @@
                     resultArea.value += "Error during scanning:\n" + err;
                 }
             }
-        };
-
-        try {
-            let licenseElement = document.getElementById("licenseKey");
-            let licenseKey = licenseElement.value == "" ? licenseElement.placeholder : licenseElement.value;
-            mrzScanner = new Dynamsoft.MRZScanner({
-                license: licenseKey,
-                container: container,
-                scannerViewConfig: {
-                    showScanGuide: false,
-                    uploadAcceptedTypes: "image/*,application/pdf",
-                    uploadFileConverter: async (file) => {
-                        if (file.type === "application/pdf") {
-                            const pdfData = await convertPDFToImage(file);
-                            return pdfData;
-                        }
-                        throw new Error("Unsupported file type");
-                    },
-                },
-                resultViewConfig: {
-                    allowResultEditing: true,
-                },
-                showResultView: true
-            });
-
-            resizeScanner();
-        } catch (ex) {
-            console.log(ex);
-        }
+        });
 
         document.getElementById("file").onchange = async function () {
             const files = Array.from(this.files || []);
@@ -194,8 +136,6 @@
         };
 
         function displayResult(result) {
-
-
             resultArea.value = "";
             imageContainer.innerHTML = "";
             if (Object.keys(result.data).length !== 0) {
@@ -225,7 +165,38 @@
         }
 
         async function convertPDFToImage(pdfFile) {
-            // TODO: Implement PDF to image conversion logic here
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+
+                reader.onload = async function (e) {
+                    try {
+                        const blob = new Blob([e.target.result], { type: pdfFile.type });
+
+                        const source = {
+                            fileData: blob,
+                            renderOptions: {
+                                renderAnnotations: "loadAnnotations"
+                            }
+                        };
+                        await currentDoc.loadSource([source]);
+                        const settings = {
+                            quality: 100,
+                            saveAnnotation: false,
+                        };
+
+                        const image = await currentDoc.saveToJpeg(0, settings);
+                        resolve(image);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+
+                reader.onerror = () => {
+                    reject(new Error("FileReader failed to read the PDF file."));
+                };
+
+                reader.readAsArrayBuffer(pdfFile);
+            });
         }
 
     </script>
