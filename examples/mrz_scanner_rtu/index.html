@@ -114,25 +114,34 @@
                     resultArea.value += "Error during scanning:\n" + err;
                 }
             }
+            else {
+                resultArea.value = "Please activate the scanner first.\n";
+            }
         });
 
         document.getElementById("file").onchange = async function () {
-            const files = Array.from(this.files || []);
-            if (files.length) {
-                try {
-                    let fileToProcess = files[0];
+            if (mrzScanner) {
+                const files = Array.from(this.files || []);
+                if (files.length) {
+                    try {
+                        let fileToProcess = files[0];
 
-                    if (fileToProcess.type === "application/pdf") {
-                        fileToProcess = await convertPDFToImage(fileToProcess);
+                        if (fileToProcess.type === "application/pdf") {
+                            fileToProcess = await convertPDFToImage(fileToProcess);
+                        }
+
+                        const result = await mrzScanner.launch(fileToProcess);
+                        displayResult(result);
+                    } catch (error) {
+                        console.error("Error processing file:", error);
+                        resultContainer.innerHTML = `<p>Error: ${error.message}</p>`;
                     }
-
-                    const result = await mrzScanner.launch(fileToProcess);
-                    displayResult(result);
-                } catch (error) {
-                    console.error("Error processing file:", error);
-                    resultContainer.innerHTML = `<p>Error: ${error.message}</p>`;
                 }
             }
+            else {
+                resultArea.value = "Please activate the scanner first.\n";
+            }
+
         };
 
         function displayResult(result) {
