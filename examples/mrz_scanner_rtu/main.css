@@ -111,3 +111,21 @@ body {
         transform: rotate(360deg);
     }
 }
+
+#imageContainer {
+    display: none;
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+    overflow: hidden;
+    max-height: 40vh;
+}
+
+#imageContainer canvas {
+    max-width: 100%;
+    max-height: 40vh;
+    height: auto;
+    width: auto;
+    display: inline-block;
+    object-fit: contain;
+}

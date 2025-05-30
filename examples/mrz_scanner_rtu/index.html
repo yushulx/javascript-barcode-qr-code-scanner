@@ -32,9 +32,10 @@
     </div>
     <div id="divScanner">
         <div id="container"></div>
+        <div id="imageContainer"></div>
     </div>
     <textarea id="result" placeholder="Scan result will appear here..." readonly></textarea>
-    <div id="imageContainer" style="margin-top: 20px; text-align: center;"></div>
+
 
     <script>
         let mrzScanner;
@@ -102,6 +103,7 @@
         });
 
         document.getElementById("scan").addEventListener('click', async () => {
+            imageContainer.style.display = "none";
             if (mrzScanner) {
                 try {
                     resultArea.value = "";
@@ -120,6 +122,7 @@
         });
 
         document.getElementById("file").onchange = async function () {
+            imageContainer.style.display = "none";
             if (mrzScanner) {
                 const files = Array.from(this.files || []);
                 if (files.length) {
@@ -167,6 +170,7 @@
                     originalImageCanvas.style.height = "auto";
                     originalImageCanvas.style.objectFit = "contain";
                     imageContainer.appendChild(originalImageCanvas);
+                    imageContainer.style.display = "block";
                 }
             }
             else
