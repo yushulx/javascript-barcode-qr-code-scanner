@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dynamsoft MRZ Scanner - Hello World</title>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-mrz-scanner@2.1.0/dist/mrz-scanner.bundle.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: top;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        #scan {
+            padding: 10px 20px;
+            font-size: 16px;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        #file {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        #divScanner {
+            border: 1px solid #ccc;
+            transition: all 0.3s ease;
+        }
+
+        #container {
+            width: 100%;
+            height: 100%;
+        }
+
+        #result {
+            height: 150px;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .license-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        .license-row label {
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .license-row input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 style="font-size: large">Dynamsoft MRZ Scanner</h1>
+    <div class="license-row">
+        <label>
+            Get a License key from <a
+                href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                target="_blank">here</a>:
+        </label>
+        <input type="text" id="licenseKey"
+            value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=="
+            placeholder="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==">
+    </div>
+    <div class="controls">
+        <button id="scan">Scan</button>
+        <input type="file" id="file" accept="image/png,image/jpeg,application/pdf" />
+    </div>
+    <div id="divScanner">
+        <div id="container"></div>
+    </div>
+    <textarea id="result" placeholder="Scan result will appear here..." readonly></textarea>
+    <div id="imageContainer" style="margin-top: 20px; text-align: center;"></div>
+
+    <script>
+        let mrzScanner;
+        const divScanner = document.getElementById("divScanner");
+        const container = document.getElementById("container");
+        const scanButton = document.getElementById("scan");
+        const resultArea = document.getElementById("result");
+        const resultContainer = document.querySelector("#results");
+        const imageContainer = document.getElementById("imageContainer");
+
+        function resizeScanner() {
+            divScanner.style.width = window.innerWidth * 0.5 + "px";
+            divScanner.style.height = window.innerHeight * 0.5 + "px";
+            resultArea.style.width = window.innerWidth * 0.5 + "px";
+            imageContainer.style.width = window.innerWidth * 0.5 + "px";
+        }
+
+        window.addEventListener("resize", resizeScanner);
+
+        scanButton.onclick = async function () {
+            if (mrzScanner) {
+                try {
+                    resultArea.value = "";
+                    const result = await mrzScanner.launch();
+                    console.log(result.data);
+
+                    displayResult(result);
+                } catch (err) {
+                    console.error(err);
+                    resultArea.value += "Error during scanning:\n" + err;
+                }
+            }
+        };
+
+        try {
+            let licenseElement = document.getElementById("licenseKey");
+            let licenseKey = licenseElement.value == "" ? licenseElement.placeholder : licenseElement.value;
+            mrzScanner = new Dynamsoft.MRZScanner({
+                license: licenseKey,
+                container: container,
+                scannerViewConfig: {
+                    showScanGuide: false,
+                    uploadAcceptedTypes: "image/*,application/pdf",
+                    uploadFileConverter: async (file) => {
+                        if (file.type === "application/pdf") {
+                            const pdfData = await convertPDFToImage(file);
+                            return pdfData;
+                        }
+                        throw new Error("Unsupported file type");
+                    },
+                },
+                resultViewConfig: {
+                    allowResultEditing: true,
+                },
+                showResultView: true
+            });
+
+            resizeScanner();
+        } catch (ex) {
+            console.log(ex);
+        }
+
+        document.getElementById("file").onchange = async function () {
+            const files = Array.from(this.files || []);
+            if (files.length) {
+                try {
+                    let fileToProcess = files[0];
+
+                    if (fileToProcess.type === "application/pdf") {
+                        fileToProcess = await convertPDFToImage(fileToProcess);
+                    }
+
+                    const result = await mrzScanner.launch(fileToProcess);
+                    displayResult(result);
+                } catch (error) {
+                    console.error("Error processing file:", error);
+                    resultContainer.innerHTML = `<p>Error: ${error.message}</p>`;
+                }
+            }
+        };
+
+        function displayResult(result) {
+
+
+            resultArea.value = "";
+            imageContainer.innerHTML = "";
+            if (Object.keys(result.data).length !== 0) {
+                resultArea.value += "Document Type: " + result.data.documentType + "\n";
+                resultArea.value += "Document Number: " + result.data.documentNumber + "\n";
+                resultArea.value += "First Name: " + result.data.firstName + "\n";
+                resultArea.value += "Last Name: " + result.data.lastName + "\n";
+                resultArea.value += "Age: " + result.data.age + "\n";
+                resultArea.value += "Gender: " + result.data.sex + "\n";
+                resultArea.value += "Nationality: " + result.data.nationality + "\n";
+                resultArea.value += "Issuing State: " + result.data.issuingState + "\n";
+                resultArea.value += "Birth Date: " + result.data.dateOfBirth.day + "/" + result.data.dateOfBirth.month + "/" + result.data.dateOfBirth.year + "\n";
+                resultArea.value += "Expiry Date: " + result.data.dateOfExpiry.day + "/" + result.data.dateOfExpiry.month + "/" + result.data.dateOfExpiry.year + "\n\n";
+
+                resultArea.value += "MRZ Text: " + result.data.mrzText + "\n";
+
+                if (result.originalImageResult?.toCanvas) {
+                    const originalImageCanvas = result.originalImageResult.toCanvas();
+                    originalImageCanvas.style.maxWidth = "100%";
+                    originalImageCanvas.style.height = "auto";
+                    originalImageCanvas.style.objectFit = "contain";
+                    imageContainer.appendChild(originalImageCanvas);
+                }
+            }
+            else
+                resultArea.value += "No MRZ data found.";
+        }
+
+        async function convertPDFToImage(pdfFile) {
+            // TODO: Implement PDF to image conversion logic here
+        }
+
+    </script>
+</body>
+
+</html>
