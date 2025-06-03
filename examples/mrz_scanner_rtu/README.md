@@ -2,6 +2,8 @@
 
 This project demonstrates how to create a **web-based Machine Readable Zone (MRZ) scanner** using **HTML5** and **JavaScript**, leveraging the **Dynamsoft MRZ Scanner SDK**. It supports scanning MRZ from **passports**, **ID cards**, and **visa documents** via **camera** or by uploading image and **PDF** files.
 
+https://github.com/user-attachments/assets/2a7b70e8-8cc6-4563-8925-8a1f7800b093
+
 ## Prerequisites
 - **License Key**: Please obtain a license key from [Dynamsoft Website](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform).
 - **Dynamsoft MRZ Scanner**: Read and scan MRZ from passport, ID card, and visa documents.
