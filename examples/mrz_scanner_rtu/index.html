@@ -69,6 +69,50 @@
             let licenseElement = document.getElementById('licenseKey');
             let licenseKey = licenseElement.value == "" ? licenseElement.placeholder : licenseElement.value;
 
+            await Dynamsoft.DDV.Core.init();
+            currentDoc = Dynamsoft.DDV.documentManager.createDocument({
+                name: Date.now().toString(),
+                author: "DDV",
+            });
+            toggleLoading(false);
+        });
+
+        document.getElementById("scan").addEventListener('click', async () => {
+            try {
+                mrzScanner = new Dynamsoft.MRZScanner({
+                    license: licenseKey,
+                    container: container,
+                    scannerViewConfig: {
+                        showScanGuide: false,
+                    },
+                    resultViewConfig: {
+                        allowResultEditing: true,
+                    },
+                    showResultView: true
+                });
+
+            } catch (error) {
+                console.error(error);
+            }
+            imageContainer.style.display = "none";
+            if (mrzScanner) {
+                try {
+                    resultArea.value = "";
+                    const result = await mrzScanner.launch();
+                    console.log(result.data);
+
+                    displayResult(result);
+                } catch (err) {
+                    console.error(err);
+                    resultArea.value += "Error during scanning:\n" + err;
+                }
+            }
+            else {
+                resultArea.value = "Please activate the scanner first.\n";
+            }
+        });
+
+        document.getElementById("file").onchange = async function () {
             try {
                 mrzScanner = new Dynamsoft.MRZScanner({
                     license: licenseKey,
@@ -90,38 +134,11 @@
                     showResultView: true
                 });
 
-                await Dynamsoft.DDV.Core.init();
-                currentDoc = Dynamsoft.DDV.documentManager.createDocument({
-                    name: Date.now().toString(),
-                    author: "DDV",
-                });
+
 
             } catch (error) {
                 console.error(error);
             }
-            toggleLoading(false);
-        });
-
-        document.getElementById("scan").addEventListener('click', async () => {
-            imageContainer.style.display = "none";
-            if (mrzScanner) {
-                try {
-                    resultArea.value = "";
-                    const result = await mrzScanner.launch();
-                    console.log(result.data);
-
-                    displayResult(result);
-                } catch (err) {
-                    console.error(err);
-                    resultArea.value += "Error during scanning:\n" + err;
-                }
-            }
-            else {
-                resultArea.value = "Please activate the scanner first.\n";
-            }
-        });
-
-        document.getElementById("file").onchange = async function () {
             imageContainer.style.display = "none";
             if (mrzScanner) {
                 const files = Array.from(this.files || []);
