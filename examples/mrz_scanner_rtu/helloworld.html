@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dynamsoft MRZ Scanner - Hello World</title>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-mrz-scanner@2.1.0/dist/mrz-scanner.bundle.js"></script>
+</head>
+
+<body>
+    <h1 style="font-size: large">Dynamsoft MRZ Scanner</h1>
+
+    <script>
+        const mrzScanner = new Dynamsoft.MRZScanner({
+            license: "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==",
+        });
+        (async () => {
+            const result = await mrzScanner.launch();
+        })();
+    </script>
+</body>
+
+</html>
