@@ -183,7 +183,7 @@ async function activate() {
 
         // Load VIN and MRZ models
         await Dynamsoft.DCP.CodeParserModule.loadSpec("VIN");
-        await Dynamsoft.DLR.LabelRecognizerModule.loadRecognitionData("VIN");
+        await Dynamsoft.CVR.CaptureVisionRouter.appendModelBuffer("VINCharRecognition");
 
         await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD1_ID");
         await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD2_FRENCH_ID");
@@ -191,7 +191,8 @@ async function activate() {
         await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD2_VISA");
         await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD3_PASSPORT");
         await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD3_VISA");
-        await Dynamsoft.DLR.LabelRecognizerModule.loadRecognitionData("MRZ");
+        await Dynamsoft.CVR.CaptureVisionRouter.appendModelBuffer("MRZCharRecognition");
+        await Dynamsoft.CVR.CaptureVisionRouter.appendModelBuffer("MRZTextLineRecognition");
 
         mrzRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
         await mrzRouter.initSettings("./full.json");
