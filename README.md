@@ -1,17 +1,8 @@
-# JavaScript Barcode and QR Code Scanner
-The samples demonstrate how to use the [Dynamsoft JavaScript Barcode SDK](https://www.dynamsoft.com/barcode-reader/sdk-javascript/) to create web-based barcode readers and QR code scanners.
+# Scan 1D/2D Barcode, MRZ and Documents in JavaScript
+This repository contains **JavaScript** examples demonstrating how to use [Dynamsoft Capture Vision](https://www.npmjs.com/package/dynamsoft-capture-vision-bundle) to build web applications for scanning **1D/2D barcodes**, **MRZ**, and **documents**.
 
-![JavaScript Barcode Scanner](https://www.dynamsoft.com/codepool/img/2022/04/flutter-web-qr-code-scanner.png)
-
-## License Activation
-Obtain a [trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform) to activate the JavaScript barcode SDK:
-
-```javascript
-Dynamsoft.DBR.BarcodeReader.license = "LICENSE-KEY";
-```
-
-## Documentation
-[JavaScript Barcode Scanner API](https://www.dynamsoft.com/barcode-reader/programming/javascript/api-reference/BarcodeScanner.html?ver=latest)
+## Prerequisites
+- Obtain a [30-day trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform).
 
 ## Try Examples
 - [barcode-reader.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/barcode-reader.html)
@@ -31,7 +22,7 @@ Dynamsoft.DBR.BarcodeReader.license = "LICENSE-KEY";
 - [WebGL](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/webgl/)
 - [Driver License PDF417 Scanner](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/driver_license/)
 - [Scan 1D Barcode and OCR Text](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_ocr_text)
-- [Detect Barcode, MRZ and Document](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/barcode_mrz_document)
+- [Detect Barcode, MRZ and Document](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_mrz_document/)
 - [Aadhaar Card](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/aadhaar_card/)
 
 ## Blog
