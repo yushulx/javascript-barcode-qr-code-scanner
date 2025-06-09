@@ -66,7 +66,7 @@ async function selectChanged() {
     }
     else {
         if (cameraEnhancer == null) {
-            initCamera();
+            await initCamera();
         }
         let divElement = document.getElementById("camera_container");
         divElement.style.display = "block";
@@ -74,7 +74,7 @@ async function selectChanged() {
         divElement = document.getElementById("file_container");
         divElement.style.display = "none";
 
-        cameraChanged();
+        await cameraChanged();
     }
 }
 
