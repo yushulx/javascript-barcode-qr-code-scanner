@@ -66,7 +66,7 @@ document.getElementById("pick_file").addEventListener("change", function () {
 });
 
 // Dropdown change event
-function selectChanged() {
+async function selectChanged() {
     if (dropdown.value === 'file') {
         if (cameraEnhancer != null) {
             closeCamera(cameraEnhancer);
@@ -90,7 +90,7 @@ function selectChanged() {
     }
     else {
         if (cameraEnhancer == null) {
-            initCamera();
+            await initCamera();
         }
         let divElement = document.getElementById("camera_container");
         divElement.style.display = "block";
