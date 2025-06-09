@@ -244,7 +244,8 @@ async function activate() {
         await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD2_VISA");
         await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD3_PASSPORT");
         await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD3_VISA");
-        await Dynamsoft.DLR.LabelRecognizerModule.loadRecognitionData("MRZ");
+        await Dynamsoft.CVR.CaptureVisionRouter.appendModelBuffer("MRZCharRecognition");
+        await Dynamsoft.CVR.CaptureVisionRouter.appendModelBuffer("MRZTextLineRecognition");
 
         cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
 
@@ -342,7 +343,7 @@ async function rectifyCanvas(source, points) {
         const result = await cvr.capture(source, "NormalizeDocument_Default");
 
         for (let item of result.items) {
-            if (item.type !== Dynamsoft.Core.EnumCapturedResultItemType.CRIT_NORMALIZED_IMAGE) {
+            if (item.type !== Dynamsoft.Core.EnumCapturedResultItemType.CRIT_ENHANCED_IMAGE) {
                 continue;
             }
 
@@ -471,7 +472,7 @@ async function scan() {
         else if (selectedMode == "document") {
             await cvr.resetSettings();
             let params = await cvr.getSimplifiedSettings("DetectDocumentBoundaries_Default");
-            params.capturedResultItemTypes |= Dynamsoft.Core.EnumCapturedResultItemType.CRIT_ORIGINAL_IMAGE;
+            params.outputOriginalImage = true;
             await cvr.updateSettings("DetectDocumentBoundaries_Default", params);
             cvr.startCapturing("DetectDocumentBoundaries_Default");
         }
