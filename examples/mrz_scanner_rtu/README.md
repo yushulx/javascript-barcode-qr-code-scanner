@@ -9,7 +9,7 @@ https://github.com/user-attachments/assets/2a7b70e8-8cc6-4563-8925-8a1f7800b093
 - **Dynamsoft MRZ Scanner**: Read and scan MRZ from passport, ID card, and visa documents.
     
     ```html
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-mrz-scanner@2.1.0/dist/mrz-scanner.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-mrz-scanner@3.0.0/dist/mrz-scanner.bundle.js"></script>
     ```
     
 - **Dynamsoft Document Viewer**: Convert PDF files to JPEG images in web browser.
