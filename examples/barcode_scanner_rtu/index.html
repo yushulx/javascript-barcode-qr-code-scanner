@@ -70,11 +70,17 @@
             let licenseElement = document.getElementById('licenseKey');
             licenseKey = licenseElement.value == "" ? licenseElement.placeholder : licenseElement.value;
 
-            await Dynamsoft.DDV.Core.init();
-            currentDoc = Dynamsoft.DDV.documentManager.createDocument({
-                name: Date.now().toString(),
-                author: "DDV",
-            });
+            try {
+                await Dynamsoft.DDV.Core.init();
+                currentDoc = Dynamsoft.DDV.documentManager.createDocument({
+                    name: Date.now().toString(),
+                    author: "DDV",
+                });
+            }
+            catch (error) {
+                console.error(error);
+            }
+
             toggleLoading(false);
         });
 
