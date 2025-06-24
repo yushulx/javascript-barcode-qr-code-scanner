@@ -126,7 +126,7 @@
                 }
                 barcodeScanner = new Dynamsoft.BarcodeScanner({
                     license: licenseKey,
-                    scanMode: Dynamsoft.EnumScanMode.SM_MULTI_UNIQUE,
+                    scanMode: Dynamsoft.EnumScanMode.ReadBarcodes_ReadRateFirst,
                 });
             } catch (error) {
                 console.error(error);
