@@ -2,6 +2,8 @@
 
 This project demonstrates how to create a **web-based Barcode scanner** using **HTML5** and **JavaScript**, leveraging the **Dynamsoft Barcode Scanner SDK**. It supports scanning 1D/2D barcodes via **camera** or by uploading image and **PDF** files.
 
+https://github.com/user-attachments/assets/b5f2667f-19b7-4f26-a979-d52aa55286f0
+
 
 ## Prerequisites
 - **License Key**: Please obtain a license key from [Dynamsoft Website](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform).
