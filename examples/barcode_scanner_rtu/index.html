@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dynamsoft Barcode Scanner - Hello World</title>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@10.5.3000/dist/dbr.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-document-viewer@2.1.0/dist/ddv.js"></script>
+    <link rel="stylesheet" href="main.css">
+</head>
+
+<body>
+    <div id="loading-indicator" class="loading-indicator">
+        <div class="spinner"></div>
+    </div>
+
+    <h1 style="font-size: large">Dynamsoft Barcode Scanner</h1>
+    <div class="license-row">
+        <label>
+            Get a License key from <a
+                href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                target="_blank">here</a>:
+        </label>
+        <input type="text" id="licenseKey" value=""
+            placeholder="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==">
+        <button id="activateButton">Activate SDK</button>
+    </div>
+    <div class="controls">
+        <button id="scan">Scan</button>
+        <input type="file" id="file" accept="image/png,image/jpeg,application/pdf" />
+    </div>
+    <div id="divScanner">
+        <div id="container"></div>
+        <div id="imageContainer"></div>
+    </div>
+    <textarea id="result" placeholder="Scan result will appear here..." readonly></textarea>
+
+
+    <script>
+        let barcodeScanner;
+        let currentDoc;
+        let licenseKey;
+        const divScanner = document.getElementById("divScanner");
+        const container = document.getElementById("container");
+        const resultArea = document.getElementById("result");
+        const resultContainer = document.querySelector("#results");
+        const imageContainer = document.getElementById("imageContainer");
+
+        function resizeScanner() {
+            divScanner.style.width = window.innerWidth * 0.5 + "px";
+            divScanner.style.height = window.innerHeight * 0.5 + "px";
+            resultArea.style.width = window.innerWidth * 0.5 + "px";
+            imageContainer.style.width = window.innerWidth * 0.5 + "px";
+        }
+
+        window.addEventListener("resize", resizeScanner);
+        resizeScanner();
+
+        function toggleLoading(isLoading) {
+            if (isLoading) {
+                document.getElementById("loading-indicator").style.display = "flex";
+            } else {
+                document.getElementById("loading-indicator").style.display = "none";
+            }
+        }
+
+        document.getElementById('activateButton').addEventListener('click', async () => {
+            toggleLoading(true);
+            let licenseElement = document.getElementById('licenseKey');
+            licenseKey = licenseElement.value == "" ? licenseElement.placeholder : licenseElement.value;
+
+            await Dynamsoft.DDV.Core.init();
+            currentDoc = Dynamsoft.DDV.documentManager.createDocument({
+                name: Date.now().toString(),
+                author: "DDV",
+            });
+            toggleLoading(false);
+        });
+
+        document.getElementById("scan").addEventListener('click', async () => {
+            try {
+                resultArea.value = "";
+                barcodeScanner = new Dynamsoft.BarcodeScanner({
+                    license: licenseKey,
+                    scanMode: Dynamsoft.EnumScanMode.SM_MULTI_UNIQUE,
+                    container: container,
+                    onUniqueBarcodeScanned: (result) => {
+                        if (!result) {
+                            resultArea.value = "No barcode found.\n";
+                        }
+                        else {
+                            resultArea.value += "Text: " + result.text + "\n";
+                            resultArea.value += "Format: " + result.formatString + "\n";
+                        }
+                    },
+                    showResultView: false,
+                    scannerViewConfig: {
+                    },
+                    resultViewConfig: {
+                    }
+                });
+            } catch (error) {
+                console.error(error);
+            }
+            imageContainer.style.display = "none";
+            if (barcodeScanner) {
+                try {
+                    resultArea.value = "";
+                    await barcodeScanner.launch();
+                } catch (err) {
+                    console.error(err);
+                    resultArea.value += "Error during scanning:\n" + err;
+                }
+            }
+            else {
+                resultArea.value = "Please activate the scanner first.\n";
+            }
+        });
+
+        document.getElementById("file").onchange = async function () {
+
+            try {
+                if (barcodeScanner) {
+                    barcodeScanner.dispose();
+                }
+                barcodeScanner = new Dynamsoft.BarcodeScanner({
+                    license: licenseKey,
+                    scanMode: Dynamsoft.EnumScanMode.SM_MULTI_UNIQUE,
+                });
+            } catch (error) {
+                console.error(error);
+            }
+
+            imageContainer.style.display = "none";
+            if (barcodeScanner) {
+                const files = Array.from(this.files || []);
+                if (files.length) {
+                    try {
+                        let fileToProcess = files[0];
+
+                        let blob = await readImage(fileToProcess);
+                        imageContainer.innerHTML = "";
+
+                        let result = await barcodeScanner.decode(blob);
+
+
+                        const imageUrl = URL.createObjectURL(blob);
+
+                        const img = new Image();
+                        img.onload = async function () {
+                            // Create and configure the canvas
+                            const canvas = document.createElement("canvas");
+                            const ctx = canvas.getContext("2d");
+
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+
+                            // Draw the image
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                            // Append the canvas
+                            imageContainer.appendChild(canvas);
+                            imageContainer.style.display = "block";
+
+                            if (!result || !result.barcodeResultItems) {
+                                resultArea.value = "No barcode found.\n";
+                            } else {
+                                resultArea.value = "";
+                                result.barcodeResultItems.forEach(item => {
+                                    resultArea.value += "Text: " + item.text + "\n";
+                                    resultArea.value += "Format: " + item.formatString + "\n";
+
+                                    let localization = item.location;
+
+                                    ctx.strokeStyle = '#ff0000';
+                                    ctx.lineWidth = 2;
+
+                                    let points = localization.points;
+                                    ctx.beginPath();
+                                    ctx.moveTo(points[0].x, points[0].y);
+                                    ctx.lineTo(points[1].x, points[1].y);
+                                    ctx.lineTo(points[2].x, points[2].y);
+                                    ctx.lineTo(points[3].x, points[3].y);
+                                    ctx.closePath();
+                                    ctx.stroke();
+                                });
+                            }
+                        };
+                        img.src = imageUrl;
+                    } catch (error) {
+                        console.error("Error processing file:", error);
+                        resultContainer.innerHTML = `<p>Error: ${error.message}</p>`;
+                    }
+                }
+            }
+            else {
+                resultArea.value = "Please activate the scanner first.\n";
+            }
+
+        };
+
+        async function readImage(fileToProcess) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+
+                reader.onload = async function (e) {
+                    try {
+                        const blob = new Blob([e.target.result], { type: fileToProcess.type });
+
+                        if (fileToProcess.type !== "application/pdf") {
+                            resolve(blob);
+                            return;
+                        }
+
+                        const source = {
+                            fileData: blob,
+                            renderOptions: {
+                                renderAnnotations: "loadAnnotations"
+                            }
+                        };
+                        currentDoc.deleteAllPages();
+                        await currentDoc.loadSource([source]);
+                        const settings = {
+                            quality: 100,
+                            saveAnnotation: false,
+                        };
+
+                        const image = await currentDoc.saveToJpeg(0, settings);
+                        resolve(image);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+
+                reader.onerror = () => {
+                    reject(new Error("FileReader failed to read the PDF file."));
+                };
+
+                reader.readAsArrayBuffer(fileToProcess);
+            });
+        }
+
+    </script>
+</body>
+
+</html>

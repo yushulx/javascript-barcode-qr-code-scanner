@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dynamsoft Barcode Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@10.5.3000/dist/dbr.bundle.js"></script>
+</head>
+
+<body>
+
+    <script>
+        const barcodeScannerConfig = {
+            license: "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==",
+            scanMode: Dynamsoft.EnumScanMode.SM_MULTI_UNIQUE,
+            onUniqueBarcodeScanned: (result) => {
+                console.log(result);
+            },
+            showResultView: false,
+            scannerViewConfig: {
+            },
+            resultViewConfig: {
+            }
+        };
+        const barcodeScanner = new Dynamsoft.BarcodeScanner(barcodeScannerConfig);
+
+        (async () => {
+            const result = await barcodeScanner.launch();
+            alert(result.barcodeResults[0].text);
+        })();
+    </script>
+</body>
+
+</html>
