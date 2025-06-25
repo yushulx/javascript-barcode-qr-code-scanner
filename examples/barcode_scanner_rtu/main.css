@@ -119,20 +119,14 @@ body {
     left: 0;
     display: none;
     width: 100%;
-    /* Match parent width */
     height: 100%;
-    /* Match parent height if needed */
     text-align: center;
     margin: 0;
-    /* Reset margin so it doesn’t shift layout */
     max-height: none;
 }
 
 #imageContainer canvas {
     max-width: 100%;
-    /* Never exceed parent width */
     max-height: 100%;
-    /* Never exceed parent height */
     object-fit: contain;
-    /* Maintain aspect ratio, fit within parent */
 }
