@@ -6,45 +6,758 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dynamsoft Driver License Scanner - Hello World</title>
   <script src="../dist/ddls.bundle.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 300;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    /* License Setup Styles */
+    .license-setup {
+      text-align: center;
+    }
+
+    .license-setup.hidden {
+      display: none;
+    }
+
+    .license-container {
+      max-width: 500px;
+      margin: 0 auto;
+      text-align: left;
+    }
+
+    .license-container h2 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .license-container p {
+      color: #666;
+      margin-bottom: 20px;
+    }
+
+    .license-input-group {
+      margin-bottom: 20px;
+    }
+
+    .license-input-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .license-input-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 14px;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
+    .license-input-group textarea:focus {
+      border-color: #667eea;
+      outline: none;
+    }
+
+    .license-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .license-btn {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .license-btn.primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .license-btn.primary:hover:not(:disabled) {
+      background: #5a6fd8;
+    }
+
+    .license-btn.secondary {
+      background: #f8f9fa;
+      color: #333;
+      border: 2px solid #ddd;
+    }
+
+    .license-btn.secondary:hover:not(:disabled) {
+      background: #e9ecef;
+    }
+
+    .license-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .license-info {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      border-left: 4px solid #667eea;
+    }
+
+    .license-info p {
+      margin: 5px 0;
+    }
+
+    .license-info a {
+      color: #667eea;
+      text-decoration: none;
+    }
+
+    .license-info a:hover {
+      text-decoration: underline;
+    }
+
+    /* Scanner App Styles */
+    .scanner-app {
+      text-align: center;
+    }
+
+    .scanner-app.hidden {
+      display: none;
+    }
+
+    .start-button {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 20px 0;
+      transition: background 0.3s ease;
+    }
+
+    .start-button:hover:not(:disabled) {
+      background: #218838;
+    }
+
+    .start-button:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    /* Results Styles */
+    #results {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      min-height: 100px;
+    }
+
+    #results.hidden {
+      display: none;
+    }
+
+    .result-item {
+      margin: 20px 0;
+      padding: 15px;
+      background: white;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .result-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .result-canvas {
+      max-width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .result-data {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    /* Enhanced styles for license data display */
+    .license-data-item {
+      border-left: 4px solid #28a745;
+      background: #f8fff9;
+    }
+
+    .license-data-table {
+      margin-top: 15px;
+    }
+
+    .license-field-row {
+      display: flex;
+      padding: 8px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .license-field-row:last-child {
+      border-bottom: none;
+    }
+
+    .license-field-label {
+      font-weight: bold;
+      color: #495057;
+      width: 200px;
+      flex-shrink: 0;
+      padding-right: 15px;
+    }
+
+    .license-field-value {
+      color: #212529;
+      flex: 1;
+      word-break: break-word;
+    }
+
+    .result-status {
+      margin-top: 10px;
+      padding: 8px;
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      border-radius: 4px;
+      color: #155724;
+      font-size: 14px;
+    }
+
+    .no-license-data {
+      margin-top: 15px;
+      padding: 15px;
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 4px;
+      color: #856404;
+      text-align: center;
+    }
+
+    .raw-data-toggle {
+      margin-top: 15px;
+      padding: 8px 16px;
+      background: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background-color 0.3s ease;
+    }
+
+    .raw-data-toggle:hover {
+      background: #5a6268;
+    }
+
+    .raw-license-data {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <h1 style="font-size: large">Dynamsoft Driver License Scanner</h1>
-  <div id="results"></div>
+  <div class="container">
+    <div class="header">
+      <h1>Dynamsoft Driver License Scanner</h1>
+    </div>
+
+    <div class="content">
+      <!-- License Setup -->
+      <div id="license-setup" class="license-setup">
+        <div class="license-container">
+          <h2>License Setup</h2>
+          <p>Enter your Dynamsoft license key to continue</p>
+
+          <div class="license-input-group">
+            <label for="license-key">License Key:</label>
+            <textarea id="license-key" placeholder="Paste your license key here..." rows="3"></textarea>
+          </div>
+
+          <div class="license-actions">
+            <button id="license-submit" class="license-btn primary">
+              Initialize Scanner
+            </button>
+            <button id="use-trial" class="license-btn secondary">
+              Use Trial License
+            </button>
+          </div>
+
+          <div class="license-info">
+            <p><strong>Need a license?</strong></p>
+            <p>Get a free trial license at: <a
+                href="https://www.dynamsoft.com/customer/license/trialLicense/?product=ddls&deploymenttype=web"
+                target="_blank" rel="noopener">Dynamsoft Trial License</a></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scanner App (initially hidden) -->
+      <div id="scanner-app" class="scanner-app hidden">
+        <p>Click the button below to start scanning driver licenses.</p>
+        <button id="start-scan" class="start-button">
+          Start Driver License Scanner
+        </button>
+
+        <div id="results" class="hidden">
+          <h3>Scan Results</h3>
+          <div id="results-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const resultContainer = document.querySelector("#results");
+    let driverLicenseScanner = null;
 
-    // Initialize the Dynamsoft Document Scanner
-    const driverLicenseScanner = new Dynamsoft.DriverLicenseScanner({
-      license: "YOUR_LICENSE_KEY_HERE",
-      scannerViewConfig: {
-        uiPath: "../dist/ddls.ui.html",
-      },
-      templateFilePath: "../dist/ddls.template.json",
-      workflowConfig: {
-        captureFrontImage: true,
-        captureBackImage: true,
-        readBarcode: true,
-      },
-    });
-    (async () => {
-      // Launch the scanner and wait for the result
-      const result = await driverLicenseScanner.launch();
-      console.log(result);
+    // Default trial license key
+    const defaultTrialKey = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
 
-      resultContainer.innerHTML = ""; // Clear placeholder content
+    // Initialize license setup
+    function initLicenseSetup() {
+      const elements = {
+        licenseSubmit: document.getElementById('license-submit'),
+        useTrial: document.getElementById('use-trial'),
+        licenseInput: document.getElementById('license-key'),
+        licenseSetup: document.getElementById('license-setup'),
+        scannerApp: document.getElementById('scanner-app')
+      };
 
-      // Clear the result container and display the scanned result as a canvas
-      Object.values(result).forEach((side) => {
-        if (side?._imageData) {
-          const canvas = side._imageData.toCanvas();
-          resultContainer.appendChild(canvas);
-        } else {
-          resultContainer.innerHTML = "<p>No image scanned. Please try again.</p>";
+      elements.licenseSubmit?.addEventListener('click', async () => {
+        const licenseKey = elements.licenseInput.value.trim();
+        if (!licenseKey) {
+          alert('Please enter a license key');
+          return;
+        }
+        await initializeWithLicense(licenseKey);
+      });
+
+      elements.useTrial?.addEventListener('click', async () => {
+        await initializeWithLicense(defaultTrialKey);
+      });
+
+      // Allow Enter key to submit
+      elements.licenseInput?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+          elements.licenseSubmit.click();
         }
       });
-    })();
+    }
+
+    // Initialize scanner with license key
+    async function initializeWithLicense(licenseKey) {
+      const submitBtn = document.getElementById('license-submit');
+      const trialBtn = document.getElementById('use-trial');
+      const licenseSetup = document.getElementById('license-setup');
+      const scannerApp = document.getElementById('scanner-app');
+
+      try {
+        // Disable buttons and show loading
+        submitBtn.disabled = true;
+        trialBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="loading"></span> Initializing...';
+
+        // Initialize the Dynamsoft Driver License Scanner
+        driverLicenseScanner = new Dynamsoft.DriverLicenseScanner({
+          license: licenseKey,
+          scannerViewConfig: {
+            uiPath: "../dist/ddls.ui.html",
+          },
+          templateFilePath: "../dist/ddls.template.json",
+          workflowConfig: {
+            captureFrontImage: true,
+            captureBackImage: true,
+            readBarcode: true,
+          },
+        });
+
+        // Test initialization by creating instance
+
+        // Hide license setup and show scanner
+        licenseSetup.classList.add('hidden');
+        scannerApp.classList.remove('hidden');
+
+        // Setup scanner launch button
+        setupScannerButton();
+
+      } catch (error) {
+        console.error('License initialization failed:', error);
+        alert('Failed to initialize with the provided license key. Please check the key and try again.\n\nError: ' + error.message);
+      } finally {
+        // Re-enable buttons
+        submitBtn.disabled = false;
+        trialBtn.disabled = false;
+        submitBtn.innerHTML = 'Initialize Scanner';
+      }
+    }
+
+    // Setup scanner launch functionality
+    function setupScannerButton() {
+      const startButton = document.getElementById('start-scan');
+      const resultsContainer = document.getElementById('results');
+      const resultsContent = document.getElementById('results-content');
+
+      startButton?.addEventListener('click', async () => {
+        try {
+          startButton.disabled = true;
+          startButton.innerHTML = '<span class="loading"></span> Scanning...';
+
+          // Clear previous results
+          resultsContent.innerHTML = '';
+          resultsContainer.classList.add('hidden');
+
+          // Launch the scanner and wait for the result
+          const result = await driverLicenseScanner.launch();
+
+          // Display results
+          displayResults(result);
+
+        } catch (error) {
+          console.error('Scanning failed:', error);
+          alert('Scanning failed: ' + error.message);
+        } finally {
+          startButton.disabled = false;
+          startButton.innerHTML = 'Start Driver License Scanner';
+        }
+      });
+    }
+
+    // Display scan results
+    function displayResults(result) {
+      const resultsContainer = document.getElementById('results');
+      const resultsContent = document.getElementById('results-content');
+
+      resultsContent.innerHTML = ''; // Clear previous content
+
+      let hasResults = false;
+
+      // Process each side (front/back) of the driver license
+      Object.entries(result).forEach(([sideName, sideData]) => {
+        if (sideData && typeof sideData === 'object' && sideName !== 'licenseData') {
+          hasResults = true;
+
+          const resultItem = document.createElement('div');
+          resultItem.className = 'result-item';
+
+          const title = document.createElement('div');
+          title.className = 'result-title';
+          title.textContent = `${sideName.charAt(0).toUpperCase() + sideName.slice(1)} Image`;
+          resultItem.appendChild(title);
+
+          // Display image if available
+          if (sideData._imageData) {
+            try {
+              const canvas = sideData._imageData.toCanvas();
+              canvas.className = 'result-canvas';
+              resultItem.appendChild(canvas);
+            } catch (e) {
+              console.warn('Failed to display image for ' + sideName, e);
+            }
+          }
+
+          // Display status information
+          if (sideData.status) {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'result-status';
+            statusDiv.innerHTML = `<strong>Status:</strong> ${sideData.status.message || 'Success'}`;
+            resultItem.appendChild(statusDiv);
+          }
+
+          resultsContent.appendChild(resultItem);
+        }
+      });
+
+      // Display extracted license data separately
+      if (result.licenseData) {
+        hasResults = true;
+
+        // The licenseData object directly contains the fields, not in a parsedInfo property
+        displayLicenseData(result.licenseData, resultsContent);
+      } else {
+        // Check for parsed data in other possible locations within the side data
+        let parsedData = null;
+
+        // Check each side for parsed barcode data
+        Object.entries(result).forEach(([sideName, sideData]) => {
+          if (sideData && typeof sideData === 'object' && sideName !== 'licenseData') {
+
+            if (sideData.parsedInfo && Object.keys(sideData.parsedInfo).length > 0) {
+              parsedData = sideData.parsedInfo;
+            } else if (sideData.barcodeInfo) {
+              parsedData = sideData.barcodeInfo;
+            } else if (sideData.licenseInfo) {
+              parsedData = sideData.licenseInfo;
+            }
+          }
+        });
+
+        if (parsedData) {
+          hasResults = true;
+          displayLicenseData(parsedData, resultsContent);
+        } else {
+          // Show a message that no barcode data was found
+          const noDataItem = document.createElement('div');
+          noDataItem.className = 'result-item';
+          noDataItem.innerHTML = `
+            <div class="result-title">Barcode Data</div>
+            <div class="no-license-data">
+              No PDF417 barcode data was extracted. This could mean:
+              <ul style="text-align: left; margin-top: 10px;">
+                <li>The barcode on the license was not clearly captured</li>
+                <li>The license may not have a PDF417 barcode</li>
+                <li>The barcode reading feature may need to be enabled</li>
+                <li>Check the console for detailed debugging information</li>
+              </ul>
+            </div>
+          `;
+          resultsContent.appendChild(noDataItem);
+        }
+      }
+
+      if (!hasResults) {
+        resultsContent.innerHTML = '<div class="result-item"><p>No driver license data captured. Please try again.</p></div>';
+      }
+
+      resultsContainer.classList.remove('hidden');
+    }
+
+    // Helper function to display license data
+    function displayLicenseData(parsedInfo, container) {
+      const licenseDataItem = document.createElement('div');
+      licenseDataItem.className = 'result-item license-data-item';
+
+      const title = document.createElement('div');
+      title.className = 'result-title';
+      title.textContent = 'Extracted Driver License Data';
+      licenseDataItem.appendChild(title);
+
+      if (parsedInfo && Object.keys(parsedInfo).length > 0) {
+        const dataTable = document.createElement('div');
+        dataTable.className = 'license-data-table';
+
+        // Create readable field mappings based on the actual DriverLicenseData interface
+        const fieldMappings = {
+          // Basic fields
+          'licenseNumber': 'License Number',
+          'licenseType': 'License Type',
+
+          // Personal information
+          'firstName': 'First Name',
+          'lastName': 'Last Name',
+          'middleName': 'Middle Name',
+          'fullName': 'Full Name',
+          'namePrefix': 'Name Prefix',
+          'nameSuffix': 'Name Suffix',
+          'dateOfBirth': 'Date of Birth',
+          'age': 'Age',
+          'sex': 'Sex',
+
+          // Address information
+          'address': 'Address',
+          'street1': 'Street Address',
+          'street2': 'Street Address 2',
+          'city': 'City',
+          'state': 'State',
+          'postalCode': 'Postal Code',
+
+          // Physical characteristics
+          'height': 'Height',
+          'heightInCentimeters': 'Height (cm)',
+          'weight': 'Weight',
+          'weightInKilograms': 'Weight (kg)',
+          'weightInPounds': 'Weight (lbs)',
+          'eyeColor': 'Eye Color',
+          'hairColor': 'Hair Color',
+          'race': 'Race',
+
+          // Document information
+          'issueDate': 'Issue Date',
+          'expirationDate': 'Expiration Date',
+          'issuingCountry': 'Issuing Country',
+          'documentDiscriminator': 'Document Discriminator',
+          'aamvaVersionNumber': 'AAMVA Version',
+          'issuerIdentificationNumber': 'Issuer ID',
+          'jurisdictionVersionNumber': 'Jurisdiction Version',
+          'complianceType': 'Compliance Type',
+
+          // License details
+          'endorsements': 'Endorsements',
+          'restrictions': 'Restrictions',
+          'vehicleClass': 'Vehicle Class',
+          'organDonor': 'Organ Donor',
+          'veteran': 'Veteran',
+
+          // Alternative info
+          'nameAlias': 'Name Alias',
+          'firstNameAlias': 'First Name Alias',
+          'lastNameAlias': 'Last Name Alias',
+          'middleNameAlias': 'Middle Name Alias',
+
+          // Status fields
+          'status': 'Status',
+          '_flowType': 'Flow Type',
+          'licenseVerificationStatus': 'Verification Status'
+        };
+
+        // Display each field in a structured way
+        Object.entries(parsedInfo).forEach(([key, value]) => {
+          if (value && value !== '' && value !== 'null' && value !== null && key !== 'status') {
+            const fieldRow = document.createElement('div');
+            fieldRow.className = 'license-field-row';
+
+            const fieldLabel = document.createElement('div');
+            fieldLabel.className = 'license-field-label';
+            fieldLabel.textContent = fieldMappings[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+
+            const fieldValue = document.createElement('div');
+            fieldValue.className = 'license-field-value';
+
+            // Format specific field types
+            if (value && typeof value === 'object') {
+              // Handle date objects with year/month/day properties
+              if (value.year && value.month && value.day) {
+                fieldValue.textContent = `${String(value.month).padStart(2, '0')}/${String(value.day).padStart(2, '0')}/${value.year}`;
+              }
+              // Handle verification status objects
+              else if (key === 'licenseVerificationStatus') {
+                fieldValue.textContent = value.isVerified ? 'Verified' : `Not Verified${value.errorMessage ? ` (${value.errorMessage})` : ''}`;
+              }
+              // Handle other objects
+              else {
+                fieldValue.textContent = JSON.stringify(value);
+              }
+            }
+            // Handle date strings in YYYYMMDD format
+            else if (key.includes('Date') && typeof value === 'string' && value.length === 8 && /^\d{8}$/.test(value)) {
+              const year = value.substring(0, 4);
+              const month = value.substring(4, 6);
+              const day = value.substring(6, 8);
+              fieldValue.textContent = `${month}/${day}/${year}`;
+            }
+            // Handle regular values
+            else {
+              fieldValue.textContent = value.toString();
+            }
+
+            fieldRow.appendChild(fieldLabel);
+            fieldRow.appendChild(fieldValue);
+            dataTable.appendChild(fieldRow);
+          }
+        });
+
+        licenseDataItem.appendChild(dataTable);
+      } else {
+        const noDataDiv = document.createElement('div');
+        noDataDiv.className = 'no-license-data';
+        noDataDiv.textContent = 'No license data could be extracted from the barcode.';
+        licenseDataItem.appendChild(noDataDiv);
+      }
+
+      // Also show raw JSON data in a collapsible section
+      const rawDataToggle = document.createElement('button');
+      rawDataToggle.className = 'raw-data-toggle';
+      rawDataToggle.textContent = 'Show Raw Data';
+      rawDataToggle.onclick = function () {
+        const rawDataDiv = licenseDataItem.querySelector('.raw-license-data');
+        if (rawDataDiv.style.display === 'none') {
+          rawDataDiv.style.display = 'block';
+          this.textContent = 'Hide Raw Data';
+        } else {
+          rawDataDiv.style.display = 'none';
+          this.textContent = 'Show Raw Data';
+        }
+      };
+
+      const rawDataDiv = document.createElement('div');
+      rawDataDiv.className = 'raw-license-data';
+      rawDataDiv.style.display = 'none';
+      rawDataDiv.textContent = JSON.stringify(parsedInfo, null, 2);
+
+      licenseDataItem.appendChild(rawDataToggle);
+      licenseDataItem.appendChild(rawDataDiv);
+      container.appendChild(licenseDataItem);
+    }
+
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', () => {
+      initLicenseSetup();
+    });
   </script>
 </body>
 

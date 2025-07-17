@@ -383,8 +383,8 @@ export interface DriverLicenseData {
 export interface DriverLicenseImageResult {
   status: ResultStatus;
   deskewedImageResult?:
-    | DeskewedImageResultItem
-    | { imageData: OriginalImageResultItem["imageData"]; toBlob: () => Blob };
+  | DeskewedImageResultItem
+  | { imageData: OriginalImageResultItem["imageData"]; toBlob: () => Blob };
   originalImageResult?: OriginalImageResultItem["imageData"] | DCEFrame;
   detectedQuadrilateral?: Quadrilateral;
   _flowType?: EnumFlowType;
@@ -439,13 +439,11 @@ function parseDate(dateString: string, country?: string, isMagstripe?: boolean):
         if (firstTwo <= 99 && lastTwo >= 1 && lastTwo <= 12) {
           year = firstTwo > 50 ? 1900 + firstTwo : 2000 + firstTwo;
           month = lastTwo;
-          console.log(`Parsed as YYMM: ${dateString} -> ${year}-${month}`);
         }
         // Try MMYY if YYMM doesn't make sense
         else if (firstTwo >= 1 && firstTwo <= 12 && lastTwo <= 99) {
           month = firstTwo;
           year = lastTwo > 50 ? 1900 + lastTwo : 2000 + lastTwo;
-          console.log(`Parsed as MMYY: ${dateString} -> ${year}-${month}`);
         }
       } else if (dateString.length === 6) {
         // Could be YYMMDD or MMDDYY
@@ -458,14 +456,12 @@ function parseDate(dateString: string, country?: string, isMagstripe?: boolean):
           year = part1 > 50 ? 1900 + part1 : 2000 + part1;
           month = part2;
           day = part3;
-          console.log(`Parsed as YYMMDD: ${dateString} -> ${year}-${month}-${day}`);
         }
         // Try MMDDYY
         else if (part1 >= 1 && part1 <= 12 && part2 >= 1 && part2 <= 31 && part3 <= 99) {
           month = part1;
           day = part2;
           year = part3 > 50 ? 1900 + part3 : 2000 + part3;
-          console.log(`Parsed as MMDDYY: ${dateString} -> ${year}-${month}-${day}`);
         }
       } else if (dateString.length === 8) {
         // Could be YYYYMMDD or MMDDYYYY
@@ -478,7 +474,6 @@ function parseDate(dateString: string, country?: string, isMagstripe?: boolean):
           year = part1;
           month = part2;
           day = part3;
-          console.log(`Parsed as YYYYMMDD: ${dateString} -> ${year}-${month}-${day}`);
         } else {
           // Try MMDDYYYY
           const yearPart = parseInt(dateString.slice(4, 8), 10);
@@ -486,7 +481,6 @@ function parseDate(dateString: string, country?: string, isMagstripe?: boolean):
             month = part1;
             day = part2;
             year = yearPart;
-            console.log(`Parsed as MMDDYYYY: ${dateString} -> ${year}-${month}-${day}`);
           }
         }
       } else if (dateString.length === 2) {
@@ -496,18 +490,15 @@ function parseDate(dateString: string, country?: string, isMagstripe?: boolean):
           // Assume it's a year if > 12, otherwise could be month
           if (value > 12) {
             year = value > 50 ? 1900 + value : 2000 + value;
-            console.log(`Parsed as YY: ${dateString} -> ${year}`);
           } else {
             // Ambiguous - could be month or year, prefer year for expiration dates
             year = value > 50 ? 1900 + value : 2000 + value;
-            console.log(`Parsed as YY (ambiguous): ${dateString} -> ${year}`);
           }
         }
       }
 
       // If magstripe parsing failed, fall through to standard parsing
       if (!year && !month && !day) {
-        console.log(`Magstripe parsing failed for: ${dateString}, falling back to standard parsing`);
         isMagstripe = false;
       }
     }

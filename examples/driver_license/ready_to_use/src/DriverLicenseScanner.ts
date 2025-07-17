@@ -17,7 +17,12 @@ import {
   EnumResultStatus,
   UtilizedTemplateNames,
 } from "./utils/types";
-import { createStyle, getElement, isEmptyObject, shouldCorrectImage } from "./utils";
+import {
+  createStyle,
+  getElement,
+  isEmptyObject,
+  shouldCorrectImage
+} from "./utils";
 import {
   DEFAULT_TEMPLATE_NAMES,
   DriverLicenseData,
@@ -98,22 +103,20 @@ class DriverLicenseScanner {
 
   private loadingScreen: ReturnType<typeof showLoadingScreen> | null = null;
 
-  private showLoadingOverlay(message?: string) {
-    const configContainer =
-      getElement(this.config.scannerViewConfig?.container) ||
-      getElement(this.config.verifyViewConfig?.container) ||
-      getElement(this.config.resultViewConfig?.container);
+  private showLoadingOverlay(message?: string): void {
+    const configContainer = this.getConfigContainer();
+    if (!configContainer) return;
 
     this.loadingScreen = showLoadingScreen(configContainer, { message });
-    configContainer.style.display = "block";
-    configContainer.style.position = "relative";
+    Object.assign(configContainer.style, {
+      display: "block",
+      position: "relative"
+    });
   }
 
-  private hideLoadingOverlay(hideContainer: boolean = false) {
-    const configContainer =
-      getElement(this.config.scannerViewConfig?.container) ||
-      getElement(this.config.verifyViewConfig?.container) ||
-      getElement(this.config.resultViewConfig?.container);
+  private hideLoadingOverlay(hideContainer: boolean = false): void {
+    const configContainer = this.getConfigContainer();
+    if (!configContainer) return;
 
     if (this.loadingScreen) {
       this.loadingScreen.hide();
@@ -121,9 +124,20 @@ class DriverLicenseScanner {
       configContainer.style.display = "none";
 
       if (hideContainer && this.config?.container) {
-        getElement(this.config.container).style.display = "none";
+        const mainContainer = getElement(this.config.container);
+        if (mainContainer) {
+          mainContainer.style.display = "none";
+        }
       }
     }
+  }
+
+  private getConfigContainer(): HTMLElement | null {
+    return (
+      getElement(this.config.scannerViewConfig?.container) ||
+      getElement(this.config.verifyViewConfig?.container) ||
+      getElement(this.config.resultViewConfig?.container)
+    );
   }
 
   constructor(private config: DriverLicenseScannerConfig) {
@@ -133,30 +147,34 @@ class DriverLicenseScanner {
     }
   }
 
-  private initializeDynamsoftResources() {
-    //The following code uses the jsDelivr CDN, feel free to change it to your own location of these files
+  private initializeDynamsoftResources(): void {
+    if (this.isDynamsoftResourcesLoaded) return;
+
+    // Set up engine resource paths
     CoreModule.engineResourcePaths = isEmptyObject(this.config?.engineResourcePaths)
       ? DEFAULT_DCV_ENGINE_RESOURCE_PATHS
-      : this.config.engineResourcePaths;
+      : this.config.engineResourcePaths!;
 
-    // Optional. Used to load wasm resources in advance, reducing latency between video playing and document modules.
-    // Can add other specs. Please check https://www.dynamsoft.com/code-parser/docs/core/code-types/mrtd.html
+    // Preload WASM resources to reduce latency
     CoreModule.loadWasm();
 
-    const { readBarcode } = this.config.workflowConfig;
-
-    // Determine what modules are needed
-    const needsBarcodeReading = readBarcode;
-
-    CoreModule.loadWasm();
-
-    if (needsBarcodeReading) {
-      CodeParserModule.loadSpec("AAMVA_DL_ID");
-      CodeParserModule.loadSpec("AAMVA_DL_ID_WITH_MAG_STRIPE");
-      CodeParserModule.loadSpec("SOUTH_AFRICA_DL");
+    // Load barcode parsing specs if barcode reading is enabled
+    if (this.config.workflowConfig?.readBarcode) {
+      this.loadBarcodeSpecs();
     }
 
     this.isDynamsoftResourcesLoaded = true;
+  }
+
+  private loadBarcodeSpecs(): void {
+    const specs = ["AAMVA_DL_ID", "AAMVA_DL_ID_WITH_MAG_STRIPE", "SOUTH_AFRICA_DL"];
+    specs.forEach(spec => {
+      try {
+        CodeParserModule.loadSpec(spec);
+      } catch (error) {
+        console.warn(`Failed to load barcode spec ${spec}:`, error);
+      }
+    });
   }
 
   private async initializeDCVResources(): Promise<void> {
@@ -165,40 +183,61 @@ class DriverLicenseScanner {
         this.initializeDynamsoftResources();
       }
 
-      // Change trial link to include product and deploymenttype
-      (LicenseManager as any)._onAuthMessage = (message: string) =>
-        message.replace(
-          "(https://www.dynamsoft.com/customer/license/trialLicense?product=unknown&deploymenttype=unknown)",
-          "(https://www.dynamsoft.com/customer/license/trialLicense?product=ddls&deploymenttype=web)"
-        );
+      // Enhance license manager error messaging
+      this.setupLicenseManager();
 
+      // Initialize license
       LicenseManager.initLicense(this.config?.license || "", {
         executeNow: true,
       });
 
-      // No need to create cameraEnhancer if user launches with a file
+      // Initialize camera resources only if not in file mode
       if (!this.isFileMode) {
-        this.resources.cameraView = await CameraView.createInstance(this.config.scannerViewConfig?.uiPath);
-
-        this.resources.cameraEnhancer = await CameraEnhancer.createInstance(this.resources.cameraView);
-        await this.resources.cameraEnhancer.enableEnhancedFeatures(EnumEnhancedFeatures.EF_TAP_TO_FOCUS);
+        await this.initializeCameraResources();
       }
 
-      this.resources.cvRouter = await CaptureVisionRouter.createInstance();
+      // Initialize capture vision router
+      await this.initializeCaptureVisionRouter();
 
-      // Initialize the template parameters for DL scanning
-      await this.resources.cvRouter.initSettings(this.config.templateFilePath);
-      this.resources.cvRouter.maxImageSideLength = Infinity;
     } catch (ex: any) {
-      let errMsg = ex?.message || ex;
-
-      const error = errMsg?.toLowerCase().includes("license")
-        ? `The license for the Driver License Scanner is no longer valid or has expired. Please contact the site administrator to resolve this issue.`
-        : `Resource Initialization Failed: ${errMsg}`;
-
+      const errMsg = ex?.message || ex;
+      const error = this.formatLicenseError(errMsg);
       console.error(error);
       throw new Error(error);
     }
+  }
+
+  private setupLicenseManager(): void {
+    // Enhance license error messages with product-specific links
+    (LicenseManager as any)._onAuthMessage = (message: string) =>
+      message.replace(
+        "(https://www.dynamsoft.com/customer/license/trialLicense?product=unknown&deploymenttype=unknown)",
+        "(https://www.dynamsoft.com/customer/license/trialLicense?product=ddls&deploymenttype=web)"
+      );
+  }
+
+  private async initializeCameraResources(): Promise<void> {
+    this.resources.cameraView = await CameraView.createInstance(this.config.scannerViewConfig?.uiPath);
+    this.resources.cameraEnhancer = await CameraEnhancer.createInstance(this.resources.cameraView);
+    await this.resources.cameraEnhancer.enableEnhancedFeatures(EnumEnhancedFeatures.EF_TAP_TO_FOCUS);
+  }
+
+  private async initializeCaptureVisionRouter(): Promise<void> {
+    this.resources.cvRouter = await CaptureVisionRouter.createInstance();
+
+    // Initialize template parameters for driver license scanning
+    if (this.config.templateFilePath) {
+      await this.resources.cvRouter.initSettings(this.config.templateFilePath);
+    }
+
+    // Set unlimited image size for better processing
+    this.resources.cvRouter.maxImageSideLength = Infinity;
+  }
+
+  private formatLicenseError(errMsg: string): string {
+    return errMsg?.toLowerCase().includes("license")
+      ? `The license for the Driver License Scanner is no longer valid or has expired. Please contact the site administrator to resolve this issue.`
+      : `Resource Initialization Failed: ${errMsg}`;
   }
 
   async initialize(): Promise<{
@@ -237,9 +276,20 @@ class DriverLicenseScanner {
 
       this.resources.onResultUpdated = (result) => {
         this.resources.result = { ...(this.resources?.result || {}), ...result };
-      };
 
-      const components: {
+        // Also update the main fullResult with any license data from the shared resources
+        if (result.licenseData && this.fullResult) {
+          this.fullResult.licenseData = result.licenseData;
+        }
+
+        // Update image results if provided
+        if (result[EnumDriverLicenseScanSide.Front] && this.fullResult) {
+          this.fullResult[EnumDriverLicenseScanSide.Front] = result[EnumDriverLicenseScanSide.Front];
+        }
+        if (result[EnumDriverLicenseScanSide.Back] && this.fullResult) {
+          this.fullResult[EnumDriverLicenseScanSide.Back] = result[EnumDriverLicenseScanSide.Back];
+        }
+      }; const components: {
         scannerView?: DriverLicenseScannerView;
         correctionView?: DriverLicenseCorrectionView;
         scanVerifyView?: DriverLicenseVerifyView;
@@ -457,12 +507,11 @@ class DriverLicenseScanner {
     return true;
   }
 
-  // Build scan sequence
+  // Build scan sequence based on workflow configuration
   private buildScanSequence(): void {
-    const { captureFrontImage, captureBackImage, readBarcode, scanOrder, barcodeScanSide } = this.config.workflowConfig;
+    const { captureFrontImage, captureBackImage, readBarcode, scanOrder, barcodeScanSide } = this.config.workflowConfig!;
 
     const isBarcodeOnlyWorkflow = !captureFrontImage && !captureBackImage && readBarcode;
-
     this.scanSequence = [];
 
     if (isBarcodeOnlyWorkflow) {
@@ -470,26 +519,23 @@ class DriverLicenseScanner {
         side: barcodeScanSide,
         mode: EnumDriverLicenseScanMode.Barcode,
       });
-    } else {
-      // Use scan order if provided, otherwise use default order
-      const orderToFollow = scanOrder || [EnumDriverLicenseScanSide.Front, EnumDriverLicenseScanSide.Back];
-
-      for (const side of orderToFollow) {
-        if (side === EnumDriverLicenseScanSide.Front && captureFrontImage) {
-          this.scanSequence.push({
-            side: EnumDriverLicenseScanSide.Front,
-            mode: EnumDriverLicenseScanMode.Image,
-          });
-        }
-
-        if (side === EnumDriverLicenseScanSide.Back && captureBackImage) {
-          this.scanSequence.push({
-            side: EnumDriverLicenseScanSide.Back,
-            mode: EnumDriverLicenseScanMode.Image,
-          });
-        }
-      }
+      return;
     }
+
+    // Build image capture sequence more efficiently
+    const orderToFollow = scanOrder || [EnumDriverLicenseScanSide.Front, EnumDriverLicenseScanSide.Back];
+
+    const scanSteps = orderToFollow
+      .filter(side => {
+        return (side === EnumDriverLicenseScanSide.Front && captureFrontImage) ||
+          (side === EnumDriverLicenseScanSide.Back && captureBackImage);
+      })
+      .map(side => ({
+        side,
+        mode: EnumDriverLicenseScanMode.Image,
+      }));
+
+    this.scanSequence.push(...scanSteps);
   }
 
   private initializeDDLSConfig() {
@@ -560,33 +606,33 @@ class DriverLicenseScanner {
 
     const correctionViewConfig = this.showCorrectionView()
       ? {
-          ...this.config.correctionViewConfig,
-          container:
-            viewContainers[EnumDriverLicenseScannerViews.Correction] ||
-            this.config.correctionViewConfig?.container ||
-            null,
-          templateFilePath: baseConfig.templateFilePath,
-          utilizedTemplateNames: baseConfig.utilizedTemplateNames,
-          _showResultView: this.showResultView(),
-        }
+        ...this.config.correctionViewConfig,
+        container:
+          viewContainers[EnumDriverLicenseScannerViews.Correction] ||
+          this.config.correctionViewConfig?.container ||
+          null,
+        templateFilePath: baseConfig.templateFilePath,
+        utilizedTemplateNames: baseConfig.utilizedTemplateNames,
+        _showResultView: this.showResultView(),
+      }
       : undefined;
 
     const verifyViewConfig = this.showVerifyView()
       ? {
-          ...this.config.verifyViewConfig,
-          container:
-            viewContainers[EnumDriverLicenseScannerViews.Verify] || this.config.verifyViewConfig?.container || null,
-          _workflowConfig: this.config.workflowConfig,
-        }
+        ...this.config.verifyViewConfig,
+        container:
+          viewContainers[EnumDriverLicenseScannerViews.Verify] || this.config.verifyViewConfig?.container || null,
+        _workflowConfig: this.config.workflowConfig,
+      }
       : undefined;
 
     const resultViewConfig = this.showResultView()
       ? {
-          ...this.config.resultViewConfig,
-          _workflowConfig: this.config.workflowConfig,
-          container:
-            viewContainers[EnumDriverLicenseScannerViews.Result] || this.config.resultViewConfig?.container || null,
-        }
+        ...this.config.resultViewConfig,
+        _workflowConfig: this.config.workflowConfig,
+        container:
+          viewContainers[EnumDriverLicenseScannerViews.Result] || this.config.resultViewConfig?.container || null,
+      }
       : undefined;
 
     Object.assign(this.config, {
@@ -627,58 +673,100 @@ class DriverLicenseScanner {
   }
 
   dispose(): void {
-    if (this.scanResultView) {
-      this.scanResultView.dispose();
-      this.scanResultView = null;
+    try {
+      // Dispose views in reverse order of initialization
+      this.disposeViews();
+
+      // Dispose DCV resources
+      this.disposeDCVResources();
+
+      // Clean up containers
+      this.cleanupContainers();
+
+      // Reset state
+      this.resetState();
+
+    } catch (error) {
+      console.warn('Error during disposal:', error);
     }
+  }
 
-    if (this.scanVerifyView) {
-      this.scanVerifyView.dispose();
-      this.scanVerifyView = null;
-    }
+  private disposeViews(): void {
+    const views = [
+      { view: this.scanResultView, name: 'scanResultView' },
+      { view: this.scanVerifyView, name: 'scanVerifyView' },
+      { view: this.correctionView, name: 'correctionView' }
+    ];
 
-    if (this.correctionView) {
-      this.correctionView.dispose();
-      this.correctionView = null;
-    }
+    views.forEach(({ view, name }) => {
+      try {
+        if (view?.dispose) {
+          view.dispose();
+        }
+      } catch (error) {
+        console.warn(`Error disposing ${name}:`, error);
+      }
+    });
 
-    this.scannerView = null;
+    this.scanResultView = undefined;
+    this.scanVerifyView = undefined;
+    this.correctionView = undefined;
+    this.scannerView = undefined;
+  }
 
-    // Dispose resources
-    if (this.resources.cameraEnhancer) {
-      this.resources.cameraEnhancer.dispose();
-      this.resources.cameraEnhancer = null;
-    }
+  private disposeDCVResources(): void {
+    const resources = [
+      { resource: this.resources.cameraEnhancer, name: 'cameraEnhancer' },
+      { resource: this.resources.cameraView, name: 'cameraView' },
+      { resource: this.resources.cvRouter, name: 'cvRouter' }
+    ];
 
-    if (this.resources.cameraView) {
-      this.resources.cameraView.dispose();
-      this.resources.cameraView = null;
-    }
+    resources.forEach(({ resource, name }) => {
+      try {
+        if (resource?.dispose) {
+          resource.dispose();
+        }
+      } catch (error) {
+        console.warn(`Error disposing ${name}:`, error);
+      }
+    });
 
-    if (this.resources.cvRouter) {
-      this.resources.cvRouter.dispose();
-      this.resources.cvRouter = null;
-    }
+    this.resources.cameraEnhancer = undefined;
+    this.resources.cameraView = undefined;
+    this.resources.cvRouter = undefined;
+    this.resources.result = undefined;
+    this.resources.onResultUpdated = undefined;
+  }
 
-    this.resources.result = null;
-    this.resources.onResultUpdated = null;
+  private cleanupContainers(): void {
+    const containers = [
+      this.config.container,
+      this.config.scannerViewConfig?.container,
+      this.config.correctionViewConfig?.container,
+      this.config.verifyViewConfig?.container,
+      this.config.resultViewConfig?.container
+    ];
 
-    // Hide and clean containers
-    const cleanContainer = (container?: HTMLElement | string) => {
+    containers.forEach(container => {
       const element = getElement(container);
       if (element) {
-        element.style.display = "none";
+        Object.assign(element.style, {
+          display: "none"
+        });
         element.textContent = "";
       }
-    };
+    });
+  }
 
-    cleanContainer(this.config.container);
-    cleanContainer(this.config.scannerViewConfig?.container);
-    cleanContainer(this.config.correctionViewConfig?.container);
-    cleanContainer(this.config.verifyViewConfig?.container);
-    cleanContainer(this.config.resultViewConfig?.container);
-
+  private resetState(): void {
     this.isInitialized = false;
+    this.isCapturing = false;
+    this.currentScanStep = 0;
+    this.scanSequence = [];
+    this.fullResult = {
+      [EnumDriverLicenseScanSide.Front]: null,
+      [EnumDriverLicenseScanSide.Back]: null,
+    };
   }
 
   // Helper method for creating error results
@@ -703,117 +791,149 @@ class DriverLicenseScanner {
       return this.createErrorResult(error);
     }
 
-    try {
-      this.isCapturing = true;
+    this.isCapturing = true;
 
+    try {
       const { components } = await this.initialize();
 
       if (isEmptyObject(components)) {
         throw new Error("Driver License Scanner initialization failed");
       }
 
-      if (this.config.container) {
-        getElement(this.config.container).style.display = "block";
+      // Show main container if configured
+      const mainContainer = getElement(this.config.container);
+      if (mainContainer) {
+        mainContainer.style.display = "block";
       }
 
-      // Scanner view is required for capturing
+      // Validate scanner view availability
       if (!components.scannerView) {
         throw new Error("Scanner view is required for capture operations");
       }
 
-      // Execute scan sequence - now simplified to only handle image captures
-      this.currentScanStep = 0;
+      // Execute scan workflow
+      const workflowResult = await this.executeWorkflow(components);
 
-      while (this.currentScanStep < this.scanSequence.length) {
-        try {
-          const currentStep = this.scanSequence[this.currentScanStep];
-          const stepResult = await this.executeCurrentScanStep(components);
-
-          if (stepResult?.status.code !== EnumResultStatus.RS_SUCCESS) {
-            // Handle step failure - RETURN IMMEDIATELY, don't continue to result view
-            if (stepResult?.status.code === EnumResultStatus.RS_CANCELLED) {
-              console.log("Scan cancelled by user");
-              return this.createCancelledResult("Scan cancelled by user");
-            } else {
-              console.error("Image capture step failed, stopping workflow");
-              // Return error result immediately - don't try to show result view
-              return this.createErrorResult(stepResult.status.message || "Image capture failed");
-            }
-          } else {
-            console.log(`Step ${this.currentScanStep + 1} completed successfully`);
-          }
-
-          // Route through correction/verify views if needed for image captures
-          if (
-            currentStep.mode === EnumDriverLicenseScanMode.Image &&
-            stepResult?.status.code === EnumResultStatus.RS_SUCCESS
-          ) {
-            if (components.correctionView && shouldCorrectImage(stepResult._flowType as any)) {
-              await components.correctionView.launch();
-            }
-
-            // Handle verify view
-            if (components.scanVerifyView) {
-              const scanMode =
-                currentStep.side === EnumDriverLicenseScanSide.Front
-                  ? EnumDriverLicenseScanSide.Front
-                  : EnumDriverLicenseScanSide.Back;
-
-              const verifyResult = await components.scanVerifyView.launch(scanMode);
-
-              // Handle verify view failures
-              if (verifyResult?.status.code === EnumResultStatus.RS_FAILED) {
-                console.error("Verify view failed");
-                return this.createErrorResult(verifyResult.status.message || "Verification failed");
-              } else if (verifyResult?.status.code === EnumResultStatus.RS_CANCELLED) {
-                console.log("Verify view cancelled");
-                return this.createCancelledResult("Verification cancelled");
-              }
-            }
-          }
-
-          this.currentScanStep++;
-        } catch (stepError) {
-          console.error(`Critical error in step ${this.currentScanStep + 1}:`, stepError);
-          // Return error immediately instead of throwing
-          return this.createErrorResult(`Step ${this.currentScanStep + 1} failed: ${stepError?.message || stepError}`);
-        }
+      // Show results if successful and result view is configured
+      if (this.isWorkflowSuccessful(workflowResult) && components.scanResultView) {
+        await this.showResults(components.scanResultView);
       }
 
-      // Only show result view if we have successful scan results
-      if (components.scanResultView && this.hasValidResults()) {
-        console.log("Launching result view with final results:", this.fullResult);
+      return this.fullResult || this.createErrorResult("No scan results available");
 
-        this.showLoadingOverlay("Preparing results...");
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        this.hideLoadingOverlay();
-
-        try {
-          await components.scanResultView.launch();
-        } catch (resultViewError) {
-          console.error("Result view failed:", resultViewError);
-          return this.createErrorResult(`Failed to show results: ${resultViewError?.message || resultViewError}`);
-        }
-      } else if (!this.hasValidResults()) {
-        // If we somehow get here without valid results, return an error
-        console.error("No valid scan results to display");
-        return this.createErrorResult("No valid scan results were captured");
-      }
-
-      console.log("Scan workflow completed successfully");
-      return this.fullResult;
     } catch (error) {
-      // Hide any active loading screen on error
       this.hideLoadingOverlay();
-
       const errorMessage = `Driver license capture flow failed. ${error?.message || error}`;
-      console.error("Driver license capture flow failed:", error?.message || error);
-
+      console.error("Driver license capture flow failed:", error);
       return this.createErrorResult(errorMessage);
     } finally {
       this.isCapturing = false;
       this.hideLoadingOverlay();
       this.dispose();
+    }
+  }
+
+  private async executeWorkflow(components: any): Promise<boolean> {
+    this.currentScanStep = 0;
+
+    while (this.currentScanStep < this.scanSequence.length) {
+      try {
+        const currentStep = this.scanSequence[this.currentScanStep];
+        const stepResult = await this.executeCurrentScanStep(components);
+
+        if (!this.isStepSuccessful(stepResult)) {
+          return false;
+        }
+
+        // Handle post-step processing for image captures
+        if (currentStep.mode === EnumDriverLicenseScanMode.Image && stepResult) {
+          const postProcessSuccess = await this.handleImagePostProcessing(
+            components,
+            currentStep,
+            stepResult
+          );
+
+          if (!postProcessSuccess) {
+            return false;
+          }
+        }
+
+        this.currentScanStep++;
+
+      } catch (stepError) {
+        console.error(`Critical error in step ${this.currentScanStep + 1}:`, stepError);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private async handleImagePostProcessing(
+    components: any,
+    currentStep: DriverLicenseScanStep,
+    stepResult: any
+  ): Promise<boolean> {
+    try {
+      // Handle correction view if needed
+      if (components.correctionView && shouldCorrectImage(stepResult._flowType)) {
+        await components.correctionView.launch();
+      }
+
+      // Handle verify view if configured
+      if (components.scanVerifyView) {
+        const scanMode = currentStep.side === EnumDriverLicenseScanSide.Front
+          ? EnumDriverLicenseScanSide.Front
+          : EnumDriverLicenseScanSide.Back;
+
+        const verifyResult = await components.scanVerifyView.launch(scanMode);
+
+        if (!this.isStepSuccessful(verifyResult)) {
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Post-processing failed:', error);
+      return false;
+    }
+  }
+
+  private isStepSuccessful(stepResult: any): boolean {
+    if (!stepResult) return false;
+
+    const statusCode = stepResult.status?.code;
+
+    if (statusCode === EnumResultStatus.RS_CANCELLED) {
+      this.fullResult = this.createCancelledResult("Operation cancelled by user");
+      return false;
+    }
+
+    if (statusCode !== EnumResultStatus.RS_SUCCESS) {
+      console.error("Step failed:", stepResult.status?.message);
+      this.fullResult = this.createErrorResult(stepResult.status?.message || "Step failed");
+      return false;
+    }
+
+    return true;
+  }
+
+  private isWorkflowSuccessful(workflowResult: boolean): boolean {
+    return workflowResult && this.hasValidResults();
+  }
+
+  private async showResults(scanResultView: any): Promise<void> {
+
+    this.showLoadingOverlay("Preparing results...");
+    await new Promise(resolve => setTimeout(resolve, 400));
+    this.hideLoadingOverlay();
+
+    try {
+      await scanResultView.launch();
+    } catch (error) {
+      console.error("Result view failed:", error);
+      throw new Error(`Failed to show results: ${error?.message || error}`);
     }
   }
 
@@ -872,7 +992,6 @@ class DriverLicenseScanner {
 
           // Update shared resources
           if (this.resources.onResultUpdated) {
-            console.log({ ...this.resources.result, ...this.fullResult });
             this.resources.onResultUpdated({ ...this.resources.result, ...this.fullResult });
           }
         }
@@ -886,7 +1005,6 @@ class DriverLicenseScanner {
 
           // Update shared resources
           if (this.resources.onResultUpdated) {
-            console.log({ ...this.resources.result, ...this.fullResult });
             this.resources.onResultUpdated({ ...this.resources.result, ...this.fullResult });
           }
         }

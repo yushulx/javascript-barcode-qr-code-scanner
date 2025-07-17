@@ -267,7 +267,6 @@ export default class DriverLicenseScannerView {
     }
 
     try {
-      console.log("Processing barcode from captured image...");
       const { cvRouter } = this.resources;
       const templateName = this.config.utilizedTemplateNames.barcode;
 
@@ -278,7 +277,6 @@ export default class DriverLicenseScannerView {
         const processedData = processDriverLicenseData(parsedResult);
 
         if (processedData) {
-          console.log("Barcode successfully processed:", processedData);
           return {
             ...processedData,
             status: {
@@ -341,11 +339,11 @@ export default class DriverLicenseScannerView {
     }
   }
 
-  private async processAndUpdateBarcodeData(imageData: DSImageData): Promise<void> {
+  private async processAndUpdateBarcodeData(imageData: DSImageData): Promise<DriverLicenseData | null> {
     const barcodeScanSide = this.config._workflowConfig?.barcodeScanSide ?? EnumDriverLicenseScanSide.Back;
 
     if (!this.config._workflowConfig?.readBarcode || this.currentScanSide !== barcodeScanSide) {
-      return;
+      return null;
     }
 
     try {
@@ -373,6 +371,8 @@ export default class DriverLicenseScannerView {
               licenseData: updatedBarcodeData,
             });
           }
+
+          return updatedBarcodeData;
         } else {
           // Update shared resources with barcode data (no verification)
           if (this.resources.onResultUpdated) {
@@ -381,11 +381,16 @@ export default class DriverLicenseScannerView {
               licenseData: barcodeData,
             });
           }
+
+          return barcodeData;
         }
       }
+
+      return null;
     } catch (error) {
       console.error("Error processing barcode data:", error);
       // Don't throw the error to prevent it from affecting the main image capture flow
+      return null;
     }
   }
 
@@ -462,7 +467,7 @@ export default class DriverLicenseScannerView {
       await this.toggleBoundsDetection();
     };
 
-    this.DCE_ELEMENTS.smartCaptureBtn.onclick = async () => {};
+    this.DCE_ELEMENTS.smartCaptureBtn.onclick = async () => { };
 
     this.DCE_ELEMENTS.autoCropBtn.onclick = async () => {
       await this.toggleAutoCrop();
@@ -1006,8 +1011,8 @@ export default class DriverLicenseScannerView {
     return this.autoCropEnabled
       ? EnumFlowType.AUTO_CROP
       : this.smartCaptureEnabled
-      ? EnumFlowType.SMART_CAPTURE
-      : EnumFlowType.MANUAL;
+        ? EnumFlowType.SMART_CAPTURE
+        : EnumFlowType.MANUAL;
   }
 
   async takePhoto() {
@@ -1076,8 +1081,9 @@ export default class DriverLicenseScannerView {
           this.originalImageData as DSImageData
         );
 
-        // Process barcode data after image capture
-        await this.processAndUpdateBarcodeData(deskewedImageResult.imageData);
+        // Process barcode data after image capture and capture the result
+        const licenseData = await this.processAndUpdateBarcodeData(deskewedImageResult.imageData);
+
         scanResult = {
           status: {
             code: EnumResultStatus.RS_SUCCESS,
@@ -1092,11 +1098,14 @@ export default class DriverLicenseScannerView {
           _imageData: deskewedImageResult,
         };
 
-        // Emit result through shared resources
+        // Emit result through shared resources, including license data if available
         onResultUpdated?.({
           ...result,
           [this.currentScanSide]: scanResult,
+          ...(licenseData && { licenseData }),
         });
+
+
       } else {
         const parsedResult = this.capturedResult?.parsedResult?.parsedResultItems?.[0] ?? null;
         const processedData = processDriverLicenseData(parsedResult);
