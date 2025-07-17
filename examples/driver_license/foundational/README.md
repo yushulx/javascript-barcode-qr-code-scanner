@@ -2,9 +2,6 @@
 
 A modern, responsive web application for scanning and extracting information from driver license **PDF417** barcodes using the [Dynamsoft Barcode Reader SDK](https://www.npmjs.com/package/dynamsoft-barcode-reader-bundle).
 
-## Prerequisites
-- Obtain a [30-day Free Trial License](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform) for Dynamsoft Barcode Reader
-
 ## Features
 
 - **PDF417 Barcode Recognition**: Specifically optimized for driver license barcodes
@@ -24,14 +21,20 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/driver_license/fo
 
 ## How It Works
 
-1. **Choose Your Mode**: Use the toggle switch to select between Camera or Image mode
+1. **Set License Key**: Enter your Dynamsoft license key or use the trial license
+2. **Choose Your Mode**: Use the toggle switch to select between Camera or Image mode
    - **Camera Mode** (📹): Real-time scanning using your device's camera
    - **Image Mode** (🖼️): Upload or capture a single high-quality image
-2. **Start Scanning**: Click the camera icon to begin
-3. **Aim Camera** (Camera Mode): Point your device's camera at the PDF417 barcode on a driver license
-4. **Upload Image** (Image Mode): Select or capture an image containing the barcode
-5. **Automatic Detection**: The scanner will automatically detect and process the barcode
-6. **View Results**: Extracted information is displayed in a clean, organized format
+3. **Start Scanning**: Click the camera icon to begin
+4. **Aim Camera** (Camera Mode): Point your device's camera at the PDF417 barcode on a driver license
+5. **Upload Image** (Image Mode): Select or capture an image containing the barcode
+6. **Automatic Detection**: The scanner will automatically detect and process the barcode
+7. **View Results**: Extracted information is displayed in a clean, organized format
+
+### License Setup
+- **Trial License**: Click "Use Trial License" for quick testing
+- **Custom License**: Enter your own Dynamsoft license key for production use
+- **Flexible Configuration**: No need to rebuild the application when license expires
 
 ### Mode Switching
 - **Instant Toggle**: Switch between modes anytime using the beautiful toggle switch
@@ -55,11 +58,17 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/driver_license/fo
 
 
 
-## Custom License
-Replace the license key in the JavaScript code:
-```javascript
-Dynamsoft.License.LicenseManager.initLicense("YOUR_LICENSE_KEY_HERE");
-```
+## License Configuration
+
+### Getting Started
+1. **Trial License**: Click "Use Trial License" for immediate testing
+2. **Custom License**: Enter your Dynamsoft license key in the setup interface
+3. **No Code Changes**: All license management happens through the UI
+
+### Getting a License Key
+- **Free Trial**: Get a trial license at [Dynamsoft Trial License](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform)
+- **Production**: Purchase a production license for commercial use
+- **Flexible Setup**: Change license keys anytime without rebuilding the application
 
 ## Local Development
 For local development with HTTPS (required for camera access):

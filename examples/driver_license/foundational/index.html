@@ -12,60 +12,92 @@
 
 <body>
   <div id="app">
-    <!-- Tip message -->
-    <div id="tip-message">Aim at the barcode on the driver's license.</div>
+    <!-- License Key Setup -->
+    <div id="license-setup" class="license-setup">
+      <div class="license-container">
+        <h2>Dynamsoft License Setup</h2>
+        <p>Enter your Dynamsoft Barcode Reader license key to continue</p>
 
-    <!-- Main title -->
-    <h1>Driver License Scanner</h1>
+        <div class="license-input-group">
+          <label for="license-key">License Key:</label>
+          <textarea id="license-key" placeholder="Paste your license key here..." rows="3"></textarea>
+        </div>
 
-    <!-- Mode Switch Toggle -->
-    <div id="mode-switch-container" class="mode-switch">
-      <div class="mode-options">
-        <label class="mode-option active" data-mode="camera">
-          <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20">
-            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
-            <path d="M2 6a2 2 0 0 1 2-2h3l1-1h6l1 1h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" />
-          </svg>
-          <span>Camera</span>
-        </label>
-        <label class="mode-option" data-mode="image">
-          <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <path d="M14 2v6h6" />
-            <path d="M10 13l2 2 4-4" />
-          </svg>
-          <span>Upload</span>
-        </label>
+        <div class="license-actions">
+          <button id="license-submit" class="license-btn primary">
+            Initialize Scanner
+          </button>
+          <button id="use-trial" class="license-btn secondary">
+            Use Trial License
+          </button>
+        </div>
+
+        <div class="license-info">
+          <p><strong>Need a license?</strong></p>
+          <p>Get a free trial license at: <a
+              href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+              target="_blank" rel="noopener">Dynamsoft Trial License</a></p>
+        </div>
       </div>
-      <div class="mode-slider"></div>
     </div>
 
-    <!-- Main scanning area -->
-    <div id="main-container">
-      <!-- Camera start button -->
-      <svg id="camera-start-btn" viewBox="0 0 2048 1792" aria-label="Start camera">
-        <path
-          d="M1024 672q119 0 203.5 84.5t84.5 203.5-84.5 203.5-203.5 84.5-203.5-84.5-84.5-203.5 84.5-203.5 203.5-84.5zm704-416q106 0 181 75t75 181v896q0 106-75 181t-181 75h-1408q-106 0-181-75t-75-181v-896q0-106 75-181t181-75h224l51-136q19-49 69.5-84.5t103.5-35.5h512q53 0 103.5 35.5t69.5 84.5l51 136h224zm-704 1152q185 0 316.5-131.5t131.5-316.5-131.5-316.5-316.5-131.5-316.5 131.5-131.5 316.5 131.5 316.5 316.5 131.5z" />
-      </svg>
+    <!-- Main Scanner Interface (initially hidden) -->
+    <div id="scanner-app" class="scanner-app hidden">
+      <!-- Tip message -->
+      <div id="tip-message">Aim at the barcode on the driver's license.</div>
 
-      <!-- Camera view container -->
-      <div id="camera-view"></div>
-    </div>
+      <!-- Main title -->
+      <h1>Driver License Scanner</h1>
 
-    <!-- Results container -->
-    <div id="results" class="results-container">
-      <div class="results-header">
-        <span>Scan Results</span>
-        <button class="close-button" aria-label="Close results">
-          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
-            <path
-              d="M512 456.310154L94.247385 38.557538a39.542154 39.542154 0 0 0-55.689847 0 39.266462 39.266462 0 0 0 0 55.689847L456.310154 512 38.557538 929.752615a39.542154 39.542154 0 0 0 0 55.689847 39.266462 39.266462 0 0 0 55.689847 0L512 567.689846l417.752615 417.752616c15.163077 15.163077 40.290462 15.36 55.689847 0a39.266462 39.266462 0 0 0 0-55.689847L567.689846 512 985.442462 94.247385a39.542154 39.542154 0 0 0 0-55.689847 39.266462 39.266462 0 0 0-55.689847 0L512 456.310154z"
-              fill="#ffffff" />
-          </svg>
-        </button>
+      <!-- Mode Switch Toggle -->
+      <div id="mode-switch-container" class="mode-switch">
+        <div class="mode-options">
+          <label class="mode-option active" data-mode="camera">
+            <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20">
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+              <path d="M2 6a2 2 0 0 1 2-2h3l1-1h6l1 1h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" />
+            </svg>
+            <span>Camera</span>
+          </label>
+          <label class="mode-option" data-mode="image">
+            <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <path d="M14 2v6h6" />
+              <path d="M10 13l2 2 4-4" />
+            </svg>
+            <span>Upload</span>
+          </label>
+        </div>
+        <div class="mode-slider"></div>
       </div>
-      <div class="results-body" id="results-content"></div>
-    </div>
+
+      <!-- Main scanning area -->
+      <div id="main-container">
+        <!-- Camera start button -->
+        <svg id="camera-start-btn" viewBox="0 0 2048 1792" aria-label="Start camera">
+          <path
+            d="M1024 672q119 0 203.5 84.5t84.5 203.5-84.5 203.5-203.5 84.5-203.5-84.5-84.5-203.5 84.5-203.5 203.5-84.5zm704-416q106 0 181 75t75 181v896q0 106-75 181t-181 75h-1408q-106 0-181-75t-75-181v-896q0-106 75-181t181-75h224l51-136q19-49 69.5-84.5t103.5-35.5h512q53 0 103.5 35.5t69.5 84.5l51 136h224zm-704 1152q185 0 316.5-131.5t131.5-316.5-131.5-316.5-316.5-131.5-316.5 131.5-131.5 316.5 131.5 316.5 316.5 131.5z" />
+        </svg>
+
+        <!-- Camera view container -->
+        <div id="camera-view"></div>
+      </div>
+
+      <!-- Results container -->
+      <div id="results" class="results-container">
+        <div class="results-header">
+          <span>Scan Results</span>
+          <button class="close-button" aria-label="Close results">
+            <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+              <path
+                d="M512 456.310154L94.247385 38.557538a39.542154 39.542154 0 0 0-55.689847 0 39.266462 39.266462 0 0 0 0 55.689847L456.310154 512 38.557538 929.752615a39.542154 39.542154 0 0 0 0 55.689847 39.266462 39.266462 0 0 0 55.689847 0L512 567.689846l417.752615 417.752616c15.163077 15.163077 40.290462 15.36 55.689847 0a39.266462 39.266462 0 0 0 0-55.689847L567.689846 512 985.442462 94.247385a39.542154 39.542154 0 0 0 0-55.689847 39.266462 39.266462 0 0 0-55.689847 0L512 456.310154z"
+                fill="#ffffff" />
+            </svg>
+          </button>
+        </div>
+        <div class="results-body" id="results-content"></div>
+      </div>
+    </div> <!-- End scanner-app -->
   </div>
   <!-- Dynamsoft Barcode Reader SDK -->
   <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.0.3000/dist/dbr.bundle.js"></script>
@@ -79,15 +111,77 @@
         this.parsedInfo = {};
         this.isInitialized = false;
         this.currentMode = 'camera'; // Track current scanning mode
+        this.licenseKey = ''; // Store license key
 
         // Initialize the application
         this.init();
-        this.initSDK();
+      }
+
+      // Initialize license setup
+      initLicenseSetup() {
+        const elements = {
+          licenseSubmit: document.getElementById('license-submit'),
+          useTrial: document.getElementById('use-trial'),
+          licenseInput: document.getElementById('license-key')
+        };
+
+        // Default trial license key
+        const defaultTrialKey = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+
+        elements.licenseSubmit?.addEventListener('click', async () => {
+          const licenseKey = elements.licenseInput.value.trim();
+          if (!licenseKey) {
+            alert('Please enter a license key');
+            return;
+          }
+          await this.initializeWithLicense(licenseKey);
+        });
+
+        elements.useTrial?.addEventListener('click', async () => {
+          await this.initializeWithLicense(defaultTrialKey);
+        });
+
+        // Allow Enter key to submit
+        elements.licenseInput?.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter' && e.ctrlKey) {
+            elements.licenseSubmit.click();
+          }
+        });
+      }
+
+      // Initialize scanner with license key
+      async initializeWithLicense(licenseKey) {
+        const submitBtn = document.getElementById('license-submit');
+        const trialBtn = document.getElementById('use-trial');
+
+        try {
+          // Disable buttons and show loading
+          submitBtn.disabled = true;
+          trialBtn.disabled = true;
+          submitBtn.textContent = 'Initializing...';
+
+          this.licenseKey = licenseKey;
+          const success = await this.initSDK();
+
+          if (success) {
+            // Hide license setup and show scanner
+            document.getElementById('license-setup').style.display = 'none';
+            document.getElementById('scanner-app').classList.remove('hidden');
+          }
+        } catch (error) {
+          console.error('License initialization failed:', error);
+          alert('Failed to initialize with the provided license key. Please check the key and try again.');
+        } finally {
+          // Re-enable buttons
+          submitBtn.disabled = false;
+          trialBtn.disabled = false;
+          submitBtn.textContent = 'Initialize Scanner';
+        }
       }      // Initialize Dynamsoft SDK and components
       async initSDK() {
         try {
-          // Set license
-          Dynamsoft.License.LicenseManager.initLicense("DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==");
+          // Set license from user input
+          Dynamsoft.License.LicenseManager.initLicense(this.licenseKey);
 
           // Preload modules
           await Dynamsoft.Core.CoreModule.loadWasm(["DBR", "DCP"]);
@@ -411,6 +505,7 @@
 
       // Initialize the application
       async init() {
+        this.initLicenseSetup();
         this.initEventHandlers();
         this.updateModeUI(); // Set initial mode UI
         console.log('Driver License Scanner initialized');

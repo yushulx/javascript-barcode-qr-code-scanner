@@ -29,6 +29,152 @@ body {
   height: 100%;
 }
 
+/* License Setup Styles */
+.license-setup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.license-container {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 2rem;
+  width: min(90vw, 500px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.license-container h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.license-container>p {
+  color: #666;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.license-input-group {
+  margin-bottom: 1.5rem;
+}
+
+.license-input-group label {
+  display: block;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.license-input-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s ease;
+}
+
+.license-input-group textarea:focus {
+  outline: none;
+  border-color: #fe8e14;
+  box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.1);
+}
+
+.license-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.license-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.license-btn.primary {
+  background: linear-gradient(135deg, #fe8e14 0%, #ff6b35 100%);
+  color: white;
+}
+
+.license-btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(254, 142, 20, 0.3);
+}
+
+.license-btn.secondary {
+  background: #f8f9fa;
+  color: #666;
+  border: 1px solid #e1e5e9;
+}
+
+.license-btn.secondary:hover {
+  background: #e9ecef;
+}
+
+.license-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.license-info {
+  padding: 1rem;
+  background: rgba(254, 142, 20, 0.1);
+  border-radius: 8px;
+  border-left: 4px solid #fe8e14;
+}
+
+.license-info p {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.license-info a {
+  color: #fe8e14;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.license-info a:hover {
+  text-decoration: underline;
+}
+
+/* Scanner App Styles */
+.scanner-app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.scanner-app.hidden {
+  display: none;
+}
+
 /* Typography */
 h1 {
   font-size: 2rem;
@@ -265,6 +411,23 @@ a:hover {
 
 /* Responsive design */
 @media only screen and (max-width: 768px) {
+  .license-container {
+    padding: 1.5rem;
+    width: 95vw;
+  }
+
+  .license-container h2 {
+    font-size: 1.25rem;
+  }
+
+  .license-actions {
+    flex-direction: column;
+  }
+
+  .license-btn {
+    margin-bottom: 0.5rem;
+  }
+
   h1 {
     font-size: 1.5rem;
     margin-bottom: 1rem;
@@ -319,6 +482,24 @@ a:hover {
 }
 
 @media only screen and (max-width: 480px) {
+  .license-container {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .license-container h2 {
+    font-size: 1.1rem;
+  }
+
+  .license-input-group textarea {
+    font-size: 0.8rem;
+  }
+
+  .license-btn {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+
   h1 {
     font-size: 1.25rem;
   }
