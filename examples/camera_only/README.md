@@ -5,7 +5,7 @@ This sample demonstrates how to use [Dynamsoft Camera Enhancer](https://www.dyna
 ![iOS web browser camera access](https://www.dynamsoft.com/codepool/img/2022/02/ios-web-browser-camera-access.jpg)
 
 ## Online Demo
-https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/camera_only
+https://yushulx.me/javascript-barcode-qr-code-scanner/examples/camera_only
 
 ## API Reference
 https://www.dynamsoft.com/camera-enhancer/docs/programming/javascript/api-reference/?ver=latest
