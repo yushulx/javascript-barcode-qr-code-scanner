@@ -1,0 +1,87 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build TypeScript",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "Watch TypeScript",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build:watch"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$tsc-watch"
+			],
+			"isBackground": true,
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"runOptions": {
+				"runOn": "folderOpen"
+			}
+		},
+		{
+			"label": "Start Dev Server",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"serve"
+			],
+			"group": "build",
+			"problemMatcher": [],
+			"isBackground": true,
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"label": "Start Development Environment",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"dev"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$tsc-watch"
+			],
+			"isBackground": true,
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "new",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"dependsOrder": "parallel"
+		}
+	]
+}

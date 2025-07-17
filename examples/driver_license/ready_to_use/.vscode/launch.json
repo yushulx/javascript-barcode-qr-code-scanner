@@ -1,0 +1,72 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug with Chrome",
+            "request": "launch",
+            "type": "chrome",
+            "url": "http://localhost:3000/debug",
+            "webRoot": "${workspaceFolder}",
+            "sourceMaps": true,
+            "sourceMapPathOverrides": {
+                "../src/*": "${workspaceFolder}/src/*",
+                "../dist/*": "${workspaceFolder}/dist/*"
+            },
+            "preLaunchTask": "Start Development Environment",
+            "smartStep": true,
+            "skipFiles": [
+                "<node_internals>/**",
+                "node_modules/**"
+            ],
+            "trace": true
+        },
+        {
+            "name": "Debug Hello World Sample",
+            "request": "launch",
+            "type": "chrome",
+            "url": "http://localhost:3000/hello-world",
+            "webRoot": "${workspaceFolder}",
+            "sourceMaps": true,
+            "sourceMapPathOverrides": {
+                "../src/*": "${workspaceFolder}/src/*",
+                "../dist/*": "${workspaceFolder}/dist/*"
+            },
+            "preLaunchTask": "Start Dev Server",
+            "smartStep": true,
+            "skipFiles": [
+                "<node_internals>/**",
+                "node_modules/**"
+            ]
+        },
+        {
+            "name": "Debug with Edge",
+            "request": "launch",
+            "type": "msedge",
+            "url": "http://localhost:3000/debug",
+            "webRoot": "${workspaceFolder}",
+            "sourceMaps": true,
+            "sourceMapPathOverrides": {
+                "../src/*": "${workspaceFolder}/src/*",
+                "../dist/*": "${workspaceFolder}/dist/*"
+            },
+            "preLaunchTask": "Start Development Environment",
+            "smartStep": true,
+            "skipFiles": [
+                "<node_internals>/**",
+                "node_modules/**"
+            ]
+        },
+        {
+            "name": "Attach to Chrome",
+            "request": "attach",
+            "type": "chrome",
+            "port": 9222,
+            "webRoot": "${workspaceFolder}",
+            "sourceMaps": true,
+            "sourceMapPathOverrides": {
+                "../src/*": "${workspaceFolder}/src/*",
+                "../dist/*": "${workspaceFolder}/dist/*"
+            }
+        }
+    ]
+}
