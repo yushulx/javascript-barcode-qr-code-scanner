@@ -2,298 +2,425 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <meta name="description" content="Instantly Read PDF417 barcodes on Driver Licenses with Dynamsoft Barcode Reader." />
-  <meta name="keywords" content="read driver license barcode" />
-  <link rel="canonical" href="https://demo.dynamsoft.com/Samples/DBR/JS/use-case/read-a-drivers-license/index.html" />
-  <title>Dynamsoft Barcode Reader Sample - Read a Driver's License</title>
-  <link href="style.css" rel="stylesheet" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="description" content="Instantly Read PDF417 barcodes on Driver Licenses with Dynamsoft Barcode Reader.">
+  <meta name="keywords" content="read driver license barcode">
+  <title>Driver License PDF417 Scanner</title>
+  <link href="style.css" rel="stylesheet">
 </head>
 
 <body>
-  <span id="span-tip">Aim at the barcode on the driver's license.</span>
-  <h1>Read a Driver's License</h1>
-  <div id="message-container">
-    <em class="message-icon"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" p-id="3665" width="32"
-        height="32">
+  <div id="app">
+    <!-- Tip message -->
+    <div id="tip-message">Aim at the barcode on the driver's license.</div>
+
+    <!-- Main title -->
+    <h1>Driver License Scanner</h1>
+
+    <!-- Mode Switch Toggle -->
+    <div id="mode-switch-container" class="mode-switch">
+      <div class="mode-options">
+        <label class="mode-option active" data-mode="camera">
+          <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20">
+            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+            <path d="M2 6a2 2 0 0 1 2-2h3l1-1h6l1 1h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" />
+          </svg>
+          <span>Camera</span>
+        </label>
+        <label class="mode-option" data-mode="image">
+          <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M10 13l2 2 4-4" />
+          </svg>
+          <span>Upload</span>
+        </label>
+      </div>
+      <div class="mode-slider"></div>
+    </div>
+
+    <!-- Main scanning area -->
+    <div id="main-container">
+      <!-- Camera start button -->
+      <svg id="camera-start-btn" viewBox="0 0 2048 1792" aria-label="Start camera">
         <path
-          d="M544 789.333333h105.173333a10.666667 10.666667 0 0 0 10.666667-10.666666v-0.362667l-3.232-94.304a32 32 0 0 1 14.293333-27.765333C750.933333 603.189333 800 513.792 800 416c0-159.061333-128.938667-288-288-288S224 256.938667 224 416c0 97.813333 49.098667 187.232 129.141333 240.266667a32 32 0 0 1 14.314667 25.578666l3.338667 97.184a10.666667 10.666667 0 0 0 10.666666 10.304H480V572.693333l-76.64-81.429333a32 32 0 0 1 46.613333-43.861333l63.36 67.328 72.693334-68.661334a32 32 0 0 1 43.946666 46.528L544 573.792V789.333333z m320-373.333333a351.530667 351.530667 0 0 1-142.826667 283.146667l2.634667 76.96A74.666667 74.666667 0 0 1 649.173333 853.333333h-267.733333a74.666667 74.666667 0 0 1-74.624-72.106666l-2.784-81.194667A351.541333 351.541333 0 0 1 160 416C160 221.6 317.6 64 512 64s352 157.6 352 352zM416 960a32 32 0 0 1 0-64h192a32 32 0 0 1 0 64H416z"
-          p-id="3666" fill="#909399"></path>
+          d="M1024 672q119 0 203.5 84.5t84.5 203.5-84.5 203.5-203.5 84.5-203.5-84.5-84.5-203.5 84.5-203.5 203.5-84.5zm704-416q106 0 181 75t75 181v896q0 106-75 181t-181 75h-1408q-106 0-181-75t-75-181v-896q0-106 75-181t181-75h224l51-136q19-49 69.5-84.5t103.5-35.5h512q53 0 103.5 35.5t69.5 84.5l51 136h224zm-704 1152q185 0 316.5-131.5t131.5-316.5-131.5-316.5-316.5-131.5-316.5 131.5-131.5 316.5 131.5 316.5 316.5 131.5z" />
       </svg>
-    </em>
-    <div class="message-content">
-      <span>Can't get scanning result for a long time?</span>
-      <p>
-        Enable
-        <span class="api_highlight">singleFrameMode</span> to capture high-definition images with your camera (mobbile
-        device) or upload a local image for better recognition.
-        <a href="javascript:void(0)" id="toggle-scan-mode">Give it a try!</a>
-      </p>
-      <em class="close-button"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" p-id="4604" width="10"
-          height="10">
-          <path
-            d="M512 456.310154L94.247385 38.557538a39.542154 39.542154 0 0 0-55.689847 0 39.266462 39.266462 0 0 0 0 55.689847L456.310154 512 38.557538 929.752615a39.542154 39.542154 0 0 0 0 55.689847 39.266462 39.266462 0 0 0 55.689847 0L512 567.689846l417.752615 417.752616c15.163077 15.163077 40.290462 15.36 55.689847 0a39.266462 39.266462 0 0 0 0-55.689847L567.689846 512 985.442462 94.247385a39.542154 39.542154 0 0 0 0-55.689847 39.266462 39.266462 0 0 0-55.689847 0L512 456.310154z"
-            p-id="4605" fill="#c0c4cc"></path>
-        </svg>
-      </em>
+
+      <!-- Camera view container -->
+      <div id="camera-view"></div>
+    </div>
+
+    <!-- Results container -->
+    <div id="results" class="results-container">
+      <div class="results-header">
+        <span>Scan Results</span>
+        <button class="close-button" aria-label="Close results">
+          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+            <path
+              d="M512 456.310154L94.247385 38.557538a39.542154 39.542154 0 0 0-55.689847 0 39.266462 39.266462 0 0 0 0 55.689847L456.310154 512 38.557538 929.752615a39.542154 39.542154 0 0 0 0 55.689847 39.266462 39.266462 0 0 0 55.689847 0L512 567.689846l417.752615 417.752616c15.163077 15.163077 40.290462 15.36 55.689847 0a39.266462 39.266462 0 0 0 0-55.689847L567.689846 512 985.442462 94.247385a39.542154 39.542154 0 0 0 0-55.689847 39.266462 39.266462 0 0 0-55.689847 0L512 456.310154z"
+              fill="#ffffff" />
+          </svg>
+        </button>
+      </div>
+      <div class="results-body" id="results-content"></div>
     </div>
   </div>
-  <div id="main-container">
-    <svg id="svg-start" viewBox="0 0 2048 1792">
-      <path
-        d="M1024 672q119 0 203.5 84.5t84.5 203.5-84.5 203.5-203.5 84.5-203.5-84.5-84.5-203.5 84.5-203.5 203.5-84.5zm704-416q106 0 181 75t75 181v896q0 106-75 181t-181 75h-1408q-106 0-181-75t-75-181v-896q0-106 75-181t181-75h224l51-136q19-49 69.5-84.5t103.5-35.5h512q53 0 103.5 35.5t69.5 84.5l51 136h224zm-704 1152q185 0 316.5-131.5t131.5-316.5-131.5-316.5-316.5-131.5-316.5 131.5-131.5 316.5 131.5 316.5 316.5 131.5z" />
-    </svg>
-    <div id="camera-view-container"></div>
-  </div>
-  <div id="result-container">
-    <div class="result-header">
-      Results:
-      <em class="close-button" class="message_box_closebtn"><svg viewBox="0 0 1024 1024"
-          xmlns="http://www.w3.org/2000/svg" p-id="4604" width="16" height="16">
-          <path
-            d="M512 456.310154L94.247385 38.557538a39.542154 39.542154 0 0 0-55.689847 0 39.266462 39.266462 0 0 0 0 55.689847L456.310154 512 38.557538 929.752615a39.542154 39.542154 0 0 0 0 55.689847 39.266462 39.266462 0 0 0 55.689847 0L512 567.689846l417.752615 417.752616c15.163077 15.163077 40.290462 15.36 55.689847 0a39.266462 39.266462 0 0 0 0-55.689847L567.689846 512 985.442462 94.247385a39.542154 39.542154 0 0 0 0-55.689847 39.266462 39.266462 0 0 0-55.689847 0L512 456.310154z"
-            p-id="4605" fill="#ffffff"></path>
-        </svg>
-      </em>
-    </div>
-    <div class="result-body"></div>
-  </div>
+  <!-- Dynamsoft Barcode Reader SDK -->
   <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.0.3000/dist/dbr.bundle.js"></script>
+
   <script>
+    // Driver License Scanner Application
+    class DriverLicenseScanner {
+      constructor() {
+        this.components = {};
+        this.timers = {};
+        this.parsedInfo = {};
+        this.isInitialized = false;
+        this.currentMode = 'camera'; // Track current scanning mode
 
-    Dynamsoft.License.LicenseManager.initLicense("DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==");
+        // Initialize the application
+        this.init();
+        this.initSDK();
+      }      // Initialize Dynamsoft SDK and components
+      async initSDK() {
+        try {
+          // Set license
+          Dynamsoft.License.LicenseManager.initLicense("DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==");
 
-    // Preload "BarcodeReader" module for reading barcodes. It will save time on the initial decoding by skipping the module loading.
-    Dynamsoft.Core.CoreModule.loadWasm(["DBR", "DCP"]);
-    Dynamsoft.DCP.CodeParserModule.loadSpec("AAMVA_DL_ID");
-    Dynamsoft.DCP.CodeParserModule.loadSpec("AAMVA_DL_ID_WITH_MAG_STRIPE");
-    Dynamsoft.DCP.CodeParserModule.loadSpec("SOUTH_AFRICA_DL");
+          // Preload modules
+          await Dynamsoft.Core.CoreModule.loadWasm(["DBR", "DCP"]);
+          await Dynamsoft.DCP.CodeParserModule.loadSpec("AAMVA_DL_ID");
+          await Dynamsoft.DCP.CodeParserModule.loadSpec("AAMVA_DL_ID_WITH_MAG_STRIPE");
+          await Dynamsoft.DCP.CodeParserModule.loadSpec("SOUTH_AFRICA_DL");
 
-    const svgStart = document.querySelector("#svg-start");
-    const openImageBtn = document.querySelector("#btn-open-image");
-    const cameraViewContainer = document.querySelector("#camera-view-container");
+          // Create components
+          this.components.parser = await Dynamsoft.DCP.CodeParser.createInstance();
+          this.components.cameraView = await Dynamsoft.DCE.CameraView.createInstance();
+          this.components.cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(this.components.cameraView);
+          this.components.cvRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
 
-    // Result HTML Elements
-    const resultContainer = document.querySelector("#result-container");
-    const resultBody = document.querySelector(".result-body");
+          // Setup camera view
+          const cameraContainer = document.getElementById('camera-view');
+          cameraContainer.appendChild(this.components.cameraView.getUIElement());
 
-    // Message Box HTML Elements
-    const messageContainer = document.querySelector("#message-container");
+          // Configure router
+          this.components.cvRouter.setInput(this.components.cameraEnhancer);
 
-    // timer for displaying MessageBox
-    let messageDisplayTimer;
-    let oriParseInfo = {};
+          // Setup result filter
+          const filter = new Dynamsoft.Utility.MultiFrameResultCrossFilter();
+          filter.enableResultDeduplication("barcode", true);
+          await this.components.cvRouter.addResultFilter(filter);
 
-    const init = async () => {
-      const parser = await Dynamsoft.DCP.CodeParser.createInstance();
+          // Configure barcode settings
+          const settings = await this.components.cvRouter.getSimplifiedSettings("ReadDenseBarcodes");
+          settings.barcodeSettings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_PDF417;
+          await this.components.cvRouter.updateSettings("ReadDenseBarcodes", settings);
 
-      // Create a `CameraEnhancer` instance for camera control and a `CameraView` instance for UI control.
-      const cameraView = await Dynamsoft.DCE.CameraView.createInstance();
-      const cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
-      cameraViewContainer.append(cameraView.getUIElement()); // Get default UI and append it to DOM.
+          this.components.receiver = {
+            onCapturedResultReceived: (result) => this.handleCapturedResult(result),
+            onDecodedBarcodesReceived: (result) => this.handleBarcodeResult(result)
+          };
 
-      // Create a `CaptureVisionRouter` instance and set `CameraEnhancer` instance as its image source.
-      const cvRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
-      cvRouter.setInput(cameraEnhancer);
-
-      // Filter out unchecked and duplicate results.
-      const filter = new Dynamsoft.Utility.MultiFrameResultCrossFilter();
-      // Filter out duplicate barcodes within 3 seconds.
-      filter.enableResultDeduplication("barcode", true);
-      await cvRouter.addResultFilter(filter);
-
-      // Define a callback for results.
-      cvRouter.addResultReceiver({
-        // callback in every frame
-        onCapturedResultReceived: (result) => {
-          if (cameraEnhancer.singleFrameMode === "disabled") {
-            return;
-          }
-          // Report no barcode in singleFrameMode
-          if (!result.items.some((item) => item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE)) {
-            resultBody.innerText = "No PDF417 Barcode Found!";
-            resultContainer.style.display = "block";
-            document.addEventListener("mousedown", clickToHide);
-          }
-        },
-        // callback only when barcode received
-        onDecodedBarcodesReceived: async (result) => {
-          if (!result.barcodeResultItems.length) return;
-
-          Dynamsoft.DCE.Feedback.beep();
-
-          messageContainer.style.display = "none";
-          clearTimeout(messageDisplayTimer);
-          const success = await extractResultAlert(result.barcodeResultItems[0].bytes);
-          if (success) {
-            cvRouter.stopCapturing();
-          }
-        },
-      });
-
-      let settings = await cvRouter.getSimplifiedSettings("ReadDenseBarcodes");
-      settings.barcodeSettings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_PDF417;
-      await cvRouter.updateSettings("ReadDenseBarcodes", settings);
-
-      return {
-        parser,
-        cameraView,
-        cameraEnhancer,
-        cvRouter,
-      };
-    };
-    const pInit = init();
-
-    // decode video from camera
-    svgStart.addEventListener("click", async () => {
-      document.querySelector("h1").style.display = "none";
-      svgStart.style.display = "none";
-      await switchToVideo();
-    });
-
-    document.querySelector("#result-container .close-button").addEventListener("click", closeResultAlert);
-
-    document.querySelector("#toggle-scan-mode").addEventListener("click", async () => {
-      document.querySelector("#span-tip").innerHTML =
-        "Click below to select a picture to read. <a href='javascript:void(0)' onclick='backToCameraMode()'>Back to camera mode</a>";
-
-      await switchToSingleFrameMode();
-      messageContainer.style.display = "none";
-    });
-
-    document.querySelector(".message-content .close-button").addEventListener("click", () => {
-      messageContainer.style.display = "none";
-    });
-
-    async function backToCameraMode() {
-      closeResultAlert();
-      document.querySelector("#span-tip").innerText = "Aim at the barcode on the driver's license.";
-
-      await switchToVideo();
-    }
-
-    async function switchToSingleFrameMode() {
-      const { cameraEnhancer, cvRouter } = await pInit;
-      cvRouter.stopCapturing();
-      cameraEnhancer.close();
-      cameraEnhancer.singleFrameMode = "image";
-      await cameraEnhancer.open();
-      await cvRouter.startCapturing("ReadDenseBarcodes");
-    }
-
-    async function switchToVideo() {
-      document.querySelector("#main-container").style.display = "block";
-      document.querySelector("#span-tip").innerText = "Aim at the barcode on the driver's license.";
-      document.querySelector("#span-tip").hidden = false;
-      cameraViewContainer.style.display = "block";
-
-      const { cameraEnhancer, cvRouter } = await pInit;
-      cvRouter.stopCapturing();
-      cameraEnhancer.close();
-      cameraEnhancer.singleFrameMode = "disabled";
-      await cameraEnhancer.open();
-      await cvRouter.startCapturing("ReadDenseBarcodes");
-
-      messageDisplayTimer = setTimeout(() => {
-        if (cameraEnhancer.singleFrameMode === "disabled") {
-          messageContainer.style.display = "flex";
+          this.isInitialized = true;
+          return true;
+        } catch (error) {
+          console.error('SDK initialization failed:', error);
+          alert('Failed to initialize barcode scanner: ' + error.message);
+          return false;
         }
-      }, 3000);
-    }
-
-    async function extractResultAlert(bytesToParse) {
-      function createNode(type, txt) {
-        let node = document.createElement(type);
-        if (txt) node.innerText = txt;
-        return node;
       }
 
-      try {
-        const { parser } = await pInit;
-        let parsedDLInfo = await parser.parse(bytesToParse);
-        if (parsedDLInfo.exception) return false;
-        parsedDLInfo = JSON.parse(parsedDLInfo.jsonString);
-        console.log(parsedDLInfo);
-        let resultShowNode = document.createElement("p");
-        oriParseInfo = {};
-        if (parsedDLInfo.CodeType === "AAMVA_DL_ID") {
-          for (let info of parsedDLInfo.ResultInfo) {
-            if (info.FieldName !== "commonSubfile") continue;
-            if (info.ChildFields) {
-              wrapResultObject(info.ChildFields);
+      // Initialize UI event handlers
+      initEventHandlers() {
+        const elements = {
+          startBtn: document.getElementById('camera-start-btn'),
+          closeResult: document.querySelector('#results .close-button'),
+          modeOptions: document.querySelectorAll('.mode-option'),
+          modeSwitch: document.getElementById('mode-switch-container')
+        };
+
+        elements.startBtn?.addEventListener('click', () => this.startScanning());
+        elements.closeResult?.addEventListener('click', () => this.closeResults());
+
+        // Mode switch handlers
+        elements.modeOptions.forEach(option => {
+          option.addEventListener('click', (e) => {
+            const mode = e.currentTarget.getAttribute('data-mode');
+            this.switchMode(mode);
+          });
+        });
+
+        // Back to camera mode link (keeping for backward compatibility)
+        window.backToCameraMode = () => this.backToCameraMode();
+      }
+
+      // Handle captured results (for single frame mode)
+      handleCapturedResult(result) {
+        if (this.components.cameraEnhancer.singleFrameMode === "disabled" || !this.components.cameraEnhancer.isOpen()) return;
+
+        const hasBarcodes = result.items.some(item =>
+          item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE
+        );
+
+        if (!hasBarcodes) {
+          this.showResults("No PDF417 Barcode Found!");
+        }
+      }
+
+      // Handle successful barcode detection
+      async handleBarcodeResult(result) {
+        if (!result.barcodeResultItems.length) return;
+
+        Dynamsoft.DCE.Feedback.beep();
+
+        const success = await this.parseDriverLicense(result.barcodeResultItems[0].bytes);
+        if (success) {
+          this.components.cvRouter.stopCapturing();
+        }
+      }
+
+      // Parse driver license information
+      async parseDriverLicense(bytesToParse) {
+        try {
+          const parsedResult = await this.components.parser.parse(bytesToParse);
+          if (parsedResult.exception) return false;
+
+          const dlInfo = JSON.parse(parsedResult.jsonString);
+          console.log('Parsed Driver License Info:', dlInfo);
+
+          this.parsedInfo = {};
+          this.extractLicenseFields(dlInfo);
+          this.displayResults();
+
+          return true;
+        } catch (error) {
+          console.error('Parsing error:', error);
+          alert('Failed to parse driver license: ' + error.message);
+          return false;
+        }
+      }
+
+      // Extract fields based on driver license type
+      extractLicenseFields(dlInfo) {
+        const { CodeType, ResultInfo } = dlInfo;
+
+        switch (CodeType) {
+          case "AAMVA_DL_ID":
+            this.extractAAMVAFields(ResultInfo, "commonSubfile");
+            break;
+          case "AAMVA_DL_ID_WITH_MAG_STRIPE":
+            this.extractAAMVAMagStripeFields(ResultInfo);
+            break;
+          case "SOUTH_AFRICA_DL":
+            this.extractSouthAfricaFields(ResultInfo);
+            break;
+          default:
+            console.warn('Unknown driver license type:', CodeType);
+        }
+      }
+
+      // Extract AAMVA standard fields
+      extractAAMVAFields(resultInfo, targetField) {
+        for (const info of resultInfo) {
+          if (info.FieldName === targetField && info.ChildFields) {
+            this.processChildFields(info.ChildFields);
+          }
+        }
+      }
+
+      // Extract AAMVA magnetic stripe fields
+      extractAAMVAMagStripeFields(resultInfo) {
+        for (const info of resultInfo) {
+          if (info.FieldName.includes("track") && info.ChildFields) {
+            this.processChildFields(info.ChildFields);
+          }
+        }
+      }
+
+      // Extract South Africa driver license fields
+      extractSouthAfricaFields(resultInfo) {
+        for (const info of resultInfo) {
+          this.parsedInfo[info.FieldName] = info.Value;
+          if (info.ChildFields) {
+            this.processChildFields(info.ChildFields);
+          }
+        }
+      }
+
+      // Recursively process child fields
+      processChildFields(childFields) {
+        const excludedFields = ["dataElementSeparator", "segmentTerminator", "subfile", "subfileType"];
+
+        for (const childField of childFields) {
+          for (const field of childField) {
+            if (!excludedFields.includes(field.FieldName)) {
+              this.parsedInfo[field.FieldName] = field.Value;
+            }
+            if (field.ChildFields) {
+              this.processChildFields(field.ChildFields);
             }
           }
-        } else if (parsedDLInfo.CodeType === "AAMVA_DL_ID_WITH_MAG_STRIPE") {
-          for (let info of parsedDLInfo.ResultInfo) {
-            if (info.FieldName.includes("track")) {
-              if (info.ChildFields) {
-                wrapResultObject(info.ChildFields);
-              }
-            }
-          }
-        } else if (parsedDLInfo.CodeType === "SOUTH_AFRICA_DL") {
-          for (let info of parsedDLInfo.ResultInfo) {
-            oriParseInfo[info.FieldName] = info.Value;
-            if (info.ChildFields) {
-              wrapResultObject(info.ChildFields);
-            }
-          }
         }
-        for (let o in oriParseInfo) {
-          if (oriParseInfo[o]) {
-            resultShowNode.appendChild(createNode("span", o));
-            resultShowNode.appendChild(createNode("br"));
-            resultShowNode.appendChild(createNode("strong", oriParseInfo[o]));
-            resultShowNode.appendChild(createNode("br"));
-            resultShowNode.appendChild(createNode("span", "------------------------------"));
-            resultShowNode.appendChild(createNode("br"));
-          }
-        }
-        resultBody.innerHTML = "";
-        resultBody.appendChild(resultShowNode);
-        resultContainer.style.display = "block";
-        document.addEventListener("mousedown", clickToHide);
-        return true;
-      } catch (ex) {
-        alert(ex.message);
-        return false;
       }
-    }
 
-    function wrapResultObject(childFields) {
-      for (let childField of childFields) {
-        for (let field of childField) {
-          if (!["dataElementSeparator", "segmentTerminator", "subfile", "subfileType"].includes(field.FieldName)) {
-            oriParseInfo[field.FieldName] = field.Value;
-          }
-          if (field.ChildFields) {
-            wrapResultObject(field.ChildFields);
+      // Display extracted information
+      displayResults() {
+        const resultsContainer = document.getElementById('results-content');
+        const resultHTML = Object.entries(this.parsedInfo)
+          .filter(([key, value]) => value)
+          .map(([key, value]) => `
+            <div class="result-item">
+              <label>${this.formatFieldName(key)}:</label>
+              <span>${value}</span>
+            </div>
+          `)
+          .join('');
+
+        resultsContainer.innerHTML = resultHTML || '<p>No information extracted</p>';
+        this.showResults();
+      }
+
+      // Format field names for display
+      formatFieldName(fieldName) {
+        return fieldName
+          .replace(/([A-Z])/g, ' $1')
+          .replace(/^./, str => str.toUpperCase())
+          .trim();
+      }
+
+      // Mode switching methods
+      switchMode(mode) {
+        if (this.currentMode === mode) return;
+
+        this.currentMode = mode;
+        this.updateModeUI();
+
+        // If scanner is already running, switch modes
+        if (this.isInitialized && this.components.cameraEnhancer) {
+          if (mode === 'camera') {
+            this.switchToVideoMode();
+          } else {
+            this.switchToSingleFrameMode();
           }
         }
       }
-    }
 
-    function clickToHide(e) {
-      if (e.target === document.body || e.target.id === "span-tip") {
-        closeResultAlert();
-        document.removeEventListener("click", arguments.callee);
+      updateModeUI() {
+        const modeSwitch = document.getElementById('mode-switch-container');
+        const modeOptions = document.querySelectorAll('.mode-option');
+        const tipMessage = document.getElementById('tip-message');
+
+        // Update active state
+        modeOptions.forEach(option => {
+          option.classList.toggle('active', option.getAttribute('data-mode') === this.currentMode);
+        });
+
+        // Update slider position
+        modeSwitch.setAttribute('data-active', this.currentMode);
+
+        // Update tip message based on mode
+        if (this.currentMode === 'camera') {
+          tipMessage.textContent = 'Aim at the barcode on the driver\'s license.';
+        } else {
+          tipMessage.textContent = 'Click below to select an image containing a driver license barcode.';
+        }
+      }
+
+      // UI Control Methods
+      async startScanning() {
+        if (!this.isInitialized) {
+          const success = await this.initSDK();
+          if (!success) return;
+        }
+
+        document.querySelector('h1').style.display = 'none';
+        document.getElementById('camera-start-btn').style.display = 'none';
+
+        // Start in the selected mode
+        if (this.currentMode === 'camera') {
+          await this.switchToVideoMode();
+        } else {
+          await this.switchToSingleFrameMode();
+        }
+      }
+
+      async switchToVideoMode() {
+        const elements = {
+          mainContainer: document.getElementById('main-container'),
+          tipMessage: document.getElementById('tip-message'),
+          cameraView: document.getElementById('camera-view')
+        };
+
+        elements.mainContainer.style.display = 'block';
+        elements.tipMessage.textContent = 'Aim at the barcode on the driver\'s license.';
+        elements.tipMessage.hidden = false;
+        elements.cameraView.style.display = 'block';
+
+        this.components.cvRouter.removeResultReceiver(this.components.receiver);
+        await this.components.cvRouter.stopCapturing();
+        await this.components.cameraEnhancer.close();
+        this.components.cameraEnhancer.singleFrameMode = "disabled";
+        await this.components.cameraEnhancer.open();
+        await this.components.cvRouter.startCapturing("ReadDenseBarcodes");
+        // Setup result receiver
+        this.components.cvRouter.addResultReceiver(this.components.receiver);
+      }
+
+      async switchToSingleFrameMode() {
+        this.components.cvRouter.removeResultReceiver(this.components.receiver);
+        await this.components.cvRouter.stopCapturing();
+        await this.components.cameraEnhancer.close();
+        this.components.cameraEnhancer.singleFrameMode = "image";
+        await this.components.cameraEnhancer.open();
+        await this.components.cvRouter.startCapturing("ReadDenseBarcodes");
+        // Setup result receiver
+        this.components.cvRouter.addResultReceiver(this.components.receiver);
+
+      }
+
+      async backToCameraMode() {
+        this.closeResults();
+        this.switchMode('camera');
+      }
+
+      // UI Display Methods
+      showResults(content = null) {
+        const resultsContainer = document.getElementById('results');
+        if (content) {
+          document.getElementById('results-content').innerHTML = `<p>${content}</p>`;
+        }
+        resultsContainer.style.display = 'block';
+        document.addEventListener('mousedown', this.handleClickToHide.bind(this));
+      }
+
+      closeResults() {
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('results-content').innerHTML = '';
+        document.removeEventListener('mousedown', this.handleClickToHide);
+
+        this.components.cvRouter?.startCapturing("ReadDenseBarcodes");
+      }
+
+      handleClickToHide(event) {
+        if (event.target === document.body || event.target.id === 'tip-message') {
+          this.closeResults();
+        }
+      }
+
+      // Initialize the application
+      async init() {
+        this.initEventHandlers();
+        this.updateModeUI(); // Set initial mode UI
+        console.log('Driver License Scanner initialized');
       }
     }
 
-    async function closeResultAlert() {
-      resultContainer.style.display = "none";
-      resultBody.innerText = "";
-      const { cameraEnhancer, cvRouter } = await pInit;
-      if (cameraEnhancer.singleFrameMode === "disabled") {
-        messageDisplayTimer = setTimeout(() => {
-          if (cameraEnhancer.singleFrameMode === "disabled") {
-            messageContainer.style.display = "flex";
-          }
-        }, 3000);
-      }
-      await cvRouter.startCapturing("ReadDenseBarcodes");
-    }
+    // Initialize the application when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      new DriverLicenseScanner();
+    });
   </script>
 </body>
 
