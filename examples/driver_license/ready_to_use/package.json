@@ -1,0 +1,79 @@
+{
+  "name": "dynamsoft-driver-license-scanner",
+  "version": "2.0.0",
+  "description": "Dynamsoft Driver License Scanner (DDLS) is a ready-to-use SDK for capturing and enhancing document images with automatic border detection, correction, and customizable workflows.",
+  "files": [
+    "/dist",
+    "/LICENSE"
+  ],
+  "sideEffects": true,
+  "main": "./dist/ddls.js",
+  "module": "./dist/ddls.no-content-bundle.esm.js",
+  "types": "./dist/ddls.d.ts",
+  "exports": {
+    "import": {
+      "types": "./dist/ddls.esm.d.ts",
+      "default": "./dist/ddls.no-content-bundle.esm.js"
+    },
+    "require": {
+      "types": "./dist/ddls.d.ts",
+      "default": "./dist/ddls.js"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "serve": "node dev-server/index.js",
+    "build": "rollup -c",
+    "build:production": "rollup -c --environment BUILD:production",
+    "build:dev": "rollup -c rollup.dev.config.mjs",
+    "build:watch": "rollup -c rollup.dev.config.mjs --watch",
+    "dev": "concurrently \"npm run build:watch\" \"npm run serve\"",
+    "dev:windows": "start npm run build:watch && npm run serve"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dynamsoft/document-scanner-javascript"
+  },
+  "keywords": [
+    "document scanning",
+    "js",
+    "javascript",
+    "pdf417",
+    "drivers",
+    "license"
+  ],
+  "author": {
+    "name": "Dynamsoft",
+    "url": "https://www.dynamsoft.com"
+  },
+  "maintainers": [
+    {
+      "name": "Dynamsoft",
+      "email": "support@dynamsoft.com"
+    }
+  ],
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://www.dynamsoft.com",
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/node": "^20.11.6",
+    "concurrently": "^9.2.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "formidable": "^3.5.2",
+    "rollup": "^4.9.5",
+    "rollup-plugin-dts": "^6.1.1",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "dynamsoft-capture-vision-bundle": "3.0.3001",
+    "dynamsoft-capture-vision-data": "1.0.1"
+  },
+  "publishConfig": {
+    "registry": "https://npm.scannerproxy.com:802/",
+    "tag": "latest"
+  }
+}

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dynamsoft Driver License Scanner - Hello World</title>
+  <script src="../dist/ddls.bundle.js"></script>
+</head>
+
+<body>
+  <h1 style="font-size: large">Dynamsoft Driver License Scanner</h1>
+  <div id="results"></div>
+
+  <script>
+    const resultContainer = document.querySelector("#results");
+
+    // Initialize the Dynamsoft Document Scanner
+    const driverLicenseScanner = new Dynamsoft.DriverLicenseScanner({
+      license: "YOUR_LICENSE_KEY_HERE",
+      scannerViewConfig: {
+        uiPath: "../dist/ddls.ui.html",
+      },
+      templateFilePath: "../dist/ddls.template.json",
+      workflowConfig: {
+        captureFrontImage: true,
+        captureBackImage: true,
+        readBarcode: true,
+      },
+    });
+    (async () => {
+      // Launch the scanner and wait for the result
+      const result = await driverLicenseScanner.launch();
+      console.log(result);
+
+      resultContainer.innerHTML = ""; // Clear placeholder content
+
+      // Clear the result container and display the scanned result as a canvas
+      Object.values(result).forEach((side) => {
+        if (side?._imageData) {
+          const canvas = side._imageData.toCanvas();
+          resultContainer.appendChild(canvas);
+        } else {
+          resultContainer.innerHTML = "<p>No image scanned. Please try again.</p>";
+        }
+      });
+    })();
+  </script>
+</body>
+
+</html>
