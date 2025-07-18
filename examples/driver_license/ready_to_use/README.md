@@ -2,6 +2,8 @@
 
 A complete TypeScript-based solution for scanning and processing driver licenses with automatic border detection, correction, and customizable workflows.
 
+https://github.com/user-attachments/assets/2e2576dc-c7e9-4c3a-a17d-8753f0edeb2b
+
 ## 🚀 Quick Start
 
 ### Prerequisites
