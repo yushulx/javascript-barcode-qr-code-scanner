@@ -455,8 +455,10 @@
         this.components.cvRouter.removeResultReceiver(this.components.receiver);
         await this.components.cvRouter.stopCapturing();
         await this.components.cameraEnhancer.close();
+        this.components.cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(this.components.cameraView);
         this.components.cameraEnhancer.singleFrameMode = "disabled";
         await this.components.cameraEnhancer.open();
+        this.components.cvRouter.setInput(this.components.cameraEnhancer);
         await this.components.cvRouter.startCapturing("ReadDenseBarcodes");
         // Setup result receiver
         this.components.cvRouter.addResultReceiver(this.components.receiver);
@@ -466,8 +468,10 @@
         this.components.cvRouter.removeResultReceiver(this.components.receiver);
         await this.components.cvRouter.stopCapturing();
         await this.components.cameraEnhancer.close();
+        this.components.cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(this.components.cameraView);
         this.components.cameraEnhancer.singleFrameMode = "image";
         await this.components.cameraEnhancer.open();
+        this.components.cvRouter.setInput(this.components.cameraEnhancer);
         await this.components.cvRouter.startCapturing("ReadDenseBarcodes");
         // Setup result receiver
         this.components.cvRouter.addResultReceiver(this.components.receiver);
