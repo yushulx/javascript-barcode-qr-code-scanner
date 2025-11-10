@@ -482,7 +482,7 @@ document.getElementById("file").onchange = async function () {
         }
         barcodeScanner = new Dynamsoft.BarcodeScanner({
             license: licenseKey,
-            scanMode: Dynamsoft.EnumScanMode.ReadBarcodes_ReadRateFirst,
+            scanMode: Dynamsoft.EnumScanMode.SM_MULTI_UNIQUE,
         });
     } catch (error) {
         console.error(error);

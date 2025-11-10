@@ -13,8 +13,9 @@
 
     floatingIcon.style.cssText = `
         position: fixed;
-        bottom: 20px;
+        top: 50%;
         right: 20px;
+        transform: translateY(-50%);
         width: 48px;
         height: 48px;
         cursor: pointer;
@@ -27,12 +28,12 @@
 
     // Hover effects
     floatingIcon.addEventListener('mouseenter', () => {
-        floatingIcon.style.transform = 'scale(1.1)';
+        floatingIcon.style.transform = 'translateY(-50%) scale(1.1)';
         floatingIcon.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.4)';
     });
 
     floatingIcon.addEventListener('mouseleave', () => {
-        floatingIcon.style.transform = 'scale(1)';
+        floatingIcon.style.transform = 'translateY(-50%) scale(1)';
         floatingIcon.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
     });
 
@@ -72,18 +73,19 @@
 
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
-            const iconSize = 60;
+            const iconSize = 48;
 
             // Keep within viewport bounds
             let newRight = viewportWidth - (e.clientX + iconSize / 2);
-            let newBottom = viewportHeight - (e.clientY + iconSize / 2);
+            let newTop = e.clientY - iconSize / 2;
 
             // Clamp values
             newRight = Math.max(10, Math.min(newRight, viewportWidth - iconSize - 10));
-            newBottom = Math.max(10, Math.min(newBottom, viewportHeight - iconSize - 10));
+            newTop = Math.max(10, Math.min(newTop, viewportHeight - iconSize - 10));
 
             floatingIcon.style.right = newRight + 'px';
-            floatingIcon.style.bottom = newBottom + 'px';
+            floatingIcon.style.top = newTop + 'px';
+            floatingIcon.style.transform = 'none'; // Remove centering transform when dragging
         }
     }
 
