@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Scanner Settings</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .settings-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .setting-group {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .setting-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .setting-info {
+            flex: 1;
+        }
+
+        .setting-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .setting-description {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+            margin-left: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 26px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #667eea;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(24px);
+        }
+
+        .status-message {
+            margin-top: 20px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .icon {
+            font-size: 20px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="settings-container">
+        <h1>⚙️ Settings</h1>
+        <p class="subtitle">Customize your barcode scanner experience</p>
+
+        <div class="setting-group">
+            <label class="setting-label" for="showFloatingIcon">
+                <div class="setting-info">
+                    <div class="setting-title">
+                        <span class="icon">📍</span>
+                        Show Floating Icon
+                    </div>
+                    <div class="setting-description">
+                        Display a floating icon on web pages to quickly reopen the scanner panel.
+                        You can also close it by clicking the × button on the icon.
+                    </div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="showFloatingIcon">
+                    <span class="slider"></span>
+                </label>
+            </label>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+
+        <a href="index.html" class="back-link">← Back to Scanner</a>
+    </div>
+
+    <script src="settings.js"></script>
+</body>
+
+</html>

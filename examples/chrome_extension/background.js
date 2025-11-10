@@ -29,15 +29,22 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 chrome.action.onClicked.addListener(async (tab) => {
     chrome.sidePanel.open({ windowId: tab.windowId });
 
-    // Inject floating icon into the active tab
-    try {
-        await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['floating-icon.js']
-        });
-    } catch (error) {
-        console.log('Could not inject floating icon:', error);
-    }
+    // Check if user wants to show floating icon
+    chrome.storage.local.get(['showFloatingIcon'], async (result) => {
+        const showIcon = result.showFloatingIcon !== false; // Default to true
+
+        if (showIcon) {
+            // Inject floating icon into the active tab
+            try {
+                await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    files: ['floating-icon.js']
+                });
+            } catch (error) {
+                console.log('Could not inject floating icon:', error);
+            }
+        }
+    });
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -174,8 +181,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     error: chrome.runtime.lastError.message
                 };
                 sendResponse(errorMsg);
-                // Also broadcast to side panel
-                chrome.runtime.sendMessage(errorMsg);
+                // Broadcast to side panel after delay (like context menu pattern)
+                setTimeout(() => {
+                    chrome.runtime.sendMessage(errorMsg);
+                }, 500);
                 return;
             }
 
@@ -215,8 +224,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             dataUrl: reader.result
                         };
                         sendResponse(resultMsg);
-                        // Broadcast to side panel
-                        chrome.runtime.sendMessage(resultMsg);
+                        // Send to side panel with delay (matching context menu pattern - 500ms)
+                        setTimeout(() => {
+                            chrome.runtime.sendMessage(resultMsg);
+                        }, 500);
                     };
                     reader.readAsDataURL(blob);
                 })
@@ -227,8 +238,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         error: error.message
                     };
                     sendResponse(errorMsg);
-                    // Broadcast to side panel
-                    chrome.runtime.sendMessage(errorMsg);
+                    // Send to side panel with delay
+                    setTimeout(() => {
+                        chrome.runtime.sendMessage(errorMsg);
+                    }, 500);
                 });
         });
 

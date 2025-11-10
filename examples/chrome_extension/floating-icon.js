@@ -5,45 +5,109 @@
         return;
     }
 
-    // Create floating icon
-    const floatingIcon = document.createElement('img');
-    floatingIcon.id = 'barcode-floating-icon';
-    floatingIcon.src = chrome.runtime.getURL('icons/icon48.png');
-    floatingIcon.title = 'Open Barcode Scanner';
-
-    floatingIcon.style.cssText = `
+    // Create container for icon and close button
+    const container = document.createElement('div');
+    container.id = 'barcode-floating-icon';
+    container.style.cssText = `
         position: fixed;
         top: 50%;
         right: 20px;
         transform: translateY(-50%);
+        z-index: 2147483646;
+        user-select: none;
+        width: 48px;
+        height: 48px;
+    `;
+
+    // Create floating icon
+    const floatingIcon = document.createElement('img');
+    floatingIcon.src = chrome.runtime.getURL('icons/icon48.png');
+    floatingIcon.title = 'Open Barcode Scanner';
+    floatingIcon.draggable = false; // Prevent browser drag behavior
+    floatingIcon.style.cssText = `
         width: 48px;
         height: 48px;
         cursor: pointer;
-        z-index: 2147483646;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         transition: transform 0.2s, box-shadow 0.2s;
-        user-select: none;
         border-radius: 8px;
+        display: block;
+        position: relative;
+        pointer-events: auto;
+        -webkit-user-drag: none;
+        user-drag: none;
     `;
+
+    // Create close button
+    const closeBtn = document.createElement('div');
+    closeBtn.innerHTML = '×';
+    closeBtn.title = 'Hide floating icon';
+    closeBtn.style.cssText = `
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 20px;
+        height: 20px;
+        background: #ff4444;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        line-height: 1;
+        font-family: Arial, sans-serif;
+        transition: all 0.2s;
+        z-index: 1;
+    `;
+
+    container.appendChild(floatingIcon);
+    container.appendChild(closeBtn);
 
     // Hover effects
     floatingIcon.addEventListener('mouseenter', () => {
-        floatingIcon.style.transform = 'translateY(-50%) scale(1.1)';
+        floatingIcon.style.transform = 'scale(1.1)';
         floatingIcon.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.4)';
     });
 
     floatingIcon.addEventListener('mouseleave', () => {
-        floatingIcon.style.transform = 'translateY(-50%) scale(1)';
+        floatingIcon.style.transform = 'scale(1)';
         floatingIcon.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
     });
 
+    closeBtn.addEventListener('mouseenter', () => {
+        closeBtn.style.background = '#ff0000';
+        closeBtn.style.transform = 'scale(1.1)';
+    });
+
+    closeBtn.addEventListener('mouseleave', () => {
+        closeBtn.style.background = '#ff4444';
+        closeBtn.style.transform = 'scale(1)';
+    });
+
     // Click to open side panel
-    floatingIcon.addEventListener('click', () => {
-        chrome.runtime.sendMessage({ action: 'openSidePanel' });
+    floatingIcon.addEventListener('click', (e) => {
+        if (!isDragging) {
+            chrome.runtime.sendMessage({ action: 'openSidePanel' });
+        }
+    });
+
+    // Close button handler
+    closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        // Save preference to hide floating icon
+        chrome.storage.local.set({ showFloatingIcon: false }, () => {
+            container.remove();
+        });
     });
 
     // Make it draggable
     let isDragging = false;
+    let hasDragged = false;
     let currentX;
     let currentY;
     let initialX;
@@ -51,23 +115,35 @@
     let xOffset = 0;
     let yOffset = 0;
 
-    floatingIcon.addEventListener('mousedown', dragStart);
+    container.addEventListener('mousedown', dragStart);
     document.addEventListener('mousemove', drag);
     document.addEventListener('mouseup', dragEnd);
 
     function dragStart(e) {
-        if (e.target === floatingIcon) {
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
-            isDragging = true;
+        if (e.target === closeBtn) {
+            return; // Don't drag when clicking close button
         }
+        e.preventDefault(); // Prevent default drag behavior (Google image search)
+        e.stopPropagation();
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+        isDragging = true;
+        hasDragged = false;
     }
 
     function drag(e) {
         if (isDragging) {
-            e.preventDefault();
+            e.preventDefault(); // Prevent default behavior during drag
+            e.stopPropagation();
+
             currentX = e.clientX - initialX;
             currentY = e.clientY - initialY;
+
+            // Check if actually dragged (moved more than 5px)
+            if (Math.abs(currentX - xOffset) > 5 || Math.abs(currentY - yOffset) > 5) {
+                hasDragged = true;
+            }
+
             xOffset = currentX;
             yOffset = currentY;
 
@@ -83,9 +159,9 @@
             newRight = Math.max(10, Math.min(newRight, viewportWidth - iconSize - 10));
             newTop = Math.max(10, Math.min(newTop, viewportHeight - iconSize - 10));
 
-            floatingIcon.style.right = newRight + 'px';
-            floatingIcon.style.top = newTop + 'px';
-            floatingIcon.style.transform = 'none'; // Remove centering transform when dragging
+            container.style.right = newRight + 'px';
+            container.style.top = newTop + 'px';
+            container.style.transform = 'none'; // Remove centering transform when dragging
         }
     }
 
@@ -94,9 +170,14 @@
             initialX = currentX;
             initialY = currentY;
             isDragging = false;
+
+            // Reset hasDragged after a short delay
+            setTimeout(() => {
+                hasDragged = false;
+            }, 100);
         }
     }
 
     // Add to page
-    document.body.appendChild(floatingIcon);
+    document.body.appendChild(container);
 })();

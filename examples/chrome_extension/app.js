@@ -20,6 +20,37 @@ const pageInfo = document.getElementById("pageInfo");
 const loginButton = document.getElementById("loginButton");
 const loginStatus = document.getElementById("loginStatus");
 const screenshotBtn = document.getElementById("screenshot");
+const settingsPanel = document.getElementById("settingsPanel");
+const openSettingsBtn = document.getElementById("openSettings");
+const closeSettingsBtn = document.getElementById("closeSettings");
+const showFloatingIconToggle = document.getElementById("showFloatingIconToggle");
+const userNameElement = document.querySelector(".user-name");
+
+// Settings Panel
+openSettingsBtn.addEventListener('click', () => {
+    settingsPanel.classList.add('open');
+});
+
+closeSettingsBtn.addEventListener('click', () => {
+    settingsPanel.classList.remove('open');
+});
+
+// Cart button handler
+const cartBtn = document.getElementById('cartBtn');
+cartBtn.addEventListener('click', () => {
+    window.open('https://www.dynamsoft.com/purchase-center/', '_blank');
+});
+
+// Load floating icon setting
+chrome.storage.local.get(['showFloatingIcon'], (result) => {
+    showFloatingIconToggle.checked = result.showFloatingIcon !== false;
+});
+
+// Save floating icon setting
+showFloatingIconToggle.addEventListener('change', () => {
+    const showIcon = showFloatingIconToggle.checked;
+    chrome.storage.local.set({ showFloatingIcon: showIcon });
+});
 
 // Listen for messages from background script (context menu, etc.)
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
@@ -186,7 +217,14 @@ async function requestTrialLicense(token, userId) {
                 }
 
                 const email = userInfoResponse.data.email;
+                const firstName = userInfoResponse.data.firstName;
                 console.log('User email:', email);
+                console.log('User first name:', firstName);
+
+                // Update user name in sidebar
+                if (firstName && userNameElement) {
+                    userNameElement.textContent = firstName;
+                }
 
                 loginStatus.textContent = 'Requesting trial license...';
 
@@ -679,3 +717,32 @@ dropZone.addEventListener('drop', async (e) => {
         fileInput.dispatchEvent(event);
     }
 });
+
+// Check for existing auth on page load
+(async function checkExistingAuth() {
+    try {
+        const token = await getCookie('DynamsoftToken');
+        const userId = await getCookie('DynamsoftUser');
+
+        if (token && userId) {
+            // User is already logged in, get user info to display name
+            chrome.runtime.sendMessage(
+                {
+                    action: 'getUserInfo',
+                    token: token,
+                    userId: userId
+                },
+                (userInfoResponse) => {
+                    if (userInfoResponse.success && userInfoResponse.data.firstName) {
+                        const firstName = userInfoResponse.data.firstName;
+                        if (userNameElement) {
+                            userNameElement.textContent = firstName;
+                        }
+                    }
+                }
+            );
+        }
+    } catch (error) {
+        console.log('No existing auth found:', error);
+    }
+})();
