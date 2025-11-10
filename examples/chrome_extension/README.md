@@ -2,6 +2,8 @@
 
 A powerful Chrome extension for scanning barcodes and QR codes from your camera, images, and PDF files using Dynamsoft's advanced barcode recognition technology.
 
+https://github.com/user-attachments/assets/838d1fd8-862b-4882-b8c4-a8bc14657b05
+
 ## Features
 
 ✅ **Camera Scanning** - Real-time barcode detection using your device camera  
