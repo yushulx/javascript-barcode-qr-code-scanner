@@ -666,56 +666,69 @@ screenshotBtn.addEventListener('click', async () => {
 
 // Drag and drop support
 const dropZone = document.body;
+const dropZoneElement = document.getElementById('dropZone');
 
-dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropZone.style.outline = '3px dashed #667eea';
-    dropZone.style.outlineOffset = '-10px';
-    dropZone.style.backgroundColor = 'rgba(102, 126, 234, 0.05)';
-});
+// Handle drag events on both body and drop zone element
+[dropZone, dropZoneElement].forEach(element => {
+    element.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.outline = '3px dashed #667eea';
+        dropZone.style.outlineOffset = '-10px';
+        dropZone.style.backgroundColor = 'rgba(102, 126, 234, 0.05)';
+        if (dropZoneElement) {
+            dropZoneElement.classList.add('drag-over');
+        }
+    });
 
-dropZone.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Only remove highlight if we're leaving the body entirely
-    if (e.target === dropZone) {
+    element.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Only remove highlight if we're leaving the body entirely
+        if (e.target === dropZone || e.target === dropZoneElement) {
+            dropZone.style.outline = '';
+            dropZone.style.outlineOffset = '';
+            dropZone.style.backgroundColor = '';
+            if (dropZoneElement) {
+                dropZoneElement.classList.remove('drag-over');
+            }
+        }
+    });
+
+    element.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Remove highlight
         dropZone.style.outline = '';
         dropZone.style.outlineOffset = '';
         dropZone.style.backgroundColor = '';
-    }
-});
-
-dropZone.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Remove highlight
-    dropZone.style.outline = '';
-    dropZone.style.outlineOffset = '';
-    dropZone.style.backgroundColor = '';
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        const file = files[0];
-
-        // Check if it's an image or PDF
-        const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'application/pdf'];
-        if (!validTypes.includes(file.type)) {
-            alert('Please drop an image or PDF file');
-            return;
+        if (dropZoneElement) {
+            dropZoneElement.classList.remove('drag-over');
         }
 
-        // Trigger the file input with the dropped file
-        const fileInput = document.getElementById('file');
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        fileInput.files = dataTransfer.files;
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
 
-        // Trigger the file change event
-        const event = new Event('change', { bubbles: true });
-        fileInput.dispatchEvent(event);
-    }
+            // Check if it's an image or PDF
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'application/pdf'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please drop an image or PDF file');
+                return;
+            }
+
+            // Trigger the file input with the dropped file
+            const fileInput = document.getElementById('file');
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+
+            // Trigger the file change event
+            const event = new Event('change', { bubbles: true });
+            fileInput.dispatchEvent(event);
+        }
+    });
 });
 
 // Check for existing auth on page load

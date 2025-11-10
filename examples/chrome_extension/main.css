@@ -190,6 +190,55 @@ h1 {
     left: 0;
 }
 
+/* Drag and Drop Zone */
+.drop-zone {
+    width: 100%;
+    padding: 30px 20px;
+    margin: 15px 0;
+    border: 2px dashed rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-align: center;
+}
+
+.drop-zone:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.drop-zone.drag-over {
+    border-color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+    border-style: solid;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.drop-zone-content {
+    pointer-events: none;
+}
+
+.drop-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.drop-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.drop-subtext {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
 #divScanner {
     border-radius: 12px;
     transition: all 0.3s ease;
