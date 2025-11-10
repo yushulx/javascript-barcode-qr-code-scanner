@@ -1,11 +1,56 @@
 // Background service worker for handling CORS-restricted API calls
 
+// Create context menu for image decoding
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.contextMenus.create({
+        id: 'decodeImage',
+        title: 'Scan barcode from image',
+        contexts: ['image']
+    });
+});
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === 'decodeImage') {
+        // Open side panel first
+        chrome.sidePanel.open({ windowId: tab.windowId });
+
+        // Send the image URL to the side panel
+        setTimeout(() => {
+            chrome.runtime.sendMessage({
+                action: 'decodeImageUrl',
+                imageUrl: info.srcUrl
+            });
+        }, 500); // Small delay to ensure side panel is ready
+    }
+});
+
 // Open side panel when extension icon is clicked
-chrome.action.onClicked.addListener((tab) => {
+chrome.action.onClicked.addListener(async (tab) => {
     chrome.sidePanel.open({ windowId: tab.windowId });
+
+    // Inject floating icon into the active tab
+    try {
+        await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['floating-icon.js']
+        });
+    } catch (error) {
+        console.log('Could not inject floating icon:', error);
+    }
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'openSidePanel') {
+        // Handle floating icon click to open side panel
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]) {
+                chrome.sidePanel.open({ windowId: tabs[0].windowId });
+            }
+        });
+        return;
+    }
+
     if (request.action === 'getUserInfo') {
         // Get user info from Dynamsoft API
         fetch('https://www.dynamsoft.com/api-common/Api/User/Info', {

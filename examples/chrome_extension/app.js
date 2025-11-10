@@ -21,6 +21,89 @@ const loginButton = document.getElementById("loginButton");
 const loginStatus = document.getElementById("loginStatus");
 const screenshotBtn = document.getElementById("screenshot");
 
+// Listen for messages from background script (context menu, etc.)
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    if (request.action === 'decodeImageUrl') {
+        decodeImageFromUrl(request.imageUrl);
+    } else if (request.action === 'screenshotResult') {
+        // Handle screenshot result
+        if (request.success && request.dataUrl) {
+            try {
+                // Convert data URL to blob
+                const fetchResponse = await fetch(request.dataUrl);
+                const blob = await fetchResponse.blob();
+
+                // Create a File object from the blob
+                const file = new File([blob], 'screenshot.png', { type: 'image/png' });
+
+                // Trigger the file input change event with the screenshot file
+                const fileInput = document.getElementById('file');
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+
+                // Trigger the file change event to process the screenshot
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+
+            } catch (error) {
+                console.error('Error processing screenshot:', error);
+                resultArea.value = `Error processing screenshot: ${error.message}`;
+                toggleLoading(false);
+            }
+        } else if (request.cancelled) {
+            console.log('Screenshot cancelled:', request.reason);
+        } else {
+            console.error('Screenshot error:', request.error || request.reason);
+            if (request.error) {
+                resultArea.value = `Error: ${request.error}`;
+            }
+        }
+    }
+});
+
+// Function to decode image from URL (context menu)
+async function decodeImageFromUrl(imageUrl) {
+    // Check if license exists and is valid
+    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
+    if (!licenseKey || !storedExpiry) {
+        alert('⚠️ No valid license. Please login to get a trial license first.');
+        return;
+    }
+
+    const expiryDate = new Date(storedExpiry);
+    const now = new Date();
+    if (expiryDate <= now) {
+        alert('⚠️ Your license has expired. Please login again to renew your trial license.');
+        loginStatus.textContent = '⚠️ License expired. Please login again.';
+        loginButton.style.display = 'block';
+        return;
+    }
+
+    try {
+        toggleLoading(true);
+
+        // Fetch the image
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const file = new File([blob], 'context-menu-image.jpg', { type: blob.type });
+
+        // Trigger the file input with the image
+        const fileInput = document.getElementById('file');
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+
+        // Trigger the file change event
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
+    } catch (error) {
+        console.error('Error decoding image from URL:', error);
+        resultArea.value = `Error: ${error.message}`;
+        toggleLoading(false);
+    }
+}
+
 function toggleLoading(isLoading) {
     if (isLoading) {
         document.getElementById("loading-indicator").style.display = "flex";
@@ -531,51 +614,7 @@ screenshotBtn.addEventListener('click', async () => {
         // Get the active tab
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-        // Set up message listener for screenshot result BEFORE injecting script
-        const messageHandler = async (request, sender, sendResponse) => {
-            if (request.action === 'screenshotResult') {
-                // Remove this listener after handling
-                chrome.runtime.onMessage.removeListener(messageHandler);
-
-                if (request.success && request.dataUrl) {
-                    try {
-                        // Convert data URL to blob
-                        const fetchResponse = await fetch(request.dataUrl);
-                        const blob = await fetchResponse.blob();
-
-                        // Create a File object from the blob
-                        const file = new File([blob], 'screenshot.png', { type: 'image/png' });
-
-                        // Trigger the file input change event with the screenshot file
-                        const fileInput = document.getElementById('file');
-                        const dataTransfer = new DataTransfer();
-                        dataTransfer.items.add(file);
-                        fileInput.files = dataTransfer.files;
-
-                        // Trigger the file change event to process the screenshot
-                        const event = new Event('change', { bubbles: true });
-                        fileInput.dispatchEvent(event);
-
-                    } catch (error) {
-                        console.error('Error processing screenshot:', error);
-                        resultArea.value = `Error processing screenshot: ${error.message}`;
-                        toggleLoading(false);
-                    }
-                } else if (request.cancelled) {
-                    console.log('Screenshot cancelled:', request.reason);
-                } else {
-                    console.error('Screenshot error:', request.error || request.reason);
-                    if (request.error) {
-                        resultArea.value = `Error: ${request.error}`;
-                    }
-                }
-            }
-        };
-
-        // Add the message listener FIRST
-        chrome.runtime.onMessage.addListener(messageHandler);
-
-        // Then inject the screenshot selector script
+        // Inject the screenshot selector script
         await chrome.scripting.executeScript({
             target: { tabId: tab.id },
             files: ['screenshot-selector.js']
@@ -612,29 +651,29 @@ dropZone.addEventListener('dragleave', (e) => {
 dropZone.addEventListener('drop', async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Remove highlight
     dropZone.style.outline = '';
     dropZone.style.outlineOffset = '';
     dropZone.style.backgroundColor = '';
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
         const file = files[0];
-        
+
         // Check if it's an image or PDF
         const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'application/pdf'];
         if (!validTypes.includes(file.type)) {
             alert('Please drop an image or PDF file');
             return;
         }
-        
+
         // Trigger the file input with the dropped file
         const fileInput = document.getElementById('file');
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
         fileInput.files = dataTransfer.files;
-        
+
         // Trigger the file change event
         const event = new Event('change', { bubbles: true });
         fileInput.dispatchEvent(event);

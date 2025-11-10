@@ -20,7 +20,8 @@
         "activeTab",
         "tabs",
         "scripting",
-        "sidePanel"
+        "sidePanel",
+        "contextMenus"
     ],
     "host_permissions": [
         "https://www.dynamsoft.com/*",
@@ -36,7 +37,8 @@
         {
             "resources": [
                 "scanner.html",
-                "scanner.js"
+                "scanner.js",
+                "icons/icon48.png"
             ],
             "matches": [
                 "<all_urls>"
