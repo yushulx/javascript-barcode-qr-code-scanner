@@ -1,5 +1,10 @@
 // Background service worker for handling CORS-restricted API calls
 
+// Open side panel when extension icon is clicked
+chrome.action.onClicked.addListener((tab) => {
+    chrome.sidePanel.open({ windowId: tab.windowId });
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'getUserInfo') {
         // Get user info from Dynamsoft API
@@ -110,6 +115,91 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({ windowId: window.id });
         });
 
+        return true;
+    }
+
+    if (request.action === 'captureScreenshot') {
+        // Capture the visible tab and crop to selection
+        chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+            if (chrome.runtime.lastError) {
+                console.error('Screenshot error:', chrome.runtime.lastError);
+                const errorMsg = {
+                    action: 'screenshotResult',
+                    success: false,
+                    error: chrome.runtime.lastError.message
+                };
+                sendResponse(errorMsg);
+                // Also broadcast to side panel
+                chrome.runtime.sendMessage(errorMsg);
+                return;
+            }
+
+            // Use fetch and createImageBitmap instead of Image (not available in service workers)
+            fetch(dataUrl)
+                .then(res => res.blob())
+                .then(blob => createImageBitmap(blob))
+                .then(bitmap => {
+                    const canvas = new OffscreenCanvas(
+                        request.selection.width * request.selection.devicePixelRatio,
+                        request.selection.height * request.selection.devicePixelRatio
+                    );
+                    const ctx = canvas.getContext('2d');
+
+                    // Draw the cropped portion
+                    ctx.drawImage(
+                        bitmap,
+                        request.selection.left * request.selection.devicePixelRatio,
+                        request.selection.top * request.selection.devicePixelRatio,
+                        request.selection.width * request.selection.devicePixelRatio,
+                        request.selection.height * request.selection.devicePixelRatio,
+                        0,
+                        0,
+                        request.selection.width * request.selection.devicePixelRatio,
+                        request.selection.height * request.selection.devicePixelRatio
+                    );
+
+                    // Convert to blob and then to data URL
+                    return canvas.convertToBlob({ type: 'image/png' });
+                })
+                .then(blob => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const resultMsg = {
+                            action: 'screenshotResult',
+                            success: true,
+                            dataUrl: reader.result
+                        };
+                        sendResponse(resultMsg);
+                        // Broadcast to side panel
+                        chrome.runtime.sendMessage(resultMsg);
+                    };
+                    reader.readAsDataURL(blob);
+                })
+                .catch(error => {
+                    const errorMsg = {
+                        action: 'screenshotResult',
+                        success: false,
+                        error: error.message
+                    };
+                    sendResponse(errorMsg);
+                    // Broadcast to side panel
+                    chrome.runtime.sendMessage(errorMsg);
+                });
+        });
+
+        return true;
+    }
+
+    if (request.action === 'screenshotCancelled') {
+        // User cancelled screenshot selection - forward to side panel
+        const cancelMsg = {
+            action: 'screenshotResult',
+            success: false,
+            cancelled: true,
+            reason: request.reason
+        };
+        sendResponse(cancelMsg);
+        chrome.runtime.sendMessage(cancelMsg);
         return true;
     }
 });

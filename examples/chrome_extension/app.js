@@ -19,24 +19,7 @@ const nextPageBtn = document.getElementById("nextPage");
 const pageInfo = document.getElementById("pageInfo");
 const loginButton = document.getElementById("loginButton");
 const loginStatus = document.getElementById("loginStatus");
-
-function resizeScanner() {
-    const isMobile = window.innerWidth <= 768;
-    if (isMobile) {
-        divScanner.style.width = "95vw";
-        divScanner.style.height = "40vh";
-        resultArea.style.width = "95vw";
-        imageContainer.style.width = "95vw";
-    } else {
-        divScanner.style.width = Math.min(window.innerWidth * 0.6, 800) + "px";
-        divScanner.style.height = window.innerHeight * 0.5 + "px";
-        resultArea.style.width = Math.min(window.innerWidth * 0.6, 800) + "px";
-        imageContainer.style.width = Math.min(window.innerWidth * 0.6, 800) + "px";
-    }
-}
-
-window.addEventListener("resize", resizeScanner);
-resizeScanner();
+const screenshotBtn = document.getElementById("screenshot");
 
 function toggleLoading(isLoading) {
     if (isLoading) {
@@ -525,3 +508,135 @@ async function processFile(fileToProcess) {
         reader.readAsArrayBuffer(fileToProcess);
     });
 }
+
+// Screenshot button handler
+screenshotBtn.addEventListener('click', async () => {
+    // Check if license exists and is valid
+    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
+    if (!licenseKey || !storedExpiry) {
+        alert('⚠️ No valid license. Please login to get a trial license first.');
+        return;
+    }
+
+    const expiryDate = new Date(storedExpiry);
+    const now = new Date();
+    if (expiryDate <= now) {
+        alert('⚠️ Your license has expired. Please login again to renew your trial license.');
+        loginStatus.textContent = '⚠️ License expired. Please login again.';
+        loginButton.style.display = 'block';
+        return;
+    }
+
+    try {
+        // Get the active tab
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+        // Set up message listener for screenshot result BEFORE injecting script
+        const messageHandler = async (request, sender, sendResponse) => {
+            if (request.action === 'screenshotResult') {
+                // Remove this listener after handling
+                chrome.runtime.onMessage.removeListener(messageHandler);
+
+                if (request.success && request.dataUrl) {
+                    try {
+                        // Convert data URL to blob
+                        const fetchResponse = await fetch(request.dataUrl);
+                        const blob = await fetchResponse.blob();
+
+                        // Create a File object from the blob
+                        const file = new File([blob], 'screenshot.png', { type: 'image/png' });
+
+                        // Trigger the file input change event with the screenshot file
+                        const fileInput = document.getElementById('file');
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        fileInput.files = dataTransfer.files;
+
+                        // Trigger the file change event to process the screenshot
+                        const event = new Event('change', { bubbles: true });
+                        fileInput.dispatchEvent(event);
+
+                    } catch (error) {
+                        console.error('Error processing screenshot:', error);
+                        resultArea.value = `Error processing screenshot: ${error.message}`;
+                        toggleLoading(false);
+                    }
+                } else if (request.cancelled) {
+                    console.log('Screenshot cancelled:', request.reason);
+                } else {
+                    console.error('Screenshot error:', request.error || request.reason);
+                    if (request.error) {
+                        resultArea.value = `Error: ${request.error}`;
+                    }
+                }
+            }
+        };
+
+        // Add the message listener FIRST
+        chrome.runtime.onMessage.addListener(messageHandler);
+
+        // Then inject the screenshot selector script
+        await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['screenshot-selector.js']
+        });
+
+    } catch (error) {
+        console.error('Screenshot error:', error);
+        alert(`Error: ${error.message}. Make sure you're on a regular web page, not chrome:// or extension pages.`);
+    }
+});
+
+// Drag and drop support
+const dropZone = document.body;
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.style.outline = '3px dashed #667eea';
+    dropZone.style.outlineOffset = '-10px';
+    dropZone.style.backgroundColor = 'rgba(102, 126, 234, 0.05)';
+});
+
+dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only remove highlight if we're leaving the body entirely
+    if (e.target === dropZone) {
+        dropZone.style.outline = '';
+        dropZone.style.outlineOffset = '';
+        dropZone.style.backgroundColor = '';
+    }
+});
+
+dropZone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Remove highlight
+    dropZone.style.outline = '';
+    dropZone.style.outlineOffset = '';
+    dropZone.style.backgroundColor = '';
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        
+        // Check if it's an image or PDF
+        const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'application/pdf'];
+        if (!validTypes.includes(file.type)) {
+            alert('Please drop an image or PDF file');
+            return;
+        }
+        
+        // Trigger the file input with the dropped file
+        const fileInput = document.getElementById('file');
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+        
+        // Trigger the file change event
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
+    }
+});

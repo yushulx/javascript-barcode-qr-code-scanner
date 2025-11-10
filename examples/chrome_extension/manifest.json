@@ -9,17 +9,18 @@
         "128": "icons/icon128.png"
     },
     "action": {
-        "default_popup": "index.html",
-        "default_title": "Barcode Scanner",
-        "default_icon": {
-            "16": "icons/icon16.png",
-            "48": "icons/icon48.png",
-            "128": "icons/icon128.png"
-        }
+        "default_title": "Barcode Scanner"
+    },
+    "side_panel": {
+        "default_path": "index.html"
     },
     "permissions": [
         "storage",
-        "cookies"
+        "cookies",
+        "activeTab",
+        "tabs",
+        "scripting",
+        "sidePanel"
     ],
     "host_permissions": [
         "https://www.dynamsoft.com/*",

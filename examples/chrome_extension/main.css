@@ -1,9 +1,9 @@
-/* Chrome Extension Popup Specific Styles */
+/* Side Panel Styles */
 html,
 body {
-    width: 600px;
-    min-height: 600px;
-    max-height: 600px;
+    width: 100%;
+    min-width: 450px;
+    min-height: 100vh;
     overflow-y: auto;
 }
 
@@ -11,10 +11,10 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: top;
+    justify-content: flex-start;
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    padding: 15px 10px;
+    padding: 20px 15px;
     box-sizing: border-box;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
@@ -35,42 +35,47 @@ h1 {
     justify-content: center;
     margin-bottom: 15px;
     width: 100%;
-    max-width: 580px;
+    flex-wrap: nowrap;
 }
 
 #scan,
-.file-label {
-    padding: 12px 24px;
-    font-size: 16px;
-    width: 150px;
-    height: 45px;
+.file-label,
+#screenshot {
+    padding: 0;
+    font-size: 28px;
+    width: 60px;
+    height: 60px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
     font-weight: 600;
     transition: all 0.3s ease;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     text-align: center;
-    line-height: 21px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 #scan:hover,
-.file-label:hover {
+.file-label:hover,
+#screenshot:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
 #scan:active,
-.file-label:active {
+.file-label:active,
+#screenshot:active {
     transform: translateY(0);
 }
 
 .file-label {
     position: relative;
-    display: inline-block;
 }
 
 #file {
@@ -88,8 +93,7 @@ h1 {
     transition: all 0.3s ease;
     position: relative;
     width: 100%;
-    max-width: 580px;
-    height: 350px;
+    height: 400px;
     background: white;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     overflow: hidden;
@@ -102,13 +106,12 @@ h1 {
 }
 
 #result {
-    height: 150px;
+    height: 200px;
     margin-top: 15px;
     border: none;
     font-size: 12px;
     resize: vertical;
     width: 100%;
-    max-width: 580px;
     box-sizing: border-box;
     padding: 12px;
     border-radius: 12px;
@@ -127,7 +130,6 @@ h1 {
     flex-wrap: wrap;
     margin-bottom: 20px;
     width: 100%;
-    max-width: 900px;
     text-align: center;
     background: rgba(255, 255, 255, 0.95);
     padding: 16px;
