@@ -2,6 +2,8 @@
 
 A modern, responsive web application for scanning and extracting information from driver license **PDF417** barcodes using the [Dynamsoft Barcode Reader SDK](https://www.npmjs.com/package/dynamsoft-barcode-reader-bundle).
 
+https://github.com/user-attachments/assets/1a83b7fa-a28b-419c-b9d3-cddaceb16918
+
 ## Features
 
 - **PDF417 Barcode Recognition**: Specifically optimized for driver license barcodes
