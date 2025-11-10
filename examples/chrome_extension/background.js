@@ -72,7 +72,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         })
             .then(response => response.json())
             .then(data => {
-                console.log('User info response:', data);
+                // console.log('User info response:', data);
                 if (data.code === 0) {
                     const briefCompany = data.data.briefCompanys && data.data.briefCompanys.length > 0
                         ? data.data.briefCompanys[0]

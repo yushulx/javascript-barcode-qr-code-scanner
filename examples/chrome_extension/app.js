@@ -243,9 +243,6 @@ async function requestTrialLicense(token, userId) {
                             const expirationDate = new Date(response.data.data.expirationDate);
                             const now = new Date();
 
-                            console.log('License key obtained:', licenseKey);
-                            console.log('Expiration date:', expirationDate);
-
                             // Check if license is already expired
                             if (expirationDate <= now) {
                                 loginStatus.textContent = '⚠️ License expired';
@@ -254,8 +251,7 @@ async function requestTrialLicense(token, userId) {
                                 return;
                             }
 
-                            // Store license key in localStorage
-                            localStorage.setItem('dynamsoft_license_key', licenseKey);
+                            // DON'T store license key - store only expiration date for reference
                             localStorage.setItem('dynamsoft_license_expiry', response.data.data.expirationDate);
 
                             // Activate SDK automatically
@@ -330,37 +326,24 @@ loginButton.addEventListener('click', () => {
 
 // Check for existing license on page load
 window.addEventListener('load', async () => {
-    const storedLicense = localStorage.getItem('dynamsoft_license_key');
     const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
 
-    if (storedLicense) {
-        licenseKey = storedLicense;
+    if (storedExpiry) {
         const expiryDate = new Date(storedExpiry);
         const now = new Date();
 
         if (expiryDate > now) {
-            // License is still valid
-            try {
-                await activateSDK(licenseKey);
-                loginButton.style.display = 'none';
+            // License might still be valid - try to get fresh license with existing auth
+            const token = await getCookie('DynamsoftToken');
+            const userId = await getCookie('DynamsoftUser');
 
-                // Show days remaining
-                const daysRemaining = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
-                loginStatus.textContent = `✓ Licensed (${daysRemaining} days left)`;
-
-                // Warn if less than 3 days remaining
-                if (daysRemaining <= 3) {
-                    loginStatus.textContent = `⚠️ License expires in ${daysRemaining} days`;
-                }
-            } catch (error) {
-                console.error('Failed to activate with stored license:', error);
-                localStorage.removeItem('dynamsoft_license_key');
-                localStorage.removeItem('dynamsoft_license_expiry');
-                loginStatus.textContent = 'License activation failed. Please login again.';
+            if (token && userId) {
+                // Re-request license using existing auth tokens
+                await requestTrialLicense(decodeURIComponent(token), decodeURIComponent(userId));
+                return;
             }
         } else {
             // License expired
-            localStorage.removeItem('dynamsoft_license_key');
             localStorage.removeItem('dynamsoft_license_expiry');
             loginStatus.textContent = '⚠️ License expired. Please login again.';
         }
@@ -738,24 +721,15 @@ const dropZoneElement = document.getElementById('dropZone');
         const userId = await getCookie('DynamsoftUser');
 
         if (token && userId) {
-            // User is already logged in, get user info to display name
-            chrome.runtime.sendMessage(
-                {
-                    action: 'getUserInfo',
-                    token: token,
-                    userId: userId
-                },
-                (userInfoResponse) => {
-                    if (userInfoResponse.success && userInfoResponse.data.firstName) {
-                        const firstName = userInfoResponse.data.firstName;
-                        if (userNameElement) {
-                            userNameElement.textContent = firstName;
-                        }
-                    }
-                }
-            );
+            // User is already logged in - hide login button and request license
+            loginButton.style.display = 'none';
+            loginStatus.textContent = 'Restoring session...';
+
+            // Request trial license directly
+            await requestTrialLicense(decodeURIComponent(token), decodeURIComponent(userId));
         }
     } catch (error) {
         console.log('No existing auth found:', error);
+        loginStatus.textContent = 'Please login to continue';
     }
 })();
