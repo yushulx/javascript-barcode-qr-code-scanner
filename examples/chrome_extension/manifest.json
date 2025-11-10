@@ -1,0 +1,45 @@
+{
+    "manifest_version": 3,
+    "name": "Barcode & QR Code Scanner",
+    "version": "1.0.0",
+    "description": "Scan barcodes and QR codes from images, PDFs, and camera using Dynamsoft SDK",
+    "icons": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    },
+    "action": {
+        "default_popup": "index.html",
+        "default_title": "Barcode Scanner",
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
+            "128": "icons/icon128.png"
+        }
+    },
+    "permissions": [
+        "storage",
+        "cookies"
+    ],
+    "host_permissions": [
+        "https://www.dynamsoft.com/*",
+        "https://*.dynamsoft.com/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_security_policy": {
+        "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "scanner.html",
+                "scanner.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
+}
