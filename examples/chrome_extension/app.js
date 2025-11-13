@@ -400,15 +400,18 @@ function displayPage(pageIndex) {
 }
 
 function displayCurrentPageResults() {
-    // Always show page-specific results with unified format
-    resultArea.value = `=== Page ${currentPageIndex + 1} of ${pdfPages.length} ===\n`;
+    // Always show barcode count instead of page numbers
+    const currentPageBarcodeCount = pageResults[currentPageIndex] && pageResults[currentPageIndex].items ? pageResults[currentPageIndex].items.length : 0;
+
+    resultArea.value = `=== Total Barcodes: ${currentPageBarcodeCount} ===\n\n`;
+
     if (pageResults[currentPageIndex] && pageResults[currentPageIndex].items && pageResults[currentPageIndex].items.length > 0) {
         pageResults[currentPageIndex].items.forEach(item => {
             resultArea.value += "Text: " + item.text + "\n";
             resultArea.value += "Format: " + item.formatString + "\n\n";
         });
     } else {
-        resultArea.value += "No barcodes found on this page.\n";
+        resultArea.value += "No barcodes found.\n";
     }
 }
 
@@ -478,7 +481,7 @@ document.getElementById("scan").addEventListener('click', async () => {
     const tab = await chrome.tabs.create({
         url: chrome.runtime.getURL('scanner.html')
     });
-    
+
     // Wait for scanner page to load, then send license
     chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
         if (tabId === tab.id && info.status === 'complete') {
