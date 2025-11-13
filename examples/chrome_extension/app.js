@@ -474,9 +474,20 @@ document.getElementById("scan").addEventListener('click', async () => {
     }
 
     // Camera access doesn't work in extension popups
-    // Open scanner in a new tab instead
-    chrome.tabs.create({
+    // Open scanner in a new tab and pass license key via message
+    const tab = await chrome.tabs.create({
         url: chrome.runtime.getURL('scanner.html')
+    });
+    
+    // Wait for scanner page to load, then send license
+    chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+        if (tabId === tab.id && info.status === 'complete') {
+            chrome.tabs.sendMessage(tabId, {
+                action: 'setLicense',
+                licenseKey: licenseKey
+            });
+            chrome.tabs.onUpdated.removeListener(listener);
+        }
     });
 });
 

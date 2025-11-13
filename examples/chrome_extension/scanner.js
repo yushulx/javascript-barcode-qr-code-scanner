@@ -1,4 +1,5 @@
 let barcodeScanner;
+let licenseKey = null; // Will be set by message from app.js
 const resultArea = document.getElementById("result");
 const statusDiv = document.getElementById("status");
 const loadingDiv = document.getElementById("loading");
@@ -12,50 +13,25 @@ closeBtn.addEventListener('click', () => {
     window.close();
 });
 
-// Get license key from storage
-async function getLicenseKey() {
-    // Try localStorage first (same as popup uses)
-    const localKey = localStorage.getItem('dynamsoft_license_key');
-    if (localKey) {
-        return localKey;
+// Listen for license key from app.js
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'setLicense') {
+        licenseKey = request.licenseKey;
+        console.log('License key received from app.js');
+        // Initialize scanner now that we have the license
+        initScanner();
     }
-
-    // Fallback to chrome.storage.local
-    return new Promise((resolve) => {
-        chrome.storage.local.get(['dynamsoft_license_key'], (result) => {
-            resolve(result.dynamsoft_license_key);
-        });
-    });
-}
+});
 
 // Initialize and start scanner
 async function initScanner() {
     try {
         loadingDiv.classList.add('active');
-        statusDiv.textContent = 'Getting license...';
-
-        // Get license from storage
-        const licenseKey = await getLicenseKey();
-        const expiryDate = localStorage.getItem('dynamsoft_license_expiry');
-
-        console.log('License key:', licenseKey ? 'Found' : 'Not found');
-        console.log('Expiry date:', expiryDate);
-
+        
         if (!licenseKey) {
-            statusDiv.textContent = '❌ No license found. Please login from the extension popup first.';
+            statusDiv.textContent = '❌ No license available. Please login from the extension side panel first.';
             loadingDiv.classList.remove('active');
             return;
-        }
-
-        // Check if license is expired
-        if (expiryDate) {
-            const expiry = new Date(expiryDate);
-            const now = new Date();
-            if (expiry <= now) {
-                statusDiv.innerHTML = '❌ License expired. <a href="https://www.dynamsoft.com/purchase-center/" target="_blank" style="color: white; text-decoration: underline;">Purchase a license</a> or login again from the extension popup.';
-                loadingDiv.classList.remove('active');
-                return;
-            }
         }
 
         statusDiv.textContent = 'Activating SDK...';
