@@ -138,3 +138,5 @@ This extension uses Dynamsoft SDKs which require a valid license:
 - Trial: 30 days free via Google login
 - Commercial: Purchase from [Dynamsoft](https://www.dynamsoft.com/purchase-center/)
 
+## Blog
+[How to Build a Chrome Extension for Scanning Barcode & QR Code with Multiple Input Methods](https://www.dynamsoft.com/codepool/chrome-extension-barcode-qr-code-scanner.html)
