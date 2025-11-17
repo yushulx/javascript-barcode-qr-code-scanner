@@ -132,3 +132,5 @@ https://github.com/user-attachments/assets/838d1fd8-862b-4882-b8c4-a8bc14657b05
 
 **Feel free to use, modify, and distribute this extension.**
 
+## Blog
+[How to Build a Chrome Extension for Scanning Barcode & QR Code with Multiple Input Methods](https://www.dynamsoft.com/codepool/chrome-extension-barcode-qr-code-scanner.html)
