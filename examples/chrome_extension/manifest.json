@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "Barcode & QR Code Scanner",
-    "version": "1.0.2",
-    "description": "Scan barcodes and QR codes from images, PDFs, and camera using Dynamsoft SDK",
+    "name": "Free Barcode & QR Code Scanner",
+    "version": "2.0.0",
+    "description": "Scan barcodes and QR codes from images, PDFs, and camera using open-source ZXing library. 100% free, no login required.",
     "icons": {
         "16": "icons/icon16.png",
         "48": "icons/icon48.png",
@@ -17,7 +17,6 @@
     },
     "permissions": [
         "storage",
-        "cookies",
         "activeTab",
         "tabs",
         "scripting",
@@ -49,7 +48,12 @@
             "resources": [
                 "scanner.html",
                 "scanner.js",
-                "icons/icon48.png"
+                "icons/icon48.png",
+                "libs/zxing-wasm/es/*.js",
+                "libs/zxing-wasm/es/**/*.js",
+                "libs/zxing-wasm/reader/zxing_reader.wasm",
+                "libs/pdfjs/pdf.min.js",
+                "libs/pdfjs/pdf.worker.min.js"
             ],
             "matches": [
                 "<all_urls>"

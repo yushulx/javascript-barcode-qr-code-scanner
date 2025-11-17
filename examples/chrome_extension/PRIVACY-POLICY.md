@@ -1,42 +1,39 @@
-# Privacy Policy for Barcode & QR Code Scanner
+# Privacy Policy for FREE Barcode & QR Code Scanner
 
-**Last Updated: November 10, 2025**
+**Last Updated: November 17, 2025**
 
 ## Overview
 
-This Chrome extension provides barcode and QR code scanning functionality using Dynamsoft's barcode recognition technology. We are committed to protecting your privacy and being transparent about our data practices.
+This **100% FREE** Chrome extension provides barcode and QR code scanning functionality using open-source ZXing-WASM technology. We are committed to protecting your privacy with a **zero-data-collection** approach. **No login required, no authentication, no tracking - completely free and private.**
 
 ## Data Collection and Usage
 
 ### What We Collect
 
-**Authentication Data (Temporary)**
-- Google OAuth tokens (stored temporarily for trial license activation)
-- User email and name (retrieved only for license management)
-- Dynamsoft cookies (DynamsoftToken, DynamsoftUser) for session management
-
-**License Information (Local)**
-- Trial license key (stored in browser's localStorage)
-- License expiration date (stored in browser's localStorage)
-
-**User Preferences (Local)**
+**User Preferences (Local Only)**
 - Settings preferences (stored in chrome.storage.local)
 - Floating icon visibility preference
 
+**That's It. Nothing Else.**
+
 ### What We DON'T Collect
 
+- ❌ **No authentication data**: No login, no OAuth, no cookies
+- ❌ **No personal information**: No email, no name, no account data
 - ❌ **No image data storage**: Images, PDFs, and screenshots are processed locally and immediately discarded
 - ❌ **No barcode results storage**: Scan results are displayed temporarily and never saved or transmitted
 - ❌ **No browsing history**: We don't track which pages you visit or images you scan
 - ❌ **No analytics or tracking**: No usage statistics, telemetry, or behavioral tracking
-- ❌ **No personal data beyond authentication**: Only email and name for license purposes
+- ❌ **No external API calls**: 100% offline processing after installation
+- ❌ **No license keys**: Completely free, no trial periods, no expiration
 
 ## How the Extension Works
 
-### Local Processing
-- **All barcode scanning happens locally** in your browser using WebAssembly
+### 100% Local Processing
+- **All barcode scanning happens locally** in your browser using FREE open-source ZXing-WASM (WebAssembly)
 - Images, PDFs, and screenshots are processed in memory and never uploaded
 - Scan results are displayed only in the side panel and immediately discarded when you close it
+- **No external servers involved** - works completely offline after installation
 
 ### Screenshot Capture
 - When you use the screenshot feature, the image is captured locally
@@ -61,29 +58,26 @@ This Chrome extension provides barcode and QR code scanning functionality using 
 ## Data Storage
 
 ### Local Storage
-- **localStorage**: Trial license key and expiration date
-- **chrome.storage.local**: User preferences (floating icon toggle)
-- **Cookies**: Dynamsoft authentication cookies (DynamsoftToken, DynamsoftUser)
+- **chrome.storage.local**: User preferences (floating icon toggle only)
+- **No cookies**: No authentication means no cookies
+- **No license data**: No trial keys, no expiration dates
 
-All stored data remains on your device and is never transmitted except during initial authentication.
+All stored data is minimal and remains on your device forever.
 
 ### No Cloud Storage
 - We do not maintain any cloud servers or databases
 - No user data is stored on external servers
-- All processing is client-side
+- All processing is 100% client-side
+- **No internet connection required** after installation
 
 ## Permissions Explained
 
 ### Required Permissions
 
 **storage**
-- Used to save your trial license and user preferences locally
+- Used to save your preferences locally (floating icon setting only)
 - Data never leaves your device
-
-**cookies**
-- Used only to read Dynamsoft authentication cookies during Google OAuth login
-- Required for trial license activation
-- Only accesses cookies from www.dynamsoft.com domain
+- No authentication or license data stored
 
 **activeTab**
 - Used to inject screenshot selector when you click the screenshot button
@@ -108,47 +102,28 @@ All stored data remains on your device and is never transmitted except during in
 - Adds "Scan barcode from image" option when you right-click images
 - Only processes images you explicitly choose to scan
 
-### Host Permissions
-
-**https://www.dynamsoft.com/***
-**https://*.dynamsoft.com/***
-- Required to communicate with Dynamsoft's license API
-- Used only for:
-  - Google OAuth authentication
-  - Trial license request (requires email)
-  - User information retrieval (name for display)
+**host_permissions (all_urls)**
+- Required to fetch images when you drag-and-drop from web pages or use context menu
+- Only activates when you explicitly interact with an image
+- No automatic background requests or tracking
 
 ## Third-Party Services
 
-### Dynamsoft License API
-The extension connects to Dynamsoft's servers **only** for:
-1. **Authentication**: Google OAuth login flow
-2. **License Activation**: Requesting a 30-day trial license (requires email)
-3. **User Information**: Retrieving your name for display in the UI
+### None. Zero. Zilch.
 
-**Data Transmitted to Dynamsoft:**
-- Email address (for trial license generation)
-- Authentication tokens (Google OAuth)
+- ✅ **No Commercial Use**: We use FREE open-source ZXing-WASM instead
+- ✅ **No Google OAuth**: No login required
+- ✅ **No analytics services**: No Google Analytics, etc.
+- ✅ **No advertising networks**: Never
+- ✅ **No social media trackers**: Never
+- ✅ **No third-party scripts or beacons**: Everything is bundled locally
+- ✅ **No external API calls**: 100% offline after installation
 
-**What Dynamsoft May Store:**
-- Your email and basic profile information
-- Trial license records
-- Authentication session data
+**Libraries Used (All FREE & Open-Source, Bundled Locally):**
+- **ZXing-WASM** v2.2.3 - Apache License 2.0 (barcode detection)
+- **PDF.js** v3.11.174 - Apache License 2.0 (PDF rendering)
 
-Please refer to [Dynamsoft's Privacy Policy](https://www.dynamsoft.com/privacy-statement/) for details on how they handle data.
-
-### Google OAuth
-When you login with Google:
-- Google handles the authentication process
-- We receive only your email and name
-- Authentication is managed through Dynamsoft's OAuth implementation
-- Refer to [Google's Privacy Policy](https://policies.google.com/privacy) for details
-
-### No Other Third Parties
-- No analytics services (Google Analytics, etc.)
-- No advertising networks
-- No social media trackers
-- No third-party scripts or beacons
+Both libraries are included in the extension and run entirely in your browser. No data is sent to their developers.
 
 ## Data Retention
 
@@ -158,32 +133,35 @@ When you login with Google:
 - **Scan results**: Cleared when you close the side panel or scan new items
 
 ### Persistent Data (Local Only)
-- **License key**: Stored until expiration or manual logout
-- **User preferences**: Stored until you change them or uninstall the extension
+- **User preferences**: Floating icon toggle only (stored until you change it or uninstall)
+- **No authentication data**: Nothing to expire or clean up
+- **No license keys**: Nothing to manage
 
 ### Data Deletion
 To delete all data:
 1. Uninstall the extension from Chrome
-2. All localStorage and chrome.storage data will be automatically removed
-3. Clear browser cookies for www.dynamsoft.com if desired
+2. All chrome.storage data will be automatically removed
+3. No cookies to clear (we don't use any)
 
 ## Security
 
-### Local Processing
-- All barcode recognition happens locally using WebAssembly
+### 100% Local Processing
+- All barcode recognition happens locally using open-source ZXing-WASM
 - No images or scan data leave your browser
-- Industry-standard Dynamsoft SDK used for barcode detection
+- WebAssembly provides near-native performance with sandboxed security
 
-### Secure Communication
-- All API calls to Dynamsoft use HTTPS
-- OAuth tokens are transmitted securely
-- Cookies are marked as secure where applicable
+### No External Communication
+- **No API calls** to any servers after installation
+- **No authentication** means no tokens to steal
+- **No cloud services** means no data breaches possible
+- Works completely **offline**
 
-### No Vulnerabilities
+### Secure Code
 - No eval() or unsafe JavaScript execution
 - Content Security Policy enforced (Manifest V3)
 - No remote code execution
 - No inline scripts
+- ES6 modules for code isolation
 
 ## Children's Privacy
 
@@ -210,35 +188,44 @@ This extension complies with:
 ## Your Rights
 
 You have the right to:
-- **Access**: View what data is stored (check localStorage in DevTools)
+- **Access**: View what data is stored (only preferences in chrome.storage)
 - **Delete**: Uninstall the extension to remove all data
-- **Opt-out**: Don't use the login feature to avoid authentication data
+- **Privacy**: No login means complete anonymity
 - **Control**: Manage permissions in Chrome's extension settings
+- **Transparency**: Full source code available on GitHub
 
 ## No Sale of Data
 
 We **never** sell, rent, or trade any user data. There is no business model based on data monetization.
 
-## Open Source
+## 100% FREE & Open Source
 
-This extension's code can be reviewed for transparency. All barcode processing uses the Dynamsoft SDK, which is a commercial product with its own privacy practices.
+This extension is **completely FREE** and open-source:
+- No paid features
+- No premium upgrades
+- No trials that expire
+- No hidden costs
+- Full source code available: [GitHub Repository](https://github.com/yushulx/javascript-barcode-qr-code-scanner/tree/main/examples/chrome_extension)
+
+All barcode processing uses FREE open-source libraries:
+- **ZXing-WASM** - Apache License 2.0
+- **PDF.js** - Apache License 2.0
 
 ## Contact
 
 For questions, concerns, or requests regarding this privacy policy:
 
-- **Chrome Web Store Support**: Use the support tab on the extension's store listing
 - **GitHub Issues**: [yushulx/javascript-barcode-qr-code-scanner](https://github.com/yushulx/javascript-barcode-qr-code-scanner)
-- **Email**: Contact through Dynamsoft's support channels
+- **Chrome Web Store Support**: Use the support tab on the extension's store listing
 
 ## Acknowledgment
 
-By using this extension, you acknowledge that you have read and understood this Privacy Policy and agree to its terms, including:
-- Local processing of images and barcodes
-- Transmission of email to Dynamsoft for trial license
-- Use of Google OAuth for authentication
-- Storage of license information locally
+By using this extension, you acknowledge that you have read and understood this Privacy Policy and agree to its terms:
+- 100% local processing of images and barcodes
+- No external data transmission
+- No authentication or personal data collection
+- Minimal local storage (preferences only)
 
 ---
 
-**Summary**: This extension processes barcodes locally. The only external communication is for trial license authentication (email sent to Dynamsoft). No images, scan results, or browsing data are ever transmitted or stored externally.
+**Summary**: This is a **100% FREE, privacy-first** extension. All barcode scanning happens locally in your browser using open-source libraries. **ZERO data collection. ZERO external communication. ZERO tracking. Completely free forever.**

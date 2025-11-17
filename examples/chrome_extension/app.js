@@ -1,30 +1,30 @@
-let barcodeScanner;
-let currentDoc;
-let licenseKey;
+// ZXing-WASM based barcode scanner (open-source, no license required)
+import { readBarcodesFromImageData } from './libs/zxing-wasm/es/reader/index.js';
+
+// Configure PDF.js worker
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'libs/pdfjs/pdf.worker.min.js';
+}
+
 let pdfPages = []; // Store all PDF pages
 let currentPageIndex = 0;
 let pageResults = []; // Store barcode results for each page
-let authWindowId = null; // Track Chrome extension window ID
-let pollTimer = null;
 
 const divScanner = document.getElementById("divScanner");
 const container = document.getElementById("container");
 const resultArea = document.getElementById("result");
-const resultContainer = document.querySelector("#results");
 const imageContainer = document.getElementById("imageContainer");
 const imageCanvas = document.getElementById("imageCanvas");
 const pageNavigation = document.getElementById("pageNavigation");
 const prevPageBtn = document.getElementById("prevPage");
 const nextPageBtn = document.getElementById("nextPage");
 const pageInfo = document.getElementById("pageInfo");
-const loginButton = document.getElementById("loginButton");
-const loginStatus = document.getElementById("loginStatus");
 const screenshotBtn = document.getElementById("screenshot");
 const settingsPanel = document.getElementById("settingsPanel");
 const openSettingsBtn = document.getElementById("openSettings");
 const closeSettingsBtn = document.getElementById("closeSettings");
 const showFloatingIconToggle = document.getElementById("showFloatingIconToggle");
-const userNameElement = document.querySelector(".user-name");
+const statusMessage = document.getElementById("statusMessage");
 
 // Settings Panel
 openSettingsBtn.addEventListener('click', () => {
@@ -33,12 +33,6 @@ openSettingsBtn.addEventListener('click', () => {
 
 closeSettingsBtn.addEventListener('click', () => {
     settingsPanel.classList.remove('open');
-});
-
-// Cart button handler
-const cartBtn = document.getElementById('cartBtn');
-cartBtn.addEventListener('click', () => {
-    window.open('https://www.dynamsoft.com/purchase-center/', '_blank');
 });
 
 // Load floating icon setting
@@ -52,40 +46,31 @@ showFloatingIconToggle.addEventListener('change', () => {
     chrome.storage.local.set({ showFloatingIcon: showIcon });
 });
 
-// Listen for messages from background script (context menu, etc.)
+// Listen for messages from background script (context menu, screenshot)
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     if (request.action === 'decodeImageUrl') {
         decodeImageFromUrl(request.imageUrl);
     } else if (request.action === 'screenshotResult') {
-        // Handle screenshot result
         if (request.success && request.dataUrl) {
             try {
-                // Convert data URL to blob
                 const fetchResponse = await fetch(request.dataUrl);
                 const blob = await fetchResponse.blob();
-
-                // Create a File object from the blob
                 const file = new File([blob], 'screenshot.png', { type: 'image/png' });
 
-                // Trigger the file input change event with the screenshot file
                 const fileInput = document.getElementById('file');
                 const dataTransfer = new DataTransfer();
                 dataTransfer.items.add(file);
                 fileInput.files = dataTransfer.files;
 
-                // Trigger the file change event to process the screenshot
                 const event = new Event('change', { bubbles: true });
                 fileInput.dispatchEvent(event);
-
             } catch (error) {
-                console.error('Error processing screenshot:', error);
                 resultArea.value = `Error processing screenshot: ${error.message}`;
                 toggleLoading(false);
             }
         } else if (request.cancelled) {
-            console.log('Screenshot cancelled:', request.reason);
+            // Screenshot cancelled
         } else {
-            console.error('Screenshot error:', request.error || request.reason);
             if (request.error) {
                 resultArea.value = `Error: ${request.error}`;
             }
@@ -95,41 +80,21 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
 // Function to decode image from URL (context menu)
 async function decodeImageFromUrl(imageUrl) {
-    // Check if license exists and is valid
-    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
-    if (!licenseKey || !storedExpiry) {
-        alert('⚠️ No valid license. Please login to get a trial license first.');
-        return;
-    }
-
-    const expiryDate = new Date(storedExpiry);
-    const now = new Date();
-    if (expiryDate <= now) {
-        alert('⚠️ Your license has expired. Please login again to renew your trial license.');
-        loginStatus.textContent = '⚠️ License expired. Please login again.';
-        loginButton.style.display = 'block';
-        return;
-    }
-
     try {
         toggleLoading(true);
 
-        // Fetch the image
         const response = await fetch(imageUrl);
         const blob = await response.blob();
         const file = new File([blob], 'context-menu-image.jpg', { type: blob.type });
 
-        // Trigger the file input with the image
         const fileInput = document.getElementById('file');
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
         fileInput.files = dataTransfer.files;
 
-        // Trigger the file change event
         const event = new Event('change', { bubbles: true });
         fileInput.dispatchEvent(event);
     } catch (error) {
-        console.error('Error decoding image from URL:', error);
         resultArea.value = `Error: ${error.message}`;
         toggleLoading(false);
     }
@@ -143,267 +108,146 @@ function toggleLoading(isLoading) {
     }
 }
 
-// Get cookie from Dynamsoft domain via background script
-async function getCookie(name) {
-    return new Promise((resolve) => {
-        chrome.runtime.sendMessage(
-            { action: 'getCookie', cookieName: name },
-            (response) => {
-                if (response && response.cookie) {
-                    resolve(response.cookie.value);
-                } else {
-                    resolve(null);
-                }
-            }
-        );
-    });
-}
-
-// Poll for authentication tokens from Dynamsoft
-function startPolling() {
-    let pollAttempts = 0;
-    const maxAttempts = 300; // 5 minutes at 1 second intervals
-
-    pollTimer = setInterval(async () => {
-        pollAttempts++;
-
-        // Check cookies via background script
-        const token = await getCookie('DynamsoftToken');
-        const user = await getCookie('DynamsoftUser');
-
-        if (token && user) {
-            console.log('Authentication detected!', { token, user });
-            clearInterval(pollTimer);
-
-            // Close the auth window if we have the windowId
-            if (authWindowId) {
-                try {
-                    chrome.windows.remove(authWindowId);
-                } catch (e) {
-                    console.log('Could not close auth window');
-                }
-            }
-
-            // Decode if needed
-            const decodedToken = decodeURIComponent(token);
-            const decodedUser = decodeURIComponent(user);
-
-            // Request trial license
-            requestTrialLicense(decodedToken, decodedUser);
-        } else if (pollAttempts >= maxAttempts) {
-            // Stop polling after max attempts
-            clearInterval(pollTimer);
-            loginStatus.textContent = 'Login timeout. Please try again.';
-        }
-    }, 1000); // Poll every second
-}
-
-// Request trial license from Dynamsoft API via background script
-async function requestTrialLicense(token, userId) {
+// Decode image using ZXing-WASM
+async function decodeImage(imageSource) {
     try {
-        toggleLoading(true);
-        loginStatus.textContent = 'Getting user info...';
+        // Get image data from canvas
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = imageSource.width || imageSource.naturalWidth;
+        canvas.height = imageSource.height || imageSource.naturalHeight;
+        ctx.drawImage(imageSource, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-        // First, get user info to retrieve email
-        chrome.runtime.sendMessage(
-            {
-                action: 'getUserInfo',
-                token: token,
-                userId: userId
-            },
-            (userInfoResponse) => {
-                if (!userInfoResponse.success) {
-                    throw new Error(userInfoResponse.error || 'Failed to get user info');
-                }
-
-                const email = userInfoResponse.data.email;
-                const firstName = userInfoResponse.data.firstName;
-                console.log('User email:', email);
-                console.log('User first name:', firstName);
-
-                // Update user name in sidebar
-                if (firstName && userNameElement) {
-                    userNameElement.textContent = firstName;
-                }
-
-                loginStatus.textContent = 'Requesting trial license...';
-
-                // Now request trial license with email
-                chrome.runtime.sendMessage(
-                    {
-                        action: 'requestTrialLicense',
-                        token: token,
-                        userId: userId,
-                        email: email
-                    },
-                    async (response) => {
-                        if (response.success && response.data.code === 0 && response.data.data) {
-                            // response.data.data is an object, not an array
-                            licenseKey = response.data.data.licenseKey;
-                            const expirationDate = new Date(response.data.data.expirationDate);
-                            const now = new Date();
-
-                            // Check if license is already expired
-                            if (expirationDate <= now) {
-                                loginStatus.textContent = '⚠️ License expired';
-                                alert('Warning: The license has already expired. Please contact support for a new license.');
-                                toggleLoading(false);
-                                return;
-                            }
-
-                            // DON'T store license key - store only expiration date for reference
-                            localStorage.setItem('dynamsoft_license_expiry', response.data.data.expirationDate);
-
-                            // Activate SDK automatically
-                            await activateSDK(licenseKey);
-
-                            // Calculate days until expiration
-                            const daysUntilExpiry = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
-                            loginStatus.textContent = `✓ Licensed (Trial - ${daysUntilExpiry} days left)`;
-                            loginButton.style.display = 'none';
-                        } else {
-                            throw new Error(response.data?.message || response.error || 'Failed to obtain license');
-                        }
-                    }
-                );
-            }
-        );
-    } catch (error) {
-        console.error('Error requesting trial license:', error);
-        loginStatus.textContent = 'Error obtaining license';
-        alert('Failed to obtain trial license. Please try again or contact support.');
-        toggleLoading(false);
-    }
-}
-
-// Activate SDK with license key
-async function activateSDK(licenseKey) {
-    try {
-        toggleLoading(true);
-        loginStatus.textContent = 'Activating SDK...';
-
-        Dynamsoft.DDV.Core.license = licenseKey;
-        await Dynamsoft.DDV.Core.init();
-        currentDoc = Dynamsoft.DDV.documentManager.createDocument({
-            name: Date.now().toString(),
-            author: "DDV",
+        const results = await readBarcodesFromImageData(imageData, {
+            maxSymbols: 1
         });
 
-        loginStatus.textContent = '✓ SDK Activated';
-        toggleLoading(false);
+        if (results.length > 0) {
+            return {
+                items: results.map(result => ({
+                    text: result.text,
+                    formatString: result.format,
+                    location: result.position
+                }))
+            };
+        }
+        return { items: [] };
     } catch (error) {
-        console.error('Error activating SDK:', error);
-        loginStatus.textContent = 'Error activating SDK';
-        toggleLoading(false);
-        throw error;
+        return { items: [] };
     }
 }
 
-// Handle Google login
-loginButton.addEventListener('click', () => {
-    loginStatus.textContent = 'Opening login window...';
+// Decode multiple barcodes from image
+async function decodeMultipleBarcodes(imageSource) {
+    try {
+        // Get image data from canvas
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = imageSource.width || imageSource.naturalWidth;
+        canvas.height = imageSource.height || imageSource.naturalHeight;
+        ctx.drawImage(imageSource, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    // Open OAuth popup via background script
-    chrome.runtime.sendMessage(
-        {
-            action: 'openAuthPopup',
-            redirectUri: 'https://www.dynamsoft.com/'
-        },
-        (response) => {
-            if (response && response.windowId) {
-                authWindowId = response.windowId;
-                console.log('Auth window opened:', authWindowId);
+        // Read all barcodes from the image
+        const results = await readBarcodesFromImageData(imageData, {
+            maxSymbols: 255  // Find all barcodes
+        });
 
-                // Start polling for cookies
-                loginStatus.textContent = 'Please login with Google...';
-                startPolling();
-            } else {
-                loginStatus.textContent = 'Failed to open login window';
-            }
+        if (results.length > 0) {
+            return {
+                items: results.map(result => ({
+                    text: result.text,
+                    formatString: result.format,
+                    location: result.position
+                }))
+            };
         }
-    );
-});
-
-// Check for existing license on page load
-window.addEventListener('load', async () => {
-    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
-
-    if (storedExpiry) {
-        const expiryDate = new Date(storedExpiry);
-        const now = new Date();
-
-        if (expiryDate > now) {
-            // License might still be valid - try to get fresh license with existing auth
-            const token = await getCookie('DynamsoftToken');
-            const userId = await getCookie('DynamsoftUser');
-
-            if (token && userId) {
-                // Re-request license using existing auth tokens
-                await requestTrialLicense(decodeURIComponent(token), decodeURIComponent(userId));
-                return;
-            }
-        } else {
-            // License expired
-            localStorage.removeItem('dynamsoft_license_expiry');
-            loginStatus.textContent = '⚠️ License expired. Please login again.';
-        }
+        return { items: [] };
+    } catch (error) {
+        return { items: [] };
     }
-});
-
-function updatePageNavigation() {
-    // Always show navigation, even for single page
-    pageNavigation.style.display = "flex";
-    pageInfo.textContent = `Page ${currentPageIndex + 1} of ${pdfPages.length}`;
-    prevPageBtn.disabled = currentPageIndex === 0;
-    nextPageBtn.disabled = currentPageIndex === pdfPages.length - 1;
 }
 
 function displayPage(pageIndex) {
-    if (pageIndex < 0 || pageIndex >= pdfPages.length) return;
-
     currentPageIndex = pageIndex;
-    const pageData = pdfPages[pageIndex];
 
-    // Display the image
-    const ctx = imageCanvas.getContext("2d");
+    const ctx = imageCanvas.getContext('2d');
     const img = new Image();
-
-    img.onload = function () {
+    img.onload = () => {
         imageCanvas.width = img.width;
         imageCanvas.height = img.height;
-        ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
         ctx.drawImage(img, 0, 0);
 
-        // Draw barcode boxes if results exist for this page
-        if (pageResults[pageIndex] && pageResults[pageIndex].items) {
-            pageResults[pageIndex].items.forEach(item => {
-                let localization = item.location;
-                ctx.strokeStyle = '#ff0000';
-                ctx.lineWidth = 2;
-                let points = localization.points;
-                ctx.beginPath();
-                ctx.moveTo(points[0].x, points[0].y);
-                ctx.lineTo(points[1].x, points[1].y);
-                ctx.lineTo(points[2].x, points[2].y);
-                ctx.lineTo(points[3].x, points[3].y);
-                ctx.closePath();
-                ctx.stroke();
-            });
-        }
-
-        // Update result area with current page results
-        displayCurrentPageResults();
+        // Draw barcode overlays
+        drawBarcodeOverlay();
     };
+    img.src = pdfPages[pageIndex].url;
 
-    img.src = pageData.url;
-    updatePageNavigation();
+    pageInfo.textContent = `Page ${pageIndex + 1} of ${pdfPages.length}`;
+    prevPageBtn.disabled = pageIndex === 0;
+    nextPageBtn.disabled = pageIndex === pdfPages.length - 1;
+
+    displayCurrentPageResults();
+}
+
+function drawBarcodeOverlay() {
+    const ctx = imageCanvas.getContext('2d');
+    const currentResults = pageResults[currentPageIndex];
+
+    if (!currentResults || !currentResults.items) return;
+
+    currentResults.items.forEach((item, index) => {
+        if (!item.location) return;
+
+        const points = item.location;
+        if (!points || points.length < 2) return;
+
+        // Draw bounding box
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+
+        // Get corner points (zxing-wasm returns topLeft, topRight, bottomRight, bottomLeft)
+        const topLeft = points.topLeft || points[0];
+        const topRight = points.topRight || points[1];
+        const bottomRight = points.bottomRight || points[2];
+        const bottomLeft = points.bottomLeft || points[3];
+
+        if (topLeft && topRight && bottomRight && bottomLeft) {
+            ctx.moveTo(topLeft.x, topLeft.y);
+            ctx.lineTo(topRight.x, topRight.y);
+            ctx.lineTo(bottomRight.x, bottomRight.y);
+            ctx.lineTo(bottomLeft.x, bottomLeft.y);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Draw label background
+            const text = `${index + 1}: ${item.formatString}`;
+            ctx.font = '16px Arial';
+            const textMetrics = ctx.measureText(text);
+            const textWidth = textMetrics.width;
+            const textHeight = 20;
+
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+            ctx.fillRect(topLeft.x, topLeft.y - textHeight - 5, textWidth + 10, textHeight + 5);
+
+            // Draw label text
+            ctx.fillStyle = '#000';
+            ctx.fillText(text, topLeft.x + 5, topLeft.y - 8);
+        }
+    });
 }
 
 function displayCurrentPageResults() {
-    // Always show barcode count instead of page numbers
     const currentPageBarcodeCount = pageResults[currentPageIndex] && pageResults[currentPageIndex].items ? pageResults[currentPageIndex].items.length : 0;
 
-    resultArea.value = `=== Total Barcodes: ${currentPageBarcodeCount} ===\n\n`;
+    // Show current page barcode count in the format
+    if (pdfPages.length > 1) {
+        resultArea.value = `📊 Page ${currentPageIndex + 1}: ${currentPageBarcodeCount} barcode${currentPageBarcodeCount !== 1 ? 's' : ''} found\n\n`;
+    } else {
+        resultArea.value = `📊 Total: ${currentPageBarcodeCount} barcode${currentPageBarcodeCount !== 1 ? 's' : ''} found\n\n`;
+    }
 
     if (pageResults[currentPageIndex] && pageResults[currentPageIndex].items && pageResults[currentPageIndex].items.length > 0) {
         pageResults[currentPageIndex].items.forEach(item => {
@@ -416,37 +260,10 @@ function displayCurrentPageResults() {
 }
 
 function displayAllResults() {
-    // Unified results display with summary
-    resultArea.value = "";
-    let totalBarcodes = 0;
-
-    pageResults.forEach((result, index) => {
-        if (result && result.items && result.items.length > 0) {
-            totalBarcodes += result.items.length;
-        }
-    });
-
-    // Always show summary header
-    if (totalBarcodes === 0) {
-        resultArea.value = `📊 Summary: No barcodes found (${pdfPages.length} page${pdfPages.length > 1 ? 's' : ''} scanned)\n\n`;
-    } else {
-        resultArea.value = `📊 Summary: ${totalBarcodes} barcode${totalBarcodes > 1 ? 's' : ''} found across ${pdfPages.length} page${pdfPages.length > 1 ? 's' : ''}\n\n`;
-    }
-
-    // Show detailed results for each page
-    pageResults.forEach((result, index) => {
-        if (result && result.items && result.items.length > 0) {
-            resultArea.value += `=== Page ${index + 1} ===\n`;
-            result.items.forEach(item => {
-                resultArea.value += "Text: " + item.text + "\n";
-                resultArea.value += "Format: " + item.formatString + "\n";
-            });
-            resultArea.value += "\n";
-        }
-    });
+    // For initial load, just show the first page
+    displayCurrentPageResults();
 }
 
-// Page navigation event listeners
 prevPageBtn.addEventListener('click', () => {
     if (currentPageIndex > 0) {
         displayPage(currentPageIndex - 1);
@@ -459,100 +276,44 @@ nextPageBtn.addEventListener('click', () => {
     }
 });
 
+// Camera scan button
 document.getElementById("scan").addEventListener('click', async () => {
-    // Check if license exists and is valid
-    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
-    if (!licenseKey || !storedExpiry) {
-        alert('⚠️ No valid license. Please login to get a trial license first.');
-        return;
-    }
-
-    const expiryDate = new Date(storedExpiry);
-    const now = new Date();
-    if (expiryDate <= now) {
-        alert('⚠️ Your license has expired. Please login again to renew your trial license.');
-        loginStatus.textContent = '⚠️ License expired. Please login again.';
-        loginButton.style.display = 'block';
-        return;
-    }
-
-    // Camera access doesn't work in extension popups
-    // Open scanner in a new tab and pass license key via message
-    const tab = await chrome.tabs.create({
+    chrome.tabs.create({
         url: chrome.runtime.getURL('scanner.html')
-    });
-
-    // Wait for scanner page to load, then send license
-    chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-        if (tabId === tab.id && info.status === 'complete') {
-            chrome.tabs.sendMessage(tabId, {
-                action: 'setLicense',
-                licenseKey: licenseKey
-            });
-            chrome.tabs.onUpdated.removeListener(listener);
-        }
     });
 });
 
+// File upload handler
 document.getElementById("file").onchange = async function () {
-    // Check if license exists and is valid
-    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
-    if (!licenseKey || !storedExpiry) {
-        alert('⚠️ No valid license. Please login to get a trial license first.');
-        return;
-    }
-
-    const expiryDate = new Date(storedExpiry);
-    const now = new Date();
-    if (expiryDate <= now) {
-        alert('⚠️ Your license has expired. Please login again to renew your trial license.');
-        loginStatus.textContent = '⚠️ License expired. Please login again.';
-        loginButton.style.display = 'block';
-        return;
-    }
-
     try {
-        if (barcodeScanner) {
-            barcodeScanner.dispose();
-        }
-        barcodeScanner = new Dynamsoft.BarcodeScanner({
-            license: licenseKey,
-            scanMode: Dynamsoft.EnumScanMode.SM_MULTI_UNIQUE,
-        });
-    } catch (error) {
-        console.error(error);
-    }
+        pdfPages = [];
+        pageResults = [];
+        currentPageIndex = 0;
 
-    // Reset variables
-    pdfPages = [];
-    pageResults = [];
-    currentPageIndex = 0;
-
-    imageContainer.style.display = "none";
-    if (barcodeScanner) {
+        imageContainer.style.display = "none";
         const files = Array.from(this.files || []);
         if (files.length) {
             try {
                 toggleLoading(true);
                 let fileToProcess = files[0];
 
-                // Process the file and get all pages
                 let pages = await processFile(fileToProcess);
                 pdfPages = pages;
                 pageResults = new Array(pages.length);
 
-                // Process each page for barcodes
                 for (let i = 0; i < pages.length; i++) {
                     try {
-                        let result = await barcodeScanner.decode(pages[i].blob);
+                        const img = document.createElement('img');
+                        img.src = pages[i].url;
+                        await new Promise(resolve => img.onload = resolve);
+
+                        let result = await decodeMultipleBarcodes(img);
                         pageResults[i] = result;
                     } catch (error) {
-                        console.error(`Error processing page ${i + 1}:`, error);
                         pageResults[i] = { items: [] };
                     }
                 }
 
-                // Display the first page
                 if (pages.length > 0) {
                     imageContainer.style.display = "flex";
                     displayPage(0);
@@ -561,102 +322,72 @@ document.getElementById("file").onchange = async function () {
 
                 toggleLoading(false);
             } catch (error) {
-                console.error("Error processing file:", error);
                 resultArea.value = `Error: ${error.message}`;
                 toggleLoading(false);
             }
         }
-    }
-    else {
-        resultArea.value = "Please activate the scanner first.\n";
+    } catch (error) {
+        resultArea.value = `Error: ${error.message}`;
+        toggleLoading(false);
     }
 };
 
 async function processFile(fileToProcess) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = async function (e) {
-            try {
-                const blob = new Blob([e.target.result], { type: fileToProcess.type });
-
-                if (fileToProcess.type !== "application/pdf") {
-                    // Single image file
-                    const url = URL.createObjectURL(blob);
-                    resolve([{ blob, url }]);
-                    return;
-                }
-
-                // PDF file - process all pages
-                const source = {
-                    fileData: blob,
-                    renderOptions: {
-                        renderAnnotations: "loadAnnotations"
-                    }
-                };
-
-                currentDoc.deleteAllPages();
-                await currentDoc.loadSource([source]);
-
-                const settings = {
-                    quality: 100,
-                    saveAnnotation: false,
-                };
-
-                let pageCount = currentDoc.pages.length;
-                let pages = [];
-
-                for (let i = 0; i < pageCount; i++) {
-                    const image = await currentDoc.saveToJpeg(i, settings);
-                    const url = URL.createObjectURL(image);
-                    pages.push({ blob: image, url });
-                }
-
-                resolve(pages);
-
-            } catch (error) {
-                reject(error);
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (fileToProcess.type !== "application/pdf") {
+                // Single image file
+                const url = URL.createObjectURL(fileToProcess);
+                resolve([{ blob: fileToProcess, url }]);
+                return;
             }
-        };
 
-        reader.onerror = () => {
-            reject(new Error("FileReader failed to read the file."));
-        };
+            // PDF file - convert each page to image using PDF.js
+            const arrayBuffer = await fileToProcess.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const pageCount = pdf.numPages;
+            let pages = [];
 
-        reader.readAsArrayBuffer(fileToProcess);
+            for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better quality
+
+                // Create canvas for rendering
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                // Render PDF page to canvas
+                await page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+
+                // Convert canvas to blob
+                const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+                const url = canvas.toDataURL('image/png');
+
+                pages.push({ blob, url, width: viewport.width, height: viewport.height });
+            }
+
+            resolve(pages);
+        } catch (error) {
+            reject(error);
+        }
     });
 }
 
 // Screenshot button handler
 screenshotBtn.addEventListener('click', async () => {
-    // Check if license exists and is valid
-    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
-    if (!licenseKey || !storedExpiry) {
-        alert('⚠️ No valid license. Please login to get a trial license first.');
-        return;
-    }
-
-    const expiryDate = new Date(storedExpiry);
-    const now = new Date();
-    if (expiryDate <= now) {
-        alert('⚠️ Your license has expired. Please login again to renew your trial license.');
-        loginStatus.textContent = '⚠️ License expired. Please login again.';
-        loginButton.style.display = 'block';
-        return;
-    }
-
     try {
-        // Get the active tab
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-        // Inject the screenshot selector script
         await chrome.scripting.executeScript({
             target: { tabId: tab.id },
             files: ['screenshot-selector.js']
         });
-
     } catch (error) {
-        console.error('Screenshot error:', error);
         alert(`Error: ${error.message}. Make sure you're on a regular web page, not chrome:// or extension pages.`);
     }
 });
@@ -665,7 +396,6 @@ screenshotBtn.addEventListener('click', async () => {
 const dropZone = document.body;
 const dropZoneElement = document.getElementById('dropZone');
 
-// Handle drag events on both body and drop zone element
 [dropZone, dropZoneElement].forEach(element => {
     element.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -681,11 +411,9 @@ const dropZoneElement = document.getElementById('dropZone');
     element.addEventListener('dragleave', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        // Only remove highlight if we're leaving the body entirely
         if (e.target === dropZone || e.target === dropZoneElement) {
-            dropZone.style.outline = '';
-            dropZone.style.outlineOffset = '';
-            dropZone.style.backgroundColor = '';
+            dropZone.style.outline = 'none';
+            dropZone.style.backgroundColor = 'transparent';
             if (dropZoneElement) {
                 dropZoneElement.classList.remove('drag-over');
             }
@@ -695,55 +423,67 @@ const dropZoneElement = document.getElementById('dropZone');
     element.addEventListener('drop', async (e) => {
         e.preventDefault();
         e.stopPropagation();
-
-        // Remove highlight
-        dropZone.style.outline = '';
-        dropZone.style.outlineOffset = '';
-        dropZone.style.backgroundColor = '';
+        dropZone.style.outline = 'none';
+        dropZone.style.backgroundColor = 'transparent';
         if (dropZoneElement) {
             dropZoneElement.classList.remove('drag-over');
         }
 
+        toggleLoading(true);
+
+        // Check for files first (local file system drops)
         const files = e.dataTransfer.files;
+
         if (files.length > 0) {
             const file = files[0];
 
-            // Check if it's an image or PDF
-            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'application/pdf'];
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'image/webp', 'application/pdf'];
             if (!validTypes.includes(file.type)) {
-                alert('Please drop an image or PDF file');
+                alert('Please drop an image or PDF file. Detected type: ' + file.type);
+                toggleLoading(false);
                 return;
             }
 
-            // Trigger the file input with the dropped file
             const fileInput = document.getElementById('file');
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(file);
             fileInput.files = dataTransfer.files;
 
-            // Trigger the file change event
-            const event = new Event('change', { bubbles: true });
-            fileInput.dispatchEvent(event);
+            fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+            return;
+        }
+
+        // Handle web image drops - check all possible data types
+        const types = e.dataTransfer.types;
+
+        // Try different data formats that browsers use for images
+        let imageUrl = null;
+
+        // Check for URL formats
+        if (types.includes('text/uri-list')) {
+            imageUrl = e.dataTransfer.getData('text/uri-list');
+        } else if (types.includes('text/plain')) {
+            imageUrl = e.dataTransfer.getData('text/plain');
+        } else if (types.includes('text/html')) {
+            // Extract image src from HTML
+            const html = e.dataTransfer.getData('text/html');
+            const match = html.match(/<img[^>]+src="([^"]+)"/i) || html.match(/<img[^>]+src='([^']+)'/i);
+            if (match) {
+                imageUrl = match[1];
+            }
+        }
+
+        if (imageUrl) {
+            imageUrl = imageUrl.trim().split('\n')[0]; // Take first line if multiple URLs
+            await decodeImageFromUrl(imageUrl);
+        } else {
+            alert('Please drop an image or PDF file. No valid image data detected.');
+            toggleLoading(false);
         }
     });
 });
 
-// Check for existing auth on page load
-(async function checkExistingAuth() {
-    try {
-        const token = await getCookie('DynamsoftToken');
-        const userId = await getCookie('DynamsoftUser');
-
-        if (token && userId) {
-            // User is already logged in - hide login button and request license
-            loginButton.style.display = 'none';
-            loginStatus.textContent = 'Restoring session...';
-
-            // Request trial license directly
-            await requestTrialLicense(decodeURIComponent(token), decodeURIComponent(userId));
-        }
-    } catch (error) {
-        console.log('No existing auth found:', error);
-        loginStatus.textContent = 'Please login to continue';
-    }
-})();
+// Initialize
+if (statusMessage) {
+    statusMessage.textContent = '📷 100% Free • No Login Required • Open Source';
+}

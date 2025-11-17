@@ -81,21 +81,17 @@ body {
     background: rgba(255, 255, 255, 0.3);
 }
 
-.user-section {
-    margin-top: auto;
-}
-
-.user-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
+/* GitHub Link in Sidebar */
+.github-link {
+    text-decoration: none;
+    color: white;
+    font-size: 24px;
     transition: transform 0.2s;
+    cursor: pointer;
 }
 
-.user-info:hover {
-    transform: scale(1.05);
+.github-link:hover {
+    transform: scale(1.1);
 }
 
 .user-avatar {
@@ -275,7 +271,8 @@ h1 {
     line-height: 1.5;
 }
 
-.license-row {
+/* Info Row - Displays "Free, No Login Required" message */
+.info-row {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -291,47 +288,13 @@ h1 {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.license-row #loginStatus {
+.info-row #statusMessage {
     font-size: 14px;
     color: #333;
-    font-weight: 500;
-}
-
-.license-row #loginButton {
-    padding: 10px 20px;
-    background: white;
-    color: #444;
-    border: 1px solid #dadce0;
-    border-radius: 8px;
-    cursor: pointer;
     font-weight: 600;
-    font-size: 14px;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
-.license-row #loginButton:hover {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    background: #f8f9fa;
-}
-
-.license-row #loginButton:active {
-    background: #f1f3f4;
-}
-
-.license-row #loginButton svg {
-    vertical-align: middle;
-    margin-right: 8px;
-}
-
-.license-row #loginButton .google-icon {
-    flex-shrink: 0;
-}
-
-.license-row .settings-link {
+.info-row .settings-link {
     width: 40px;
     height: 40px;
     background: white;
@@ -345,12 +308,12 @@ h1 {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.license-row .settings-link:hover {
+.info-row .settings-link:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.license-row label {
+.info-row label {
     font-size: 14px;
     white-space: nowrap;
     color: #333;
@@ -516,17 +479,12 @@ h1 {
         font-size: 1.3em;
     }
 
-    .license-row {
+    .info-row {
         padding: 10px;
     }
 
-    .license-row #loginStatus {
+    .info-row #statusMessage {
         font-size: 13px;
-    }
-
-    .license-row #loginButton {
-        font-size: 13px;
-        padding: 8px 16px;
     }
 
     .nav-btn {
