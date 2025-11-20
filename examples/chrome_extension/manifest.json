@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Free Barcode & QR Code Scanner",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "description": "Scan barcodes and QR codes from images, PDFs, and camera using open-source ZXing library. 100% free, no login required.",
     "icons": {
         "16": "icons/icon16.png",
@@ -18,7 +18,6 @@
     "permissions": [
         "storage",
         "activeTab",
-        "tabs",
         "scripting",
         "sidePanel",
         "contextMenus"
