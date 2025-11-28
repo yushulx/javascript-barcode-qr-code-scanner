@@ -6,6 +6,9 @@ let currentPageIndex = 0;
 let pageResults = []; // Store barcode results for each page
 let authWindowId = null; // Track Chrome extension window ID
 let pollTimer = null;
+let engine = 'dynamsoft'; // dynamsoft | zxing
+let zxingReader = null;
+let pdfWorkerConfigured = false;
 
 const divScanner = document.getElementById("divScanner");
 const container = document.getElementById("container");
@@ -25,6 +28,8 @@ const openSettingsBtn = document.getElementById("openSettings");
 const closeSettingsBtn = document.getElementById("closeSettings");
 const showFloatingIconToggle = document.getElementById("showFloatingIconToggle");
 const userNameElement = document.querySelector(".user-name");
+const engineOptions = document.querySelectorAll('input[name="engineOption"]');
+const engineHint = document.getElementById('engineHint');
 
 // Settings Panel
 openSettingsBtn.addEventListener('click', () => {
@@ -35,15 +40,82 @@ closeSettingsBtn.addEventListener('click', () => {
     settingsPanel.classList.remove('open');
 });
 
+// Engine selector handling
+function applyEngineChoice(choice, skipSave = false) {
+    engine = choice;
+    if (!skipSave) {
+        chrome.storage.local.set({ scannerEngine: engine });
+    }
+
+    engineOptions.forEach(option => {
+        option.checked = option.value === engine;
+    });
+
+    if (engineHint) {
+        engineHint.textContent = engine === 'zxing'
+            ? 'Uses open-source ZXing-WASM. No login or license required.'
+            : 'Uses Dynamsoft SDK. Trial/login or license key required for scanning.';
+    }
+
+    if (engine === 'zxing') {
+        loginButton.style.display = 'none';
+        loginStatus.textContent = 'Using ZXing-WASM (free mode)';
+    } else {
+        loginButton.style.display = 'inline-flex';
+        if (!licenseKey) {
+            loginStatus.textContent = 'Get your free 30-day trial license';
+        }
+    }
+
+    refreshLoginUI();
+    if (engine === 'dynamsoft') {
+        checkExistingAuth();
+    }
+}
+
+function refreshLoginUI() {
+    if (!loginStatus || !loginButton) return;
+
+    if (engine === 'zxing') {
+        loginButton.style.display = 'none';
+        loginStatus.textContent = 'Using ZXing-WASM (free mode)';
+        return;
+    }
+
+    const hasValidLicense = licenseKey && isLicenseValid();
+
+    if (hasValidLicense) {
+        loginButton.style.display = 'none';
+        if (!loginStatus.textContent.toLowerCase().includes('licensed')) {
+            loginStatus.textContent = 'Licensed';
+        }
+    } else {
+        loginButton.style.display = 'inline-flex';
+        loginStatus.textContent = 'Get your free 30-day trial license';
+    }
+}
+
+engineOptions.forEach(option => {
+    option.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            applyEngineChoice(e.target.value);
+        }
+    });
+});
+
 // Help button handler
 const helpBtn = document.getElementById('helpBtn');
 helpBtn.addEventListener('click', () => {
     window.open('https://www.dynamsoft.com/codepool/chrome-extension-barcode-qr-code-scanner.html', '_blank');
 });
 
-// Load floating icon setting
-chrome.storage.local.get(['showFloatingIcon', 'customLicenseKey'], (result) => {
+// Load floating icon setting and saved engine
+chrome.storage.local.get(['showFloatingIcon', 'customLicenseKey', 'scannerEngine'], (result) => {
     showFloatingIconToggle.checked = result.showFloatingIcon !== false;
+    if (result.scannerEngine) {
+        engine = result.scannerEngine;
+    }
+    applyEngineChoice(engine, true);
 
     // Load custom license key if exists
     const licenseKeyInput = document.getElementById('licenseKeyInput');
@@ -51,13 +123,14 @@ chrome.storage.local.get(['showFloatingIcon', 'customLicenseKey'], (result) => {
     if (result.customLicenseKey && licenseKeyInput) {
         licenseKeyInput.value = result.customLicenseKey;
         if (licenseStatus) {
-            licenseStatus.textContent = '✓ Custom license key is set';
+            licenseStatus.textContent = 'Custom license key is set';
             licenseStatus.style.display = 'block';
             licenseStatus.style.background = '#d4edda';
             licenseStatus.style.color = '#155724';
             licenseStatus.style.border = '1px solid #c3e6cb';
         }
     }
+
 });
 
 // Save floating icon setting
@@ -86,7 +159,7 @@ if (saveLicenseBtn) {
         }
 
         chrome.storage.local.set({ customLicenseKey: licenseKey }, () => {
-            licenseStatus.textContent = '✓ Custom license key saved successfully';
+            licenseStatus.textContent = 'Custom license key saved successfully';
             licenseStatus.style.display = 'block';
             licenseStatus.style.background = '#d4edda';
             licenseStatus.style.color = '#155724';
@@ -103,7 +176,7 @@ if (clearLicenseBtn) {
         licenseKeyInput.value = '';
 
         chrome.storage.local.remove('customLicenseKey', () => {
-            licenseStatus.textContent = '✓ Custom license key cleared. Will use Google auth license.';
+            licenseStatus.textContent = 'Custom license key cleared. Will use Google auth license.';
             licenseStatus.style.display = 'block';
             licenseStatus.style.background = '#d1ecf1';
             licenseStatus.style.color = '#0c5460';
@@ -176,20 +249,22 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
 // Function to decode image from URL (context menu)
 async function decodeImageFromUrl(imageUrl) {
-    // Get effective license key (custom takes priority)
-    const effectiveLicense = await getEffectiveLicenseKey();
+    if (engine === 'dynamsoft') {
+        const effectiveLicense = await getEffectiveLicenseKey();
 
-    if (!effectiveLicense) {
-        alert('⚠️ No valid license. Please login to get a trial license or set a custom license in settings.');
-        return;
-    }
+        if (!effectiveLicense) {
+            alert('⚠️ No valid license. Please login to get a trial license or set a custom license in settings.');
+            toggleLoading(false);
+            return;
+        }
 
-    // If using Google auth license, check expiration
-    if (!effectiveLicense.isCustom && !isLicenseValid()) {
-        alert('⚠️ Your license has expired. Please login again to renew your trial license or set a custom license in settings.');
-        loginStatus.textContent = '⚠️ License expired. Please login again.';
-        loginButton.style.display = 'block';
-        return;
+        if (!effectiveLicense.isCustom && !isLicenseValid()) {
+            alert('⚠️ Your license has expired. Please login again to renew your trial license or set a custom license in settings.');
+            loginStatus.textContent = '⚠️ License expired. Please login again.';
+            loginButton.style.display = 'block';
+            toggleLoading(false);
+            return;
+        }
     }
 
     try {
@@ -222,6 +297,87 @@ function toggleLoading(isLoading) {
     } else {
         document.getElementById("loading-indicator").style.display = "none";
     }
+}
+
+async function ensureZXingReady() {
+    if (!zxingReader) {
+        const module = await import('./libs/zxing-wasm/es/reader/index.js');
+        zxingReader = module.readBarcodesFromImageData;
+    }
+
+    if (typeof pdfjsLib !== 'undefined' && !pdfWorkerConfigured) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'libs/pdfjs/pdf.worker.min.js';
+        pdfWorkerConfigured = true;
+    }
+}
+
+function normalizeLocationPoints(location) {
+    if (!location) return null;
+
+    if (Array.isArray(location)) {
+        return location;
+    }
+
+    if (location.points && Array.isArray(location.points)) {
+        return location.points;
+    }
+
+    if (location.topLeft && location.topRight && location.bottomRight && location.bottomLeft) {
+        return [location.topLeft, location.topRight, location.bottomRight, location.bottomLeft];
+    }
+
+    return null;
+}
+
+async function decodeWithZXing(imageSource, maxSymbols = 255) {
+    await ensureZXingReady();
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = imageSource.width || imageSource.naturalWidth;
+    canvas.height = imageSource.height || imageSource.naturalHeight;
+    ctx.drawImage(imageSource, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    const results = await zxingReader(imageData, { maxSymbols });
+    return {
+        items: results.map(result => ({
+            text: result.text,
+            formatString: result.format,
+            location: { points: normalizeLocationPoints(result.position || result.location) }
+        }))
+    };
+}
+
+async function processFileWithZXing(fileToProcess) {
+    await ensureZXingReady();
+
+    if (fileToProcess.type !== "application/pdf") {
+        const url = URL.createObjectURL(fileToProcess);
+        return [{ blob: fileToProcess, url }];
+    }
+
+    const arrayBuffer = await fileToProcess.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pageCount = pdf.numPages;
+    let pages = [];
+
+    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 2.0 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({ canvasContext: context, viewport }).promise;
+
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        const url = canvas.toDataURL('image/png');
+        pages.push({ blob, url, width: viewport.width, height: viewport.height });
+    }
+
+    return pages;
 }
 
 // Get cookie from Dynamsoft domain via background script
@@ -281,6 +437,10 @@ function startPolling() {
 
 // Request trial license from Dynamsoft API via background script
 async function requestTrialLicense(token, userId) {
+    if (engine === "zxing") {
+        toggleLoading(false);
+        return;
+    }
     try {
         toggleLoading(true);
         loginStatus.textContent = 'Getting user info...';
@@ -340,8 +500,9 @@ async function requestTrialLicense(token, userId) {
 
                             // Calculate days until expiration
                             const daysUntilExpiry = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
-                            loginStatus.textContent = `✓ Licensed (Trial - ${daysUntilExpiry} days left)`;
+                            loginStatus.textContent = `Licensed (Trial - ${daysUntilExpiry} days left)`;
                             loginButton.style.display = 'none';
+                            refreshLoginUI();
                         } else {
                             throw new Error(response.data?.message || response.error || 'Failed to obtain license');
                         }
@@ -444,6 +605,10 @@ loginButton.addEventListener('click', () => {
 
 // Check for existing license on page load
 window.addEventListener('load', async () => {
+    if (engine === 'zxing') {
+        refreshLoginUI();
+        return;
+    }
     const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
 
     if (storedExpiry) {
@@ -495,10 +660,12 @@ function displayPage(pageIndex) {
         // Draw barcode boxes if results exist for this page
         if (pageResults[pageIndex] && pageResults[pageIndex].items) {
             pageResults[pageIndex].items.forEach(item => {
-                let localization = item.location;
-                ctx.strokeStyle = '#ff0000';
+                const points = normalizeLocationPoints(item.location && (item.location.points || item.location));
+                if (!points || points.length < 4) {
+                    return;
+                }
+                ctx.strokeStyle = engine === 'zxing' ? '#00c774' : '#ff0000';
                 ctx.lineWidth = 2;
-                let points = localization.points;
                 ctx.beginPath();
                 ctx.moveTo(points[0].x, points[0].y);
                 ctx.lineTo(points[1].x, points[1].y);
@@ -578,7 +745,11 @@ nextPageBtn.addEventListener('click', () => {
 });
 
 document.getElementById("scan").addEventListener('click', async () => {
-    // Get effective license key (custom takes priority)
+    if (engine === 'zxing') {
+        await chrome.tabs.create({ url: chrome.runtime.getURL('scanner.html') });
+        return;
+    }
+
     const effectiveLicense = await getEffectiveLicenseKey();
 
     if (!effectiveLicense) {
@@ -586,7 +757,6 @@ document.getElementById("scan").addEventListener('click', async () => {
         return;
     }
 
-    // If using Google auth license, check expiration
     if (!effectiveLicense.isCustom && !isLicenseValid()) {
         alert('⚠️ Your license has expired. Please login again to renew your trial license or set a custom license in settings.');
         loginStatus.textContent = '⚠️ License expired. Please login again.';
@@ -594,13 +764,10 @@ document.getElementById("scan").addEventListener('click', async () => {
         return;
     }
 
-    // Camera access doesn't work in extension popups
-    // Open scanner in a new tab and pass license key via message
     const tab = await chrome.tabs.create({
         url: chrome.runtime.getURL('scanner.html')
     });
 
-    // Wait for scanner page to load, then send license
     chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
         if (tabId === tab.id && info.status === 'complete') {
             chrome.tabs.sendMessage(tabId, {
@@ -613,7 +780,47 @@ document.getElementById("scan").addEventListener('click', async () => {
 });
 
 document.getElementById("file").onchange = async function () {
-    // Get effective license key (custom takes priority)
+    const files = Array.from(this.files || []);
+    if (!files.length) return;
+
+    // ZXing path (no license required)
+    if (engine === 'zxing') {
+        try {
+            toggleLoading(true);
+            pdfPages = [];
+            pageResults = [];
+            currentPageIndex = 0;
+            imageContainer.style.display = "none";
+
+            let fileToProcess = files[0];
+            const pages = await processFileWithZXing(fileToProcess);
+            pdfPages = pages;
+            pageResults = new Array(pages.length);
+
+            for (let i = 0; i < pages.length; i++) {
+                const img = document.createElement('img');
+                img.src = pages[i].url;
+                await new Promise(resolve => img.onload = resolve);
+                const result = await decodeWithZXing(img, 255);
+                pageResults[i] = result;
+            }
+
+            if (pages.length > 0) {
+                imageContainer.style.display = "flex";
+                displayPage(0);
+                displayAllResults();
+            }
+
+            toggleLoading(false);
+        } catch (error) {
+            console.error("Error processing file with ZXing:", error);
+            resultArea.value = `Error: ${error.message}`;
+            toggleLoading(false);
+        }
+        return;
+    }
+
+    // Dynamsoft path (license required)
     const effectiveLicense = await getEffectiveLicenseKey();
 
     if (!effectiveLicense) {
@@ -621,7 +828,6 @@ document.getElementById("file").onchange = async function () {
         return;
     }
 
-    // If using Google auth license, check expiration
     if (!effectiveLicense.isCustom && !isLicenseValid()) {
         alert('⚠️ Your license has expired. Please login again to renew your trial license or set a custom license in settings.');
         loginStatus.textContent = '⚠️ License expired. Please login again.';
@@ -641,51 +847,45 @@ document.getElementById("file").onchange = async function () {
         console.error(error);
     }
 
-    // Reset variables
     pdfPages = [];
     pageResults = [];
     currentPageIndex = 0;
 
     imageContainer.style.display = "none";
     if (barcodeScanner) {
-        const files = Array.from(this.files || []);
-        if (files.length) {
-            try {
-                toggleLoading(true);
-                let fileToProcess = files[0];
+        try {
+            toggleLoading(true);
+            let fileToProcess = files[0];
 
-                // Process the file and get all pages
-                let pages = await processFile(fileToProcess);
-                pdfPages = pages;
-                pageResults = new Array(pages.length);
+            // Process the file and get all pages
+            let pages = await processFile(fileToProcess);
+            pdfPages = pages;
+            pageResults = new Array(pages.length);
 
-                // Process each page for barcodes
-                for (let i = 0; i < pages.length; i++) {
-                    try {
-                        let result = await barcodeScanner.decode(pages[i].blob);
-                        pageResults[i] = result;
-                    } catch (error) {
-                        console.error(`Error processing page ${i + 1}:`, error);
-                        pageResults[i] = { items: [] };
-                    }
+            // Process each page for barcodes
+            for (let i = 0; i < pages.length; i++) {
+                try {
+                    let result = await barcodeScanner.decode(pages[i].blob);
+                    pageResults[i] = result;
+                } catch (error) {
+                    console.error(`Error processing page ${i + 1}:`, error);
+                    pageResults[i] = { items: [] };
                 }
-
-                // Display the first page
-                if (pages.length > 0) {
-                    imageContainer.style.display = "flex";
-                    displayPage(0);
-                    displayAllResults();
-                }
-
-                toggleLoading(false);
-            } catch (error) {
-                console.error("Error processing file:", error);
-                resultArea.value = `Error: ${error.message}`;
-                toggleLoading(false);
             }
+
+            if (pages.length > 0) {
+                imageContainer.style.display = "flex";
+                displayPage(0);
+                displayAllResults();
+            }
+
+            toggleLoading(false);
+        } catch (error) {
+            console.error("Error processing file:", error);
+            resultArea.value = `Error: ${error.message}`;
+            toggleLoading(false);
         }
-    }
-    else {
+    } else {
         resultArea.value = "Please activate the scanner first.\n";
     }
 };
@@ -747,20 +947,21 @@ async function processFile(fileToProcess) {
 
 // Screenshot button handler
 screenshotBtn.addEventListener('click', async () => {
-    // Check if license exists and is valid
-    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
-    if (!licenseKey || !storedExpiry) {
-        alert('⚠️ No valid license. Please login to get a trial license first.');
-        return;
-    }
+    if (engine === 'dynamsoft') {
+        const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
+        if (!licenseKey || !storedExpiry) {
+            alert('⚠️ No valid license. Please login to get a trial license first.');
+            return;
+        }
 
-    const expiryDate = new Date(storedExpiry);
-    const now = new Date();
-    if (expiryDate <= now) {
-        alert('⚠️ Your license has expired. Please login again to renew your trial license.');
-        loginStatus.textContent = '⚠️ License expired. Please login again.';
-        loginButton.style.display = 'block';
-        return;
+        const expiryDate = new Date(storedExpiry);
+        const now = new Date();
+        if (expiryDate <= now) {
+            alert('⚠️ Your license has expired. Please login again to renew your trial license.');
+            loginStatus.textContent = '⚠️ License expired. Please login again.';
+            loginButton.style.display = 'block';
+            return;
+        }
     }
 
     try {
@@ -847,7 +1048,10 @@ const dropZoneElement = document.getElementById('dropZone');
 });
 
 // Check for existing auth on page load
-(async function checkExistingAuth() {
+async function checkExistingAuth() {
+    if (engine === 'zxing') {
+        return;
+    }
     try {
         // First check if there's a custom license key
         const effectiveLicense = await getEffectiveLicenseKey();
@@ -856,10 +1060,11 @@ const dropZoneElement = document.getElementById('dropZone');
             // Custom license exists - hide login button and activate SDK
             loginButton.style.display = 'none';
             loginStatus.textContent = 'Using custom license...';
+            licenseKey = effectiveLicense.key;
 
             try {
                 await activateSDK(effectiveLicense.key);
-                loginStatus.textContent = '✓ Licensed (Custom License Key)';
+                loginStatus.textContent = 'Licensed (Custom License Key)';
             } catch (error) {
                 loginStatus.textContent = '❌ Invalid custom license';
                 console.error('Error activating custom license:', error);
@@ -883,4 +1088,4 @@ const dropZoneElement = document.getElementById('dropZone');
         console.log('No existing auth found:', error);
         loginStatus.textContent = 'Please login to continue';
     }
-})();
+}

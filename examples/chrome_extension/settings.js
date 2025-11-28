@@ -6,9 +6,10 @@ const licenseKeyInput = document.getElementById('licenseKeyInput');
 const saveLicenseBtn = document.getElementById('saveLicenseBtn');
 const clearLicenseBtn = document.getElementById('clearLicenseBtn');
 const licenseStatus = document.getElementById('licenseStatus');
+const engineRadios = document.querySelectorAll('input[name=\"engineOption\"]');
 
 // Load current settings
-chrome.storage.local.get(['showFloatingIcon', 'customLicenseKey'], (result) => {
+chrome.storage.local.get(['showFloatingIcon', 'customLicenseKey', 'scannerEngine'], (result) => {
     showFloatingIconToggle.checked = result.showFloatingIcon !== false; // Default to true
 
     // Load custom license key if exists
@@ -16,6 +17,11 @@ chrome.storage.local.get(['showFloatingIcon', 'customLicenseKey'], (result) => {
         licenseKeyInput.value = result.customLicenseKey;
         showLicenseStatus('Custom license key is set', 'active');
     }
+
+    const engineValue = result.scannerEngine || 'dynamsoft';
+    engineRadios.forEach(radio => {
+        radio.checked = radio.value === engineValue;
+    });
 });
 
 // Save settings when changed
@@ -34,6 +40,24 @@ showFloatingIconToggle.addEventListener('change', () => {
         setTimeout(() => {
             statusMessage.style.display = 'none';
         }, 3000);
+    });
+});
+
+engineRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+        if (!radio.checked) return;
+
+        chrome.storage.local.set({ scannerEngine: radio.value }, () => {
+            statusMessage.textContent = radio.value === 'zxing'
+                ? 'Using ZXing-WASM (no login needed).'
+                : 'Using Dynamsoft engine (login or license required).';
+            statusMessage.className = 'status-message success';
+            statusMessage.style.display = 'block';
+
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 3000);
+        });
     });
 });
 

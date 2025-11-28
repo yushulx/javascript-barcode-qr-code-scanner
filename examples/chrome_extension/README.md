@@ -19,8 +19,8 @@ https://github.com/user-attachments/assets/838d1fd8-862b-4882-b8c4-a8bc14657b05
 
 ## Installation
 
-### From Chrome Web Store
-*(Coming soon)*
+- [Chrome Web Store](https://chromewebstore.google.com/detail/free-barcode-qr-code-scan/oifbhbnnboafnkjeaglbhknagfjkbhfm?authuser=0&hl=en)
+- [Edge Web Store](https://microsoftedge.microsoft.com/addons/detail/free-barcode-qr-code-sc/lddfadanimbaiceehkfdngafclpodldj)
 
 ### Manual Installation (Developer Mode)
 
@@ -96,6 +96,11 @@ https://github.com/user-attachments/assets/838d1fd8-862b-4882-b8c4-a8bc14657b05
 - **1D Barcodes**: Code 128, Code 39, Code 93, EAN-8, EAN-13, UPC-A, UPC-E, Interleaved 2 of 5, Industrial 2 of 5, Codabar
 - **2D Barcodes**: QR Code, Data Matrix, PDF417, Aztec Code, MaxiCode
 - **Postal Codes**: USPS Intelligent Mail, Postnet, Planet, Australia Post, Royal Mail
+
+## Engines
+
+- **Dynamsoft Barcode Reader**: Commercial-grade accuracy and speed. Requires trial login or license key.
+- **ZXing-WASM**: 100% free, open source, no login required. Runs entirely in the browser.
 
 ## License
 

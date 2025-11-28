@@ -277,6 +277,35 @@
         <div class="setting-group">
             <div class="setting-info">
                 <div class="setting-title">
+                    <span class="icon">🧭</span>
+                    Scanner Engine
+                </div>
+                <div class="setting-description">
+                    Choose between the commercial Dynamsoft Barcode Reader (trial/license) or the free ZXing-WASM engine.
+                </div>
+            </div>
+            <div class="license-input-container">
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <label style="display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="engineOption" value="dynamsoft" id="engineDynamsoftSettings">
+                            Dynamsoft (trial/license)
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="engineOption" value="zxing" id="engineZxingSettings">
+                            ZXing-WASM (free)
+                        </label>
+                    </div>
+                    <div class="help-text">
+                        ZXing runs fully offline with no login. Dynamsoft offers better accuracy and speed with a trial license.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <div class="setting-info">
+                <div class="setting-title">
                     <span class="icon">🔑</span>
                     License Key
                 </div>

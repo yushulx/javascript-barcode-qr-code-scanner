@@ -7,6 +7,7 @@
     <title>Dynamsoft Barcode Scanner - Hello World</title>
     <script src="libs/dynamsoft-barcode-reader-bundle/dist/dbr.bundle.js"></script>
     <script src="libs/dynamsoft-document-viewer/dist/ddv.js"></script>
+    <script src="libs/pdfjs/pdf.min.js"></script>
     <link rel="stylesheet" href="main.css">
 </head>
 
@@ -70,7 +71,18 @@
                 </div>
             </div>
 
-            <h1>Dynamsoft Barcode Scanner</h1>
+            <h1>Dynamsoft Barcode Scanner & ZXing</h1>
+            <div class="engine-toggle" id="engineToggle">
+                <div class="engine-option">
+                    <input type="radio" id="engineDynamsoft" name="engineOption" value="dynamsoft" checked>
+                    <label for="engineDynamsoft">Dynamsoft (trial or license)</label>
+                </div>
+                <div class="engine-option">
+                    <input type="radio" id="engineZxing" name="engineOption" value="zxing">
+                    <label for="engineZxing">ZXing-WASM (free, no login)</label>
+                </div>
+                <div class="engine-hint" id="engineHint"></div>
+            </div>
             <div class="license-row">
                 <span id="loginStatus">Get your free 30-day trial license</span>
                 <button id="loginButton">
@@ -132,6 +144,13 @@
                 <button id="helpBtn" class="sidebar-btn" title="Help & Documentation">
                     📖
                 </button>
+            </div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-section">
+                <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                    target="_blank" rel="noopener" class="sidebar-btn" title="Get Dynamsoft Trial License">
+                    🛒
+                </a>
             </div>
             <div class="sidebar-divider"></div>
             <div class="sidebar-section user-section">

@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
     "name": "Barcode & QR Code Scanner",
-    "version": "1.0.2",
-    "description": "Scan barcodes and QR codes from images, PDFs, and camera using Dynamsoft SDK",
+    "version": "3.0.0",
+    "description": "Scan barcodes and QR codes from images, PDFs, and camera using Dynamsoft SDK or open-source ZXing-WASM",
     "icons": {
         "16": "icons/icon16.png",
         "48": "icons/icon48.png",
