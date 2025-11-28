@@ -100,15 +100,9 @@ https://github.com/user-attachments/assets/838d1fd8-862b-4882-b8c4-a8bc14657b05
 ## License
 
 ### Trial License (Free)
-- **30 days** of full functionality
+- [30 days](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform) of full functionality
 - Obtained automatically via Google OAuth login
 - No credit card required
-
-### Commercial License
-When your trial expires:
-1. Visit [Dynamsoft Purchase Center](https://www.dynamsoft.com/purchase-center/)
-2. Choose a plan that fits your needs
-3. The extension will prompt you to purchase when needed
 
 
 ### Privacy & Security
@@ -133,8 +127,5 @@ When your trial expires:
 
 
 ## License Agreement
-
-This extension uses Dynamsoft SDKs which require a valid license:
-- Trial: 30 days free via Google login
-- Commercial: Purchase from [Dynamsoft](https://www.dynamsoft.com/purchase-center/)
+This extension uses Dynamsoft SDKs which require a valid license.
 
