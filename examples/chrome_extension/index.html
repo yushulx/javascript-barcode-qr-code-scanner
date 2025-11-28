@@ -39,6 +39,34 @@
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
+
+                    <div class="setting-item" style="display: block;">
+                        <div class="setting-info">
+                            <div class="setting-title">🔑 Custom License Key</div>
+                            <div class="setting-description">
+                                Enter your Dynamsoft license key to override the Google auth license. This is useful if
+                                your trial license has expired.
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <input type="text" id="licenseKeyInput" placeholder="Enter your license key here..."
+                                style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 13px; margin-bottom: 8px;"
+                                autocomplete="off" spellcheck="false">
+                            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                                <button id="saveLicenseBtn"
+                                    style="flex: 1; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">Save</button>
+                                <button id="clearLicenseBtn"
+                                    style="flex: 1; padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">Clear</button>
+                            </div>
+                            <div id="licenseStatus"
+                                style="font-size: 12px; padding: 6px 10px; border-radius: 4px; display: none;"></div>
+                            <div style="font-size: 11px; color: #888; margin-top: 6px;">
+                                💡 Get a license from <a
+                                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                                    target="_blank" rel="noopener" style="color: #667eea;">Dynamsoft License Portal</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -101,8 +129,8 @@
             </div>
             <div class="sidebar-divider"></div>
             <div class="sidebar-section">
-                <button id="cartBtn" class="sidebar-btn" title="Purchase">
-                    🛒
+                <button id="helpBtn" class="sidebar-btn" title="Help & Documentation">
+                    📖
                 </button>
             </div>
             <div class="sidebar-divider"></div>

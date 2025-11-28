@@ -153,6 +153,100 @@
             font-size: 20px;
             margin-right: 10px;
         }
+
+        /* License Key Input */
+        .license-input-container {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: monospace;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .license-status {
+            margin-top: 8px;
+            font-size: 13px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .license-status.active {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .license-status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #888;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
     </style>
 </head>
 
@@ -178,6 +272,36 @@
                     <span class="slider"></span>
                 </label>
             </label>
+        </div>
+
+        <div class="setting-group">
+            <div class="setting-info">
+                <div class="setting-title">
+                    <span class="icon">🔑</span>
+                    License Key
+                </div>
+                <div class="setting-description">
+                    Enter your Dynamsoft license key to override the Google auth license. This is useful if your trial
+                    license has expired.
+                </div>
+            </div>
+            <div class="license-input-container">
+                <div class="input-group">
+                    <label class="input-label" for="licenseKeyInput">Custom License Key</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="licenseKeyInput" placeholder="Enter your license key here..."
+                            autocomplete="off" spellcheck="false">
+                        <button class="btn btn-primary" id="saveLicenseBtn">Save</button>
+                        <button class="btn btn-secondary" id="clearLicenseBtn">Clear</button>
+                    </div>
+                    <div class="help-text">
+                        💡 Get a license from <a
+                            href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                            target="_blank" rel="noopener">Dynamsoft License Portal</a>
+                    </div>
+                    <div class="license-status" id="licenseStatus"></div>
+                </div>
+            </div>
         </div>
 
         <div class="status-message" id="statusMessage"></div>

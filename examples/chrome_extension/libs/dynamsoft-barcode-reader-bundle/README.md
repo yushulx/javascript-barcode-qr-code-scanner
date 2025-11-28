@@ -44,7 +44,7 @@ new Dynamsoft.BarcodeScanner().launch().then(result=>alert(result.barcodeResults
 
 ## License
 
-When getting started with Barcode Scanner, we recommend [getting your own 30-day trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dbr&utm_source=npm&package=js)
+When getting started with Barcode Scanner, we recommend [getting your own 30-day trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform)
 
 ## Quick Start: Hello World Example
 

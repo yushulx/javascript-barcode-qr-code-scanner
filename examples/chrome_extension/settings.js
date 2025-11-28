@@ -2,10 +2,20 @@
 
 const showFloatingIconToggle = document.getElementById('showFloatingIcon');
 const statusMessage = document.getElementById('statusMessage');
+const licenseKeyInput = document.getElementById('licenseKeyInput');
+const saveLicenseBtn = document.getElementById('saveLicenseBtn');
+const clearLicenseBtn = document.getElementById('clearLicenseBtn');
+const licenseStatus = document.getElementById('licenseStatus');
 
 // Load current settings
-chrome.storage.local.get(['showFloatingIcon'], (result) => {
+chrome.storage.local.get(['showFloatingIcon', 'customLicenseKey'], (result) => {
     showFloatingIconToggle.checked = result.showFloatingIcon !== false; // Default to true
+
+    // Load custom license key if exists
+    if (result.customLicenseKey) {
+        licenseKeyInput.value = result.customLicenseKey;
+        showLicenseStatus('Custom license key is set', 'active');
+    }
 });
 
 // Save settings when changed
@@ -26,3 +36,52 @@ showFloatingIconToggle.addEventListener('change', () => {
         }, 3000);
     });
 });
+
+// Save custom license key
+saveLicenseBtn.addEventListener('click', () => {
+    const licenseKey = licenseKeyInput.value.trim();
+
+    if (!licenseKey) {
+        showLicenseStatus('Please enter a license key', 'info');
+        return;
+    }
+
+    // Save to chrome storage
+    chrome.storage.local.set({ customLicenseKey: licenseKey }, () => {
+        showLicenseStatus('✓ Custom license key saved successfully', 'active');
+
+        // Show status message
+        statusMessage.textContent = '✓ License key saved. It will be used when you scan barcodes.';
+        statusMessage.className = 'status-message success';
+        statusMessage.style.display = 'block';
+
+        setTimeout(() => {
+            statusMessage.style.display = 'none';
+        }, 3000);
+    });
+});
+
+// Clear custom license key
+clearLicenseBtn.addEventListener('click', () => {
+    licenseKeyInput.value = '';
+
+    chrome.storage.local.remove('customLicenseKey', () => {
+        showLicenseStatus('Custom license key cleared. Will use Google auth license.', 'info');
+
+        // Show status message
+        statusMessage.textContent = '✓ License key cleared. Google auth license will be used.';
+        statusMessage.className = 'status-message success';
+        statusMessage.style.display = 'block';
+
+        setTimeout(() => {
+            statusMessage.style.display = 'none';
+        }, 3000);
+    });
+});
+
+// Helper function to show license status
+function showLicenseStatus(message, type) {
+    licenseStatus.textContent = message;
+    licenseStatus.className = 'license-status ' + type;
+    licenseStatus.style.display = 'block';
+}

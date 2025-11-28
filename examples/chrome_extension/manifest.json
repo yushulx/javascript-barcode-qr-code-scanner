@@ -19,7 +19,6 @@
         "storage",
         "cookies",
         "activeTab",
-        "tabs",
         "scripting",
         "sidePanel",
         "contextMenus"

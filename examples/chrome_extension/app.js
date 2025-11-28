@@ -35,21 +35,102 @@ closeSettingsBtn.addEventListener('click', () => {
     settingsPanel.classList.remove('open');
 });
 
-// Cart button handler
-const cartBtn = document.getElementById('cartBtn');
-cartBtn.addEventListener('click', () => {
-    window.open('https://www.dynamsoft.com/purchase-center/', '_blank');
+// Help button handler
+const helpBtn = document.getElementById('helpBtn');
+helpBtn.addEventListener('click', () => {
+    window.open('https://www.dynamsoft.com/codepool/chrome-extension-barcode-qr-code-scanner.html', '_blank');
 });
 
 // Load floating icon setting
-chrome.storage.local.get(['showFloatingIcon'], (result) => {
+chrome.storage.local.get(['showFloatingIcon', 'customLicenseKey'], (result) => {
     showFloatingIconToggle.checked = result.showFloatingIcon !== false;
+
+    // Load custom license key if exists
+    const licenseKeyInput = document.getElementById('licenseKeyInput');
+    const licenseStatus = document.getElementById('licenseStatus');
+    if (result.customLicenseKey && licenseKeyInput) {
+        licenseKeyInput.value = result.customLicenseKey;
+        if (licenseStatus) {
+            licenseStatus.textContent = '✓ Custom license key is set';
+            licenseStatus.style.display = 'block';
+            licenseStatus.style.background = '#d4edda';
+            licenseStatus.style.color = '#155724';
+            licenseStatus.style.border = '1px solid #c3e6cb';
+        }
+    }
 });
 
 // Save floating icon setting
 showFloatingIconToggle.addEventListener('change', () => {
     const showIcon = showFloatingIconToggle.checked;
     chrome.storage.local.set({ showFloatingIcon: showIcon });
+});
+
+// License key management
+const licenseKeyInput = document.getElementById('licenseKeyInput');
+const saveLicenseBtn = document.getElementById('saveLicenseBtn');
+const clearLicenseBtn = document.getElementById('clearLicenseBtn');
+const licenseStatus = document.getElementById('licenseStatus');
+
+if (saveLicenseBtn) {
+    saveLicenseBtn.addEventListener('click', () => {
+        const licenseKey = licenseKeyInput.value.trim();
+
+        if (!licenseKey) {
+            licenseStatus.textContent = 'Please enter a license key';
+            licenseStatus.style.display = 'block';
+            licenseStatus.style.background = '#d1ecf1';
+            licenseStatus.style.color = '#0c5460';
+            licenseStatus.style.border = '1px solid #bee5eb';
+            return;
+        }
+
+        chrome.storage.local.set({ customLicenseKey: licenseKey }, () => {
+            licenseStatus.textContent = '✓ Custom license key saved successfully';
+            licenseStatus.style.display = 'block';
+            licenseStatus.style.background = '#d4edda';
+            licenseStatus.style.color = '#155724';
+            licenseStatus.style.border = '1px solid #c3e6cb';
+
+            // Reload to apply new license
+            setTimeout(() => location.reload(), 1000);
+        });
+    });
+}
+
+if (clearLicenseBtn) {
+    clearLicenseBtn.addEventListener('click', () => {
+        licenseKeyInput.value = '';
+
+        chrome.storage.local.remove('customLicenseKey', () => {
+            licenseStatus.textContent = '✓ Custom license key cleared. Will use Google auth license.';
+            licenseStatus.style.display = 'block';
+            licenseStatus.style.background = '#d1ecf1';
+            licenseStatus.style.color = '#0c5460';
+            licenseStatus.style.border = '1px solid #bee5eb';
+
+            // Reload to apply change
+            setTimeout(() => location.reload(), 1000);
+        });
+    });
+}
+
+
+// Listen for storage changes (e.g., when custom license key is updated)
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.customLicenseKey) {
+        // Custom license key was updated
+        if (changes.customLicenseKey.newValue) {
+            // New license key set
+            console.log('Custom license key updated');
+            // Reload the page to apply new license
+            location.reload();
+        } else if (changes.customLicenseKey.oldValue && !changes.customLicenseKey.newValue) {
+            // License key was removed
+            console.log('Custom license key removed');
+            location.reload();
+        }
+    }
 });
 
 // Listen for messages from background script (context menu, etc.)
@@ -95,17 +176,17 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
 // Function to decode image from URL (context menu)
 async function decodeImageFromUrl(imageUrl) {
-    // Check if license exists and is valid
-    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
-    if (!licenseKey || !storedExpiry) {
-        alert('⚠️ No valid license. Please login to get a trial license first.');
+    // Get effective license key (custom takes priority)
+    const effectiveLicense = await getEffectiveLicenseKey();
+
+    if (!effectiveLicense) {
+        alert('⚠️ No valid license. Please login to get a trial license or set a custom license in settings.');
         return;
     }
 
-    const expiryDate = new Date(storedExpiry);
-    const now = new Date();
-    if (expiryDate <= now) {
-        alert('⚠️ Your license has expired. Please login again to renew your trial license.');
+    // If using Google auth license, check expiration
+    if (!effectiveLicense.isCustom && !isLicenseValid()) {
+        alert('⚠️ Your license has expired. Please login again to renew your trial license or set a custom license in settings.');
         loginStatus.textContent = '⚠️ License expired. Please login again.';
         loginButton.style.display = 'block';
         return;
@@ -299,6 +380,43 @@ async function activateSDK(licenseKey) {
     }
 }
 
+// Get effective license key (custom key takes priority over Google auth)
+async function getEffectiveLicenseKey() {
+    return new Promise((resolve) => {
+        chrome.storage.local.get(['customLicenseKey'], (result) => {
+            if (result.customLicenseKey) {
+                // Custom license key exists - use it
+                resolve({
+                    key: result.customLicenseKey,
+                    source: 'custom',
+                    isCustom: true
+                });
+            } else if (licenseKey) {
+                // Use Google auth license
+                resolve({
+                    key: licenseKey,
+                    source: 'google-auth',
+                    isCustom: false
+                });
+            } else {
+                // No license available
+                resolve(null);
+            }
+        });
+    });
+}
+
+// Check if license is valid (not expired)
+function isLicenseValid() {
+    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
+    if (!storedExpiry) return false;
+
+    const expiryDate = new Date(storedExpiry);
+    const now = new Date();
+    return expiryDate > now;
+}
+
+
 // Handle Google login
 loginButton.addEventListener('click', () => {
     loginStatus.textContent = 'Opening login window...';
@@ -460,17 +578,17 @@ nextPageBtn.addEventListener('click', () => {
 });
 
 document.getElementById("scan").addEventListener('click', async () => {
-    // Check if license exists and is valid
-    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
-    if (!licenseKey || !storedExpiry) {
-        alert('⚠️ No valid license. Please login to get a trial license first.');
+    // Get effective license key (custom takes priority)
+    const effectiveLicense = await getEffectiveLicenseKey();
+
+    if (!effectiveLicense) {
+        alert('⚠️ No valid license. Please login to get a trial license or set a custom license in settings.');
         return;
     }
 
-    const expiryDate = new Date(storedExpiry);
-    const now = new Date();
-    if (expiryDate <= now) {
-        alert('⚠️ Your license has expired. Please login again to renew your trial license.');
+    // If using Google auth license, check expiration
+    if (!effectiveLicense.isCustom && !isLicenseValid()) {
+        alert('⚠️ Your license has expired. Please login again to renew your trial license or set a custom license in settings.');
         loginStatus.textContent = '⚠️ License expired. Please login again.';
         loginButton.style.display = 'block';
         return;
@@ -487,7 +605,7 @@ document.getElementById("scan").addEventListener('click', async () => {
         if (tabId === tab.id && info.status === 'complete') {
             chrome.tabs.sendMessage(tabId, {
                 action: 'setLicense',
-                licenseKey: licenseKey
+                licenseKey: effectiveLicense.key
             });
             chrome.tabs.onUpdated.removeListener(listener);
         }
@@ -495,17 +613,17 @@ document.getElementById("scan").addEventListener('click', async () => {
 });
 
 document.getElementById("file").onchange = async function () {
-    // Check if license exists and is valid
-    const storedExpiry = localStorage.getItem('dynamsoft_license_expiry');
-    if (!licenseKey || !storedExpiry) {
-        alert('⚠️ No valid license. Please login to get a trial license first.');
+    // Get effective license key (custom takes priority)
+    const effectiveLicense = await getEffectiveLicenseKey();
+
+    if (!effectiveLicense) {
+        alert('⚠️ No valid license. Please login to get a trial license or set a custom license in settings.');
         return;
     }
 
-    const expiryDate = new Date(storedExpiry);
-    const now = new Date();
-    if (expiryDate <= now) {
-        alert('⚠️ Your license has expired. Please login again to renew your trial license.');
+    // If using Google auth license, check expiration
+    if (!effectiveLicense.isCustom && !isLicenseValid()) {
+        alert('⚠️ Your license has expired. Please login again to renew your trial license or set a custom license in settings.');
         loginStatus.textContent = '⚠️ License expired. Please login again.';
         loginButton.style.display = 'block';
         return;
@@ -516,7 +634,7 @@ document.getElementById("file").onchange = async function () {
             barcodeScanner.dispose();
         }
         barcodeScanner = new Dynamsoft.BarcodeScanner({
-            license: licenseKey,
+            license: effectiveLicense.key,
             scanMode: Dynamsoft.EnumScanMode.SM_MULTI_UNIQUE,
         });
     } catch (error) {
@@ -731,6 +849,25 @@ const dropZoneElement = document.getElementById('dropZone');
 // Check for existing auth on page load
 (async function checkExistingAuth() {
     try {
+        // First check if there's a custom license key
+        const effectiveLicense = await getEffectiveLicenseKey();
+
+        if (effectiveLicense && effectiveLicense.isCustom) {
+            // Custom license exists - hide login button and activate SDK
+            loginButton.style.display = 'none';
+            loginStatus.textContent = 'Using custom license...';
+
+            try {
+                await activateSDK(effectiveLicense.key);
+                loginStatus.textContent = '✓ Licensed (Custom License Key)';
+            } catch (error) {
+                loginStatus.textContent = '❌ Invalid custom license';
+                console.error('Error activating custom license:', error);
+            }
+            return;
+        }
+
+        // No custom license, check for Google auth
         const token = await getCookie('DynamsoftToken');
         const userId = await getCookie('DynamsoftUser');
 
