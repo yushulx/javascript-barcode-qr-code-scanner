@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dynamsoft MRZ Scanner - Hello World</title>
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-document-viewer@2.1.0/dist/ddv.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-mrz-scanner@3.0.0/dist/mrz-scanner.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-mrz-scanner@3.0.4/dist/mrz-scanner.bundle.js"></script>
     <link rel="stylesheet" href="main.css">
 </head>
 
@@ -85,8 +85,10 @@
                     scannerViewConfig: {
                         showScanGuide: false,
                     },
+                    // https://www.dynamsoft.com/mrz-scanner/docs/web/api/mrz-scanner.html#mrzresultviewconfig
                     resultViewConfig: {
                         allowResultEditing: true,
+                        showOriginalImage: true,
                     },
                     showResultView: true
                 });
