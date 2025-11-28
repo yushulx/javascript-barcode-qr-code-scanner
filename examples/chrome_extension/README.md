@@ -1,6 +1,6 @@
 # Barcode & QR Code Scanner - Chrome Extension
 
-A powerful Chrome extension for scanning barcodes and QR codes from your camera, images, and PDF files using Dynamsoft's advanced barcode recognition technology.
+A powerful (free) Chrome extension for scanning barcodes and QR codes from your camera, images, and PDF files. Use the included open-source ZXing-WASM engine for free forever, or switch to Dynamsoft Barcode Reader with your own license key or a trial license.
 
 https://github.com/user-attachments/assets/838d1fd8-862b-4882-b8c4-a8bc14657b05
 
@@ -13,7 +13,8 @@ https://github.com/user-attachments/assets/838d1fd8-862b-4882-b8c4-a8bc14657b05
 ✅ **Context Menu** - Right-click on any image to scan barcodes directly  
 ✅ **PDF Support** - Multi-page PDF barcode scanning with page navigation  
 ✅ **Multiple Formats** - Supports QR Code, Code 128, Code 39, EAN, UPC, and more  
-✅ **30-Day Trial** - Free trial license via Google OAuth login  
+✅ **ZXing-WASM (Default)** - 100% free, offline, no login or license required  
+✅ **30-Day Trial (Dynamsoft)** - Sign in to obtain a trial license key; required only if you choose the Dynamsoft engine  
 ✅ **Side Panel UI** - Modern, responsive interface that doesn't interrupt browsing  
 ✅ **Settings** - Customizable options with floating icon toggle  
 
@@ -36,7 +37,7 @@ https://github.com/user-attachments/assets/838d1fd8-862b-4882-b8c4-a8bc14657b05
 ### Getting Started
 
 1. **Click the extension icon** in your Chrome toolbar to open the side panel
-2. **Login with Google** to get a free 30-day trial license
+2. **Login with Google** to get a free 30-day trial license for the Dynamsoft engine (ZXing requires no login)
 3. Choose your scanning method:
    - **📷 Camera** - Opens camera scanner in a new tab
    - **📁 Upload** - Select images or PDF files from your computer
@@ -129,8 +130,6 @@ https://github.com/user-attachments/assets/838d1fd8-862b-4882-b8c4-a8bc14657b05
 - **SDK Provider**: [Dynamsoft](https://www.dynamsoft.com/)
 - **Barcode Reader**: Dynamsoft Barcode Reader Bundle
 - **Document Viewer**: Dynamsoft Document Viewer (for PDF processing)
+- **Open-Source Engine**: [ZXing-WASM](https://github.com/Sec-ant/zxing-wasm)
 
-
-## License Agreement
-This extension uses Dynamsoft SDKs which require a valid license.
 
