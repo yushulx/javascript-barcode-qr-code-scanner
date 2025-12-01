@@ -169,19 +169,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function createThumbnail(dataUrl) {
+    function createThumbnail(dataUrl, maxWidth = 300) {
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const ratio = 1;
-                canvas.width = img.width * ratio;
+                const ratio = maxWidth / img.width;
+                canvas.width = maxWidth;
                 canvas.height = img.height * ratio;
                 const ctx = canvas.getContext('2d');
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                resolve(canvas.toDataURL('image/jpeg', 1));
+                resolve(canvas.toDataURL('image/jpeg', 1.0));
             };
             img.src = dataUrl;
         });

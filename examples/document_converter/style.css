@@ -104,6 +104,7 @@ main {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 #viewer-panel {
@@ -138,11 +139,18 @@ main {
 /* Thumbnail Styles */
 .thumbnail {
     width: 100%;
+    height: 260px;
+    min-height: 260px;
     border: 2px solid transparent;
     cursor: pointer;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     transition: border-color 0.2s;
     background-color: white;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding: 5px;
+    flex-shrink: 0;
 }
 
 .thumbnail.active {
@@ -151,7 +159,10 @@ main {
 
 .thumbnail img {
     width: 100%;
+    flex: 1;
+    object-fit: contain;
     display: block;
+    min-height: 0;
 }
 
 .thumbnail-number {
