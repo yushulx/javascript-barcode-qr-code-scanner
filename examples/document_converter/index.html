@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Reader & Editor</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.6.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/mammoth@1.4.17/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
+
+    <!-- PDF & Image Tools -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/photopea/UTIF.js@master/UTIF.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>Document Converter & Gallery</h1>
+        <p>Convert Word/PDF/Images, Merge, and Save.</p>
+    </header>
+    <main>
+        <div id="controls">
+            <label for="file-input" class="button">Add Files</label>
+            <button id="camera-button" class="button">Camera</button>
+            <input type="file" id="file-input" accept=".docx,.pdf,.jpg,.jpeg,.png,.bmp,.webp,.tiff" multiple>
+            <button id="save-pdf-button" class="button">Save as PDF</button>
+            <button id="save-word-button" class="button">Save as Word</button>
+            <button id="delete-page-button" class="button" style="background-color: #dc3545; display: none;">Delete
+                Page</button>
+            <button id="delete-all-button" class="button" style="background-color: #dc3545; display: none;">Delete
+                All</button>
+            <div class="zoom-controls">
+                <button id="zoom-in" class="button">+</button>
+                <button id="zoom-out" class="button">-</button>
+            </div>
+        </div>
+
+        <div id="workspace">
+            <div id="thumbnails-panel">
+                <!-- Thumbnails will go here -->
+            </div>
+            <div id="viewer-panel">
+                <div id="scroll-wrapper">
+                    <div id="large-view-container">
+                        <!-- Large view will go here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="hidden-container" style="position: absolute; left: -9999px; top: 0;"></div>
+
+        <div id="camera-overlay"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+            <div
+                style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; max-width: 90%; max-height: 90%;">
+                <h3 style="margin: 0 0 15px 0; color: #333;">Camera Capture</h3>
+                <video id="camera-video" autoplay playsinline
+                    style="max-width: 100%; max-height: 60vh; border: 1px solid #ccc; background: #000;"></video>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button id="capture-btn" class="button">Capture</button>
+                    <button id="close-camera-btn" class="button" style="background-color: #dc3545;">Close</button>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="app.js?v=3" defer></script>
+</body>
+
+</html>
