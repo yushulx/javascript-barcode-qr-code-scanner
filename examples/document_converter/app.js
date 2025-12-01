@@ -21,10 +21,171 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeCameraBtn = document.getElementById('close-camera-btn');
     let mediaStream = null;
 
-    let pages = []; // Array of { id, dataUrl, width, height, sourceFile }
+    let pages = []; // Array of { id, width, height, sourceFile, thumbnailDataUrl }
     let currentPageIndex = -1;
     let currentZoom = 1.0;
     let draggedThumbnailIndex = -1;
+    let currentObjectUrl = null;
+
+    // --- IndexedDB Setup ---
+    const dbName = 'DocScannerDB';
+    const storeName = 'images';
+    let db;
+
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(dbName, 1);
+            request.onerror = (e) => {
+                console.error("IndexedDB error:", e);
+                reject(e);
+            };
+            request.onsuccess = (e) => {
+                db = e.target.result;
+                resolve(db);
+            };
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(storeName)) {
+                    db.createObjectStore(storeName, { keyPath: 'id' });
+                }
+            };
+        });
+    }
+
+    // Initialize DB immediately
+    initDB().then(() => {
+        loadSavedPages();
+    }).catch(console.error);
+
+    function storeImageInDB(data) {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const request = store.put(data);
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => reject(e);
+        });
+    }
+
+    function getAllPagesFromDB() {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([storeName], 'readonly');
+            const store = transaction.objectStore(storeName);
+            const request = store.getAll();
+            request.onsuccess = (e) => resolve(e.target.result);
+            request.onerror = (e) => reject(e);
+        });
+    }
+
+    async function loadSavedPages() {
+        try {
+            const savedPages = await getAllPagesFromDB();
+            if (savedPages && savedPages.length > 0) {
+                pages = [];
+                for (const page of savedPages) {
+                    let thumb = page.thumbnailDataUrl;
+                    if (!thumb && page.blob) {
+                        // Generate thumbnail if missing (migration for old data)
+                        try {
+                            const dataUrl = await blobToDataURL(page.blob);
+                            thumb = await createThumbnail(dataUrl);
+                            // Update DB with new thumbnail
+                            page.thumbnailDataUrl = thumb;
+                            await storeImageInDB(page);
+                        } catch (e) {
+                            console.error("Error generating thumbnail for page:", page.id, e);
+                            // Fallback to placeholder or skip
+                            continue;
+                        }
+                    }
+
+                    pages.push({
+                        id: page.id,
+                        width: page.width,
+                        height: page.height,
+                        sourceFile: page.sourceFile,
+                        thumbnailDataUrl: thumb
+                    });
+                }
+
+                renderAllThumbnails();
+                if (pages.length > 0) {
+                    selectPage(0);
+                }
+            }
+        } catch (err) {
+            console.error("Error loading saved pages:", err);
+        }
+    }
+
+    function getImageFromDB(id) {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([storeName], 'readonly');
+            const store = transaction.objectStore(storeName);
+            const request = store.get(id);
+            request.onsuccess = (e) => resolve(e.target.result ? e.target.result.blob : null);
+            request.onerror = (e) => reject(e);
+        });
+    }
+
+    function deleteImageFromDB(id) {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const request = store.delete(id);
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => reject(e);
+        });
+    }
+
+    function clearImageDB() {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const request = store.clear();
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => reject(e);
+        });
+    }
+
+    function dataURLtoBlob(dataurl) {
+        const arr = dataurl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    }
+
+    function blobToDataURL(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    function createThumbnail(dataUrl) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ratio = 1;
+                canvas.width = img.width * ratio;
+                canvas.height = img.height * ratio;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', 1));
+            };
+            img.src = dataUrl;
+        });
+    }
 
     // Initialize PDF.js
     const { jsPDF } = window.jspdf;
@@ -52,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cameraOverlay.style.display = 'none';
     }
 
-    captureBtn.addEventListener('click', () => {
+    captureBtn.addEventListener('click', async () => {
         if (!mediaStream) return;
 
         const canvas = document.createElement('canvas');
@@ -61,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
 
-        addPage({
+        await addPage({
             dataUrl: canvas.toDataURL('image/jpeg', 0.9),
             width: canvas.width,
             height: canvas.height,
@@ -177,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             ctx.putImageData(imageData, 0, 0);
 
-            addPage({
+            await addPage({
                 dataUrl: canvas.toDataURL('image/jpeg', 0.9),
                 width: width,
                 height: height,
@@ -189,8 +350,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const img = new Image();
-                img.onload = () => {
-                    addPage({
+                img.onload = async () => {
+                    await addPage({
                         dataUrl: e.target.result,
                         width: img.width,
                         height: img.height,
@@ -224,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 viewport: viewport
             }).promise;
 
-            addPage({
+            await addPage({
                 dataUrl: canvas.toDataURL('image/jpeg', 0.9),
                 width: viewport.width,
                 height: viewport.height,
@@ -279,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     0, 0, scaledPageWidth, heightToDraw
                 );
 
-                addPage({
+                await addPage({
                     dataUrl: pageCanvas.toDataURL('image/jpeg', 0.9),
                     width: scaledPageWidth,
                     height: scaledPageHeight,
@@ -297,9 +458,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Page Management ---
 
-    function addPage(pageData) {
+    async function addPage(pageData) {
         const id = Date.now() + Math.random();
-        pages.push({ ...pageData, id });
+        const blob = dataURLtoBlob(pageData.dataUrl);
+        const thumbnailDataUrl = await createThumbnail(pageData.dataUrl);
+
+        const pageObject = {
+            id,
+            blob,
+            width: pageData.width,
+            height: pageData.height,
+            sourceFile: pageData.sourceFile,
+            thumbnailDataUrl: thumbnailDataUrl
+        };
+
+        await storeImageInDB(pageObject);
+
+        pages.push({
+            id,
+            width: pageData.width,
+            height: pageData.height,
+            sourceFile: pageData.sourceFile,
+            thumbnailDataUrl: thumbnailDataUrl
+        });
         renderAllThumbnails();
     }
 
@@ -331,7 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
         div.addEventListener('dragend', handleDragEnd);
 
         const img = document.createElement('img');
-        img.src = page.dataUrl;
+        img.src = page.thumbnailDataUrl; // Use thumbnail
 
         const num = document.createElement('div');
         num.className = 'thumbnail-number';
@@ -412,8 +593,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderLargeView();
     }
 
-    deletePageButton.addEventListener('click', () => {
+    deletePageButton.addEventListener('click', async () => {
         if (currentPageIndex === -1) return;
+
+        const pageToDelete = pages[currentPageIndex];
+        await deleteImageFromDB(pageToDelete.id);
 
         pages.splice(currentPageIndex, 1);
 
@@ -431,8 +615,9 @@ document.addEventListener('DOMContentLoaded', () => {
         selectPage(currentPageIndex);
     });
 
-    deleteAllButton.addEventListener('click', () => {
+    deleteAllButton.addEventListener('click', async () => {
         if (confirm('Are you sure you want to delete all pages?')) {
+            await clearImageDB();
             pages = [];
             currentPageIndex = -1;
             renderAllThumbnails();
@@ -441,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function renderLargeView() {
+    async function renderLargeView() {
         if (currentPageIndex === -1) {
             largeViewContainer.innerHTML = '';
             return;
@@ -450,19 +635,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const page = pages[currentPageIndex];
         largeViewContainer.innerHTML = '';
 
-        const img = document.createElement('img');
-        img.src = page.dataUrl;
-        img.style.width = '100%';
-        img.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
-        
-        // Prevent default drag behavior to allow panning
-        img.addEventListener('dragstart', (e) => e.preventDefault());
+        // Revoke previous object URL to avoid memory leaks
+        if (currentObjectUrl) {
+            URL.revokeObjectURL(currentObjectUrl);
+            currentObjectUrl = null;
+        }
 
-        largeViewContainer.appendChild(img);
-        updateZoom();
-    }
+        try {
+            const blob = await getImageFromDB(page.id);
+            if (!blob) {
+                largeViewContainer.textContent = "Error loading image.";
+                return;
+            }
 
-    function updateZoom() {
+            currentObjectUrl = URL.createObjectURL(blob);
+
+            const img = document.createElement('img');
+            img.src = currentObjectUrl;
+            img.style.width = '100%';
+            img.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+
+            // Prevent default drag behavior to allow panning
+            img.addEventListener('dragstart', (e) => e.preventDefault());
+
+            largeViewContainer.appendChild(img);
+            updateZoom();
+        } catch (err) {
+            console.error("Error rendering large view:", err);
+            largeViewContainer.textContent = "Error loading image.";
+        }
+    }    function updateZoom() {
         if (largeViewContainer.firstChild) {
             largeViewContainer.style.width = `${currentZoom * 100}%`;
         }
@@ -517,7 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Saving ---
 
-    savePdfButton.addEventListener('click', () => {
+    savePdfButton.addEventListener('click', async () => {
         if (pages.length === 0) {
             alert('No pages to save.');
             return;
@@ -525,8 +727,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const doc = new jsPDF();
 
-        pages.forEach((page, index) => {
-            if (index > 0) doc.addPage();
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i];
+            if (i > 0) doc.addPage();
 
             // Calculate aspect ratio to fit A4
             const pageWidth = doc.internal.pageSize.getWidth();
@@ -536,13 +739,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const w = page.width * ratio;
             const h = page.height * ratio;
 
-            doc.addImage(page.dataUrl, 'JPEG', 0, 0, w, h);
-        });
+            try {
+                const blob = await getImageFromDB(page.id);
+                if (blob) {
+                    const dataUrl = await blobToDataURL(blob);
+                    doc.addImage(dataUrl, 'JPEG', 0, 0, w, h);
+                }
+            } catch (err) {
+                console.error(`Error adding page ${i + 1} to PDF:`, err);
+            }
+        }
 
         doc.save('combined_document.pdf');
     });
 
-    saveWordButton.addEventListener('click', () => {
+    saveWordButton.addEventListener('click', async () => {
         if (pages.length === 0) {
             alert('No pages to save.');
             return;
@@ -551,9 +762,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create HTML content with images
         let htmlContent = '<!DOCTYPE html><html><head><title>Document</title></head><body>';
 
-        pages.forEach(page => {
-            htmlContent += `<p><img src="${page.dataUrl}" style="width: 100%; max-width: 600px;" /></p><br style="page-break-after: always;" />`;
-        });
+        for (const page of pages) {
+            try {
+                const blob = await getImageFromDB(page.id);
+                if (blob) {
+                    const dataUrl = await blobToDataURL(blob);
+                    htmlContent += `<p><img src="${dataUrl}" style="width: 100%; max-width: 600px;" /></p><br style="page-break-after: always;" />`;
+                }
+            } catch (err) {
+                console.error("Error adding page to Word:", err);
+            }
+        }
 
         htmlContent += '</body></html>';
 
