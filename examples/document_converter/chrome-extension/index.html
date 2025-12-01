@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Reader & Editor</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="lib/fontawesome.min.css">
+
+    <!-- Libraries -->
+    <script src="lib/jquery.min.js"></script>
+    <script src="lib/jszip.min.js"></script>
+    <script src="lib/mammoth.browser.min.js"></script>
+    <script src="lib/html-docx.js"></script>
+
+    <!-- PDF & Image Tools -->
+    <script src="lib/pdf.min.js"></script>
+    <script>window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';</script>
+    <script src="lib/jspdf.umd.min.js"></script>
+    <script src="lib/html2canvas.min.js"></script>
+    <script src="lib/UTIF.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>Document Converter & Gallery</h1>
+        <p>Convert Word/PDF/Images, Merge, and Save.</p>
+    </header>
+    <main>
+        <div id="controls">
+            <!-- Document Actions -->
+            <div class="controls-group">
+                <label for="file-input" class="button btn-primary btn-icon-only" title="Add Files"><i
+                        class="fas fa-file-upload"></i></label>
+                <button id="camera-button" class="button btn-primary btn-icon-only" title="Open Camera"><i
+                        class="fas fa-camera"></i></button>
+                <input type="file" id="file-input" accept=".docx,.pdf,.jpg,.jpeg,.png,.bmp,.webp,.tiff" multiple>
+            </div>
+            <div class="controls-group">
+                <button id="save-pdf-button" class="button btn-success btn-icon-only" title="Save as PDF"><i
+                        class="fas fa-file-pdf"></i></button>
+                <button id="save-word-button" class="button btn-success btn-icon-only" title="Save as Word"><i
+                        class="fas fa-file-word"></i></button>
+            </div>
+
+            <div class="controls-divider"></div>
+
+            <!-- Image Editing Tools -->
+            <div class="controls-group" id="image-tools-group">
+                <button id="rotate-btn" class="button btn-edit btn-icon-only" title="Rotate Image"><i
+                        class="fas fa-rotate-right"></i></button>
+                <button id="crop-btn" class="button btn-edit btn-icon-only" title="Crop Image"><i
+                        class="fas fa-crop"></i></button>
+                <button id="filter-btn" class="button btn-edit btn-icon-only" title="Apply Filters"><i
+                        class="fas fa-sliders-h"></i></button>
+                <button id="resize-btn" class="button btn-edit btn-icon-only" title="Resize Image"><i
+                        class="fas fa-expand"></i></button>
+            </div>
+            <div class="controls-group" id="history-group">
+                <button id="undo-btn" class="button btn-secondary btn-icon-only" title="Undo" disabled><i
+                        class="fas fa-undo"></i></button>
+                <button id="redo-btn" class="button btn-secondary btn-icon-only" title="Redo" disabled><i
+                        class="fas fa-redo"></i></button>
+            </div>
+
+            <div class="controls-divider"></div>
+
+            <!-- Page Management -->
+            <div class="controls-group">
+                <button id="delete-page-button" class="button btn-danger btn-icon-only" title="Delete Current Page"><i
+                        class="fas fa-trash-alt"></i></button>
+                <button id="delete-all-button" class="button btn-danger btn-icon-only" title="Delete All Pages"><i
+                        class="fas fa-trash"></i></button>
+            </div>
+
+            <!-- Zoom Controls -->
+            <div class="controls-group zoom-controls">
+                <button id="info-btn" class="button btn-secondary btn-icon-only" title="Image Information"><i
+                        class="fas fa-info-circle"></i></button>
+                <button id="zoom-out" class="button btn-secondary btn-icon-only" title="Zoom Out"><i
+                        class="fas fa-search-minus"></i></button>
+                <button id="zoom-in" class="button btn-secondary btn-icon-only" title="Zoom In"><i
+                        class="fas fa-search-plus"></i></button>
+            </div>
+        </div>
+
+        <div id="workspace">
+            <div id="thumbnails-panel">
+                <!-- Thumbnails will go here -->
+            </div>
+            <div id="viewer-panel">
+                <div id="scroll-wrapper">
+                    <div id="large-view-container">
+                        <!-- Large view will go here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="hidden-container" style="position: absolute; left: -9999px; top: 0;"></div>
+
+        <!-- Modals -->
+        <div id="modal-overlay" class="modal-overlay" style="display:none;">
+            <!-- Rotate Modal -->
+            <div id="rotate-modal" class="modal-content" style="display:none;">
+                <h3>Rotate Image</h3>
+                <div class="modal-body">
+                    <div class="control-group">
+                        <button id="rotate-left" class="button">-90°</button>
+                        <button id="rotate-right" class="button">+90°</button>
+                    </div>
+                    <div class="slider-container">
+                        <label>Custom Angle: <span id="rotate-val">0</span>°</label>
+                        <input type="range" id="rotate-slider" min="-180" max="180" value="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="rotate-cancel" class="button secondary">Cancel</button>
+                    <button id="rotate-apply" class="button primary">Apply</button>
+                </div>
+            </div>
+
+            <!-- Crop Modal -->
+            <div id="crop-modal" class="modal-content" style="display:none;">
+                <h3>Crop Image</h3>
+                <div class="modal-body">
+                    <p>Adjust the overlay on the image to crop.</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="crop-cancel" class="button secondary">Cancel</button>
+                    <button id="crop-apply" class="button primary">Apply</button>
+                </div>
+            </div>
+
+            <!-- Filter Modal -->
+            <div id="filter-modal" class="modal-content" style="display:none;">
+                <h3>Image Filters</h3>
+                <div class="modal-body">
+                    <div class="filter-option">
+                        <label>Type:</label>
+                        <select id="filter-type">
+                            <option value="none">None</option>
+                            <option value="grayscale">Grayscale</option>
+                            <option value="blackwhite">Black & White</option>
+                        </select>
+                    </div>
+                    <div class="filter-option" id="threshold-container" style="display:none;">
+                        <label>Threshold: <span id="threshold-val">128</span></label>
+                        <input type="range" id="threshold-slider" min="0" max="255" value="128">
+                    </div>
+                    <div class="filter-option">
+                        <label>Brightness: <span id="brightness-val">0</span></label>
+                        <input type="range" id="brightness-slider" min="-100" max="100" value="0">
+                    </div>
+                    <div class="filter-option">
+                        <label>Contrast: <span id="contrast-val">0</span></label>
+                        <input type="range" id="contrast-slider" min="-100" max="100" value="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="filter-cancel" class="button secondary">Cancel</button>
+                    <button id="filter-apply" class="button primary">Apply</button>
+                </div>
+            </div>
+
+            <!-- Resize Modal -->
+            <div id="resize-modal" class="modal-content" style="display:none;">
+                <h3>Resize Image</h3>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <label>Width:</label>
+                        <input type="number" id="resize-width">
+                    </div>
+                    <div class="input-group">
+                        <label>Height:</label>
+                        <input type="number" id="resize-height">
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="resize-aspect" checked>
+                        <label for="resize-aspect">Maintain Aspect Ratio</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="resize-cancel" class="button secondary">Cancel</button>
+                    <button id="resize-apply" class="button primary">Apply</button>
+                </div>
+            </div>
+
+            <!-- Image Info Modal -->
+            <div id="info-modal" class="modal-content" style="display:none;">
+                <div class="modal-header">
+                    <h3>Image Information</h3>
+                </div>
+                <div class="modal-body">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <i class="fas fa-file-image info-icon-label"></i>
+                            <div class="info-content">
+                                <span class="info-label">Type</span>
+                                <span class="info-value" id="info-type">-</span>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-ruler-combined info-icon-label"></i>
+                            <div class="info-content">
+                                <span class="info-label">Dimensions</span>
+                                <span class="info-value" id="info-dimensions">-</span>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-weight info-icon-label"></i>
+                            <div class="info-content">
+                                <span class="info-label">File Size</span>
+                                <span class="info-value" id="info-size">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="info-ok" class="button btn-primary">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="camera-overlay"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+            <div
+                style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; max-width: 90%; max-height: 90%;">
+                <h3 style="margin: 0 0 15px 0; color: #333;">Camera Capture</h3>
+                <video id="camera-video" autoplay playsinline
+                    style="max-width: 100%; max-height: 60vh; border: 1px solid #ccc; background: #000;"></video>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button id="capture-btn" class="button">Capture</button>
+                    <button id="close-camera-btn" class="button" style="background-color: #dc3545;">Close</button>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="app.js" defer></script>
+</body>
+
+</html>
