@@ -2,6 +2,9 @@
 
 A free, powerful, and secure web-based tool for viewing, merging, and converting documents and images. This application runs entirely in your browser, ensuring your files remain private and are never uploaded to a server.
 
+## Online Demo
+https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_converter/
+
 ## Features
 
 *   **Wide Format Support**: View and process multiple file types including:
