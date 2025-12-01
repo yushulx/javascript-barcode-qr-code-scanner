@@ -2,8 +2,7 @@
 
 A free, powerful, and secure web-based tool for viewing, merging, and converting documents and images. This application runs entirely in your browser, ensuring your files remain private and are never uploaded to a server.
 
-<img width="800" alt="free online document converter" src="https://github.com/user-attachments/assets/5e3ac20c-2b7c-4b8a-91d9-07be3dad6872" />
-
+<img width="1201" height="959" alt="free online document converter" src="https://github.com/user-attachments/assets/4a17f91f-4db1-4aa6-8d3a-01920353083d" />
 
 ## Online Demo
 https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_converter/
