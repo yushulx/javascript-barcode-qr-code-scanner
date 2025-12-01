@@ -35,10 +35,6 @@ The extension requests the following permissions:
 - **Usage**: Allows processing of large PDF files and high-resolution images
 - **Location**: All data remains in your browser's temporary memory
 
-### 3. **activeTab** (Optional)
-- **Purpose**: Currently not actively used, reserved for potential future features
-- **Note**: This permission does not access any tab content
-
 ## Camera Access
 If you use the camera capture feature:
 - Camera access is requested only when you click the camera button
