@@ -11,11 +11,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const largeViewContainer = document.getElementById('large-view-container');
     const zoomInBtn = document.getElementById('zoom-in');
     const zoomOutBtn = document.getElementById('zoom-out');
+    const infoBtn = document.getElementById('info-btn');
     const hiddenContainer = document.getElementById('hidden-container');
     const mainContainer = document.querySelector('main');
 
     // Editor elements
-    const floatingToolbar = document.getElementById('floating-toolbar');
+    const imageToolsGroup = document.getElementById('image-tools-group');
+    const historyGroup = document.getElementById('history-group');
     const rotateBtn = document.getElementById('rotate-btn');
     const cropBtn = document.getElementById('crop-btn');
     const filterBtn = document.getElementById('filter-btn');
@@ -29,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cropModal = document.getElementById('crop-modal');
     const filterModal = document.getElementById('filter-modal');
     const resizeModal = document.getElementById('resize-modal');
+    const infoModal = document.getElementById('info-modal');
 
     // Rotate Controls
     const rotateLeftBtn = document.getElementById('rotate-left');
@@ -761,11 +764,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderLargeView() {
         if (currentPageIndex === -1) {
             largeViewContainer.innerHTML = '';
-            floatingToolbar.style.display = 'none';
+            imageToolsGroup.style.display = 'none';
+            historyGroup.style.display = 'none';
             return;
         }
 
-        floatingToolbar.style.display = 'flex';
+        imageToolsGroup.style.display = 'flex';
+        historyGroup.style.display = 'flex';
         
         const page = pages[currentPageIndex];
         largeViewContainer.innerHTML = '';
@@ -796,17 +801,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             largeViewContainer.appendChild(img);
 
-            // Add Info Icon
-            const infoIcon = document.createElement('div');
-            infoIcon.className = 'info-icon';
-            infoIcon.textContent = 'i';
-            infoIcon.title = 'Image Information';
-            infoIcon.onclick = (e) => {
-                e.stopPropagation();
-                alert(`Width: ${img.naturalWidth}px\nHeight: ${img.naturalHeight}px`);
-            };
-            largeViewContainer.appendChild(infoIcon);
-
             updateZoom();
         } catch (err) {
             console.error("Error rendering large view:", err);
@@ -828,6 +822,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentZoom > 0.2) {
             currentZoom -= 0.1;
             updateZoom();
+        }
+    });
+
+    // --- Info Button ---
+    infoBtn.addEventListener('click', async () => {
+        if (currentPageIndex === -1) {
+            alert('Please select an image first');
+            return;
+        }
+        try {
+            await showImageInfo(currentPageIndex);
+        } catch (error) {
+            console.error('Error showing image info:', error);
+            alert('Error loading image information');
         }
     });
 
@@ -952,6 +960,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cropModal.style.display = 'none';
         filterModal.style.display = 'none';
         resizeModal.style.display = 'none';
+        infoModal.style.display = 'none';
         
         // Cleanup crop overlay
         if (cropOverlayDiv) {
@@ -1324,6 +1333,57 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     resizeCancel.addEventListener('click', closeModal);
+
+    // --- Info Modal ---
+    const infoOk = document.getElementById('info-ok');
+    
+    infoOk.addEventListener('click', closeModal);
+
+    async function showImageInfo(pageIndex) {
+        if (pageIndex === -1) {
+            return;
+        }
+        
+        const page = pages[pageIndex];
+        const blob = await getImageFromDB(page.id);
+        
+        if (!blob) {
+            return;
+        }
+        
+        // Get image dimensions
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(blob);
+        img.src = objectUrl;
+        await img.decode();
+        
+        // Format file size
+        const sizeInBytes = blob.size;
+        let sizeString;
+        if (sizeInBytes < 1024) {
+            sizeString = `${sizeInBytes} bytes`;
+        } else if (sizeInBytes < 1024 * 1024) {
+            sizeString = `${(sizeInBytes / 1024).toFixed(2)} KB`;
+        } else {
+            sizeString = `${(sizeInBytes / (1024 * 1024)).toFixed(2)} MB`;
+        }
+        
+        // Get image type
+        const imageType = blob.type || 'Unknown';
+        const typeDisplay = imageType.replace('image/', '').toUpperCase();
+        
+        // Update modal content
+        document.getElementById('info-type').textContent = typeDisplay;
+        document.getElementById('info-dimensions').textContent = `${img.naturalWidth} × ${img.naturalHeight} px`;
+        document.getElementById('info-size').textContent = sizeString;
+        
+        // Clean up
+        URL.revokeObjectURL(objectUrl);
+        
+        // Show modal
+        infoModal.style.display = 'block';
+        modalOverlay.style.display = 'flex'; // Ensure flex for centering
+    }
 
     // --- Undo / Redo ---
     undoBtn.addEventListener('click', async () => {

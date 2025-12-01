@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document Reader & Editor</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -28,18 +29,59 @@
     </header>
     <main>
         <div id="controls">
-            <label for="file-input" class="button">Add Files</label>
-            <button id="camera-button" class="button">Camera</button>
-            <input type="file" id="file-input" accept=".docx,.pdf,.jpg,.jpeg,.png,.bmp,.webp,.tiff" multiple>
-            <button id="save-pdf-button" class="button">Save as PDF</button>
-            <button id="save-word-button" class="button">Save as Word</button>
-            <button id="delete-page-button" class="button" style="background-color: #dc3545; display: none;">Delete
-                Page</button>
-            <button id="delete-all-button" class="button" style="background-color: #dc3545; display: none;">Delete
-                All</button>
-            <div class="zoom-controls">
-                <button id="zoom-in" class="button">+</button>
-                <button id="zoom-out" class="button">-</button>
+            <!-- Document Actions -->
+            <div class="controls-group">
+                <label for="file-input" class="button btn-primary btn-icon-only" title="Add Files"><i
+                        class="fas fa-file-upload"></i></label>
+                <button id="camera-button" class="button btn-primary btn-icon-only" title="Open Camera"><i
+                        class="fas fa-camera"></i></button>
+                <input type="file" id="file-input" accept=".docx,.pdf,.jpg,.jpeg,.png,.bmp,.webp,.tiff" multiple>
+            </div>
+            <div class="controls-group">
+                <button id="save-pdf-button" class="button btn-success btn-icon-only" title="Save as PDF"><i
+                        class="fas fa-file-pdf"></i></button>
+                <button id="save-word-button" class="button btn-success btn-icon-only" title="Save as Word"><i
+                        class="fas fa-file-word"></i></button>
+            </div>
+
+            <div class="controls-divider"></div>
+
+            <!-- Image Editing Tools -->
+            <div class="controls-group" id="image-tools-group">
+                <button id="rotate-btn" class="button btn-edit btn-icon-only" title="Rotate Image"><i
+                        class="fas fa-rotate-right"></i></button>
+                <button id="crop-btn" class="button btn-edit btn-icon-only" title="Crop Image"><i
+                        class="fas fa-crop"></i></button>
+                <button id="filter-btn" class="button btn-edit btn-icon-only" title="Apply Filters"><i
+                        class="fas fa-sliders-h"></i></button>
+                <button id="resize-btn" class="button btn-edit btn-icon-only" title="Resize Image"><i
+                        class="fas fa-expand"></i></button>
+            </div>
+            <div class="controls-group" id="history-group">
+                <button id="undo-btn" class="button btn-secondary btn-icon-only" title="Undo" disabled><i
+                        class="fas fa-undo"></i></button>
+                <button id="redo-btn" class="button btn-secondary btn-icon-only" title="Redo" disabled><i
+                        class="fas fa-redo"></i></button>
+            </div>
+
+            <div class="controls-divider"></div>
+
+            <!-- Page Management -->
+            <div class="controls-group">
+                <button id="delete-page-button" class="button btn-danger btn-icon-only" title="Delete Current Page"><i
+                        class="fas fa-trash-alt"></i></button>
+                <button id="delete-all-button" class="button btn-danger btn-icon-only" title="Delete All Pages"><i
+                        class="fas fa-trash"></i></button>
+            </div>
+
+            <!-- Zoom Controls -->
+            <div class="controls-group zoom-controls">
+                <button id="info-btn" class="button btn-secondary btn-icon-only" title="Image Information"><i
+                        class="fas fa-info-circle"></i></button>
+                <button id="zoom-out" class="button btn-secondary btn-icon-only" title="Zoom Out"><i
+                        class="fas fa-search-minus"></i></button>
+                <button id="zoom-in" class="button btn-secondary btn-icon-only" title="Zoom In"><i
+                        class="fas fa-search-plus"></i></button>
             </div>
         </div>
 
@@ -48,14 +90,6 @@
                 <!-- Thumbnails will go here -->
             </div>
             <div id="viewer-panel">
-                <div id="floating-toolbar" class="floating-toolbar" style="display:none;">
-                    <button id="rotate-btn" class="button">Rotate</button>
-                    <button id="crop-btn" class="button">Crop</button>
-                    <button id="filter-btn" class="button">Filter</button>
-                    <button id="resize-btn" class="button">Resize</button>
-                    <button id="undo-btn" class="button" style="background-color: #6c757d;" disabled>Undo</button>
-                    <button id="redo-btn" class="button" style="background-color: #6c757d;" disabled>Redo</button>
-                </div>
                 <div id="scroll-wrapper">
                     <div id="large-view-container">
                         <!-- Large view will go here -->
@@ -150,6 +184,41 @@
                 <div class="modal-footer">
                     <button id="resize-cancel" class="button secondary">Cancel</button>
                     <button id="resize-apply" class="button primary">Apply</button>
+                </div>
+            </div>
+
+            <!-- Image Info Modal -->
+            <div id="info-modal" class="modal-content" style="display:none;">
+                <div class="modal-header">
+                    <h3>Image Information</h3>
+                </div>
+                <div class="modal-body">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <i class="fas fa-file-image info-icon-label"></i>
+                            <div class="info-content">
+                                <span class="info-label">Type</span>
+                                <span class="info-value" id="info-type">-</span>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-ruler-combined info-icon-label"></i>
+                            <div class="info-content">
+                                <span class="info-label">Dimensions</span>
+                                <span class="info-value" id="info-dimensions">-</span>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-weight info-icon-label"></i>
+                            <div class="info-content">
+                                <span class="info-label">File Size</span>
+                                <span class="info-value" id="info-size">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="info-ok" class="button btn-primary">OK</button>
                 </div>
             </div>
         </div>
