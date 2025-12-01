@@ -14,6 +14,58 @@ document.addEventListener('DOMContentLoaded', () => {
     const hiddenContainer = document.getElementById('hidden-container');
     const mainContainer = document.querySelector('main');
 
+    // Editor elements
+    const floatingToolbar = document.getElementById('floating-toolbar');
+    const rotateBtn = document.getElementById('rotate-btn');
+    const cropBtn = document.getElementById('crop-btn');
+    const filterBtn = document.getElementById('filter-btn');
+    const resizeBtn = document.getElementById('resize-btn');
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+
+    // Modals
+    const modalOverlay = document.getElementById('modal-overlay');
+    const rotateModal = document.getElementById('rotate-modal');
+    const cropModal = document.getElementById('crop-modal');
+    const filterModal = document.getElementById('filter-modal');
+    const resizeModal = document.getElementById('resize-modal');
+
+    // Rotate Controls
+    const rotateLeftBtn = document.getElementById('rotate-left');
+    const rotateRightBtn = document.getElementById('rotate-right');
+    const rotateSlider = document.getElementById('rotate-slider');
+    const rotateVal = document.getElementById('rotate-val');
+    const rotateApply = document.getElementById('rotate-apply');
+    const rotateCancel = document.getElementById('rotate-cancel');
+
+    // Crop Controls
+    const cropApply = document.getElementById('crop-apply');
+    const cropCancel = document.getElementById('crop-cancel');
+    let cropOverlayDiv = null;
+    let cropData = { x: 0, y: 0, w: 0, h: 0 };
+
+    // Filter Controls
+    const filterType = document.getElementById('filter-type');
+    const thresholdContainer = document.getElementById('threshold-container');
+    const thresholdSlider = document.getElementById('threshold-slider');
+    const thresholdVal = document.getElementById('threshold-val');
+    const brightnessSlider = document.getElementById('brightness-slider');
+    const brightnessVal = document.getElementById('brightness-val');
+    const contrastSlider = document.getElementById('contrast-slider');
+    const contrastVal = document.getElementById('contrast-val');
+    const filterApply = document.getElementById('filter-apply');
+    const filterCancel = document.getElementById('filter-cancel');
+
+    // Resize Controls
+    const resizeWidth = document.getElementById('resize-width');
+    const resizeHeight = document.getElementById('resize-height');
+    const resizeAspect = document.getElementById('resize-aspect');
+    const resizeApply = document.getElementById('resize-apply');
+    const resizeCancel = document.getElementById('resize-cancel');
+
+    let tempCanvas = null; // For previews
+    let currentRotation = 0;
+
     // Camera elements
     const cameraOverlay = document.getElementById('camera-overlay');
     const cameraVideo = document.getElementById('camera-video');
@@ -61,9 +113,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return new Promise((resolve, reject) => {
             const transaction = db.transaction([storeName], 'readwrite');
             const store = transaction.objectStore(storeName);
-            const request = store.put(data);
-            request.onsuccess = () => resolve();
-            request.onerror = (e) => reject(e);
+            // Ensure originalBlob is preserved if not provided in update
+            if (!data.originalBlob) {
+                const getReq = store.get(data.id);
+                getReq.onsuccess = () => {
+                    const existing = getReq.result;
+                    if (existing && existing.originalBlob) {
+                        data.originalBlob = existing.originalBlob;
+                    }
+                    const request = store.put(data);
+                    request.onsuccess = () => resolve();
+                    request.onerror = (e) => reject(e);
+                };
+                getReq.onerror = (e) => {
+                    // If new or error, just put
+                    const request = store.put(data);
+                    request.onsuccess = () => resolve();
+                    request.onerror = (e) => reject(e);
+                };
+            } else {
+                const request = store.put(data);
+                request.onsuccess = () => resolve();
+                request.onerror = (e) => reject(e);
+            }
         });
     }
 
@@ -99,12 +171,51 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
+                    // Migration: Ensure history exists and is valid
+                    let historyChanged = false;
+                    if (!page.history || !Array.isArray(page.history)) {
+                        page.history = [];
+                        if (page.originalBlob) {
+                            page.history.push(page.originalBlob);
+                        }
+                        // If blob is present, add it. 
+                        // If originalBlob exists, we assume blob is a subsequent edit (or the same).
+                        // We push it to ensure we don't lose the current state.
+                        if (page.blob) {
+                             // If originalBlob exists, we check if it's the same reference.
+                             // If they are different objects (which they usually are from DB), we push.
+                             // This might create duplicates if no edits were made, but ensures safety.
+                             if (!page.originalBlob || page.blob !== page.originalBlob) {
+                                 page.history.push(page.blob);
+                             }
+                        }
+                        // If history is still empty (shouldn't happen if blob exists), handle it
+                        if (page.history.length === 0 && page.blob) {
+                             page.history.push(page.blob);
+                        }
+                        
+                        historyChanged = true;
+                    }
+
+                    // Ensure historyIndex is valid
+                    if (page.historyIndex === undefined || page.historyIndex < 0 || page.historyIndex >= page.history.length) {
+                        page.historyIndex = page.history.length - 1;
+                        historyChanged = true;
+                    }
+                        
+                    // Save migrated structure back to DB
+                    if (historyChanged) {
+                        await storeImageInDB(page);
+                    }
+
                     pages.push({
                         id: page.id,
                         width: page.width,
                         height: page.height,
                         sourceFile: page.sourceFile,
-                        thumbnailDataUrl: thumb
+                        thumbnailDataUrl: thumb,
+                        historyIndex: page.historyIndex,
+                        historyLength: page.history.length
                     });
                 }
 
@@ -123,7 +234,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const transaction = db.transaction([storeName], 'readonly');
             const store = transaction.objectStore(storeName);
             const request = store.get(id);
-            request.onsuccess = (e) => resolve(e.target.result ? e.target.result.blob : null);
+            request.onsuccess = (e) => {
+                const result = e.target.result;
+                if (result) {
+                    if (result.history && result.history.length > 0) {
+                        // Ensure index is within bounds
+                        let idx = result.historyIndex;
+                        if (idx === undefined || idx < 0) idx = 0;
+                        if (idx >= result.history.length) idx = result.history.length - 1;
+                        resolve(result.history[idx]);
+                    } else {
+                        resolve(result.blob);
+                    }
+                } else {
+                    resolve(null);
+                }
+            };
             request.onerror = (e) => reject(e);
         });
     }
@@ -466,6 +592,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const pageObject = {
             id,
             blob,
+            originalBlob: blob,
+            history: [blob],
+            historyIndex: 0,
             width: pageData.width,
             height: pageData.height,
             sourceFile: pageData.sourceFile,
@@ -479,7 +608,9 @@ document.addEventListener('DOMContentLoaded', () => {
             width: pageData.width,
             height: pageData.height,
             sourceFile: pageData.sourceFile,
-            thumbnailDataUrl: thumbnailDataUrl
+            thumbnailDataUrl: thumbnailDataUrl,
+            historyIndex: 0,
+            historyLength: 1
         });
         renderAllThumbnails();
     }
@@ -591,6 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPageIndex = index;
         deletePageButton.style.display = 'inline-block';
         renderLargeView();
+        updateUndoRedoButtons();
     }
 
     deletePageButton.addEventListener('click', async () => {
@@ -629,9 +761,12 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderLargeView() {
         if (currentPageIndex === -1) {
             largeViewContainer.innerHTML = '';
+            floatingToolbar.style.display = 'none';
             return;
         }
 
+        floatingToolbar.style.display = 'flex';
+        
         const page = pages[currentPageIndex];
         largeViewContainer.innerHTML = '';
 
@@ -654,11 +789,24 @@ document.addEventListener('DOMContentLoaded', () => {
             img.src = currentObjectUrl;
             img.style.width = '100%';
             img.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+            img.id = 'large-image';
 
             // Prevent default drag behavior to allow panning
             img.addEventListener('dragstart', (e) => e.preventDefault());
 
             largeViewContainer.appendChild(img);
+
+            // Add Info Icon
+            const infoIcon = document.createElement('div');
+            infoIcon.className = 'info-icon';
+            infoIcon.textContent = 'i';
+            infoIcon.title = 'Image Information';
+            infoIcon.onclick = (e) => {
+                e.stopPropagation();
+                alert(`Width: ${img.naturalWidth}px\nHeight: ${img.naturalHeight}px`);
+            };
+            largeViewContainer.appendChild(infoIcon);
+
             updateZoom();
         } catch (err) {
             console.error("Error rendering large view:", err);
@@ -784,4 +932,543 @@ document.addEventListener('DOMContentLoaded', () => {
         link.click();
         document.body.removeChild(link);
     });
+
+    // --- Editor Features ---
+
+    function openModal(modal, blocking = true) {
+        modalOverlay.style.display = 'flex';
+        modal.style.display = 'block';
+        if (!blocking) {
+            modalOverlay.classList.add('non-blocking');
+        } else {
+            modalOverlay.classList.remove('non-blocking');
+        }
+    }
+
+    function closeModal() {
+        modalOverlay.style.display = 'none';
+        modalOverlay.classList.remove('non-blocking');
+        rotateModal.style.display = 'none';
+        cropModal.style.display = 'none';
+        filterModal.style.display = 'none';
+        resizeModal.style.display = 'none';
+        
+        // Cleanup crop overlay
+        if (cropOverlayDiv) {
+            cropOverlayDiv.remove();
+            cropOverlayDiv = null;
+        }
+        
+        // Reset temp canvas
+        tempCanvas = null;
+        
+        // Reset image style
+        const img = document.getElementById('large-image');
+        if (img) {
+            img.style.transform = 'none';
+            img.style.filter = 'none';
+        }
+    }
+
+    // --- Rotate ---
+    rotateBtn.addEventListener('click', () => {
+        currentRotation = 0;
+        rotateSlider.value = 0;
+        rotateVal.textContent = 0;
+        openModal(rotateModal);
+    });
+
+    rotateLeftBtn.addEventListener('click', () => updateRotation(-90));
+    rotateRightBtn.addEventListener('click', () => updateRotation(90));
+    rotateSlider.addEventListener('input', (e) => {
+        currentRotation = parseInt(e.target.value);
+        rotateVal.textContent = currentRotation;
+        applyRotationPreview();
+    });
+
+    function updateRotation(deg) {
+        currentRotation = (currentRotation + deg) % 360;
+        rotateSlider.value = currentRotation;
+        rotateVal.textContent = currentRotation;
+        applyRotationPreview();
+    }
+
+    function applyRotationPreview() {
+        const img = document.getElementById('large-image');
+        if (img) img.style.transform = `rotate(${currentRotation}deg)`;
+    }
+
+    rotateApply.addEventListener('click', async () => {
+        const img = document.getElementById('large-image');
+        if (!img) return;
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Calculate new bounding box
+        const rad = currentRotation * Math.PI / 180;
+        const sin = Math.abs(Math.sin(rad));
+        const cos = Math.abs(Math.cos(rad));
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        
+        canvas.width = w * cos + h * sin;
+        canvas.height = w * sin + h * cos;
+        
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(rad);
+        ctx.drawImage(img, -w / 2, -h / 2);
+        
+        await saveEditedImage(canvas.toDataURL('image/jpeg', 0.9));
+        closeModal();
+    });
+
+    rotateCancel.addEventListener('click', closeModal);
+
+    // --- Crop ---
+    cropBtn.addEventListener('click', () => {
+        const img = document.getElementById('large-image');
+        if (!img) return;
+        
+        openModal(cropModal, false); // Non-blocking
+        initCropOverlay(img);
+    });
+
+    function initCropOverlay(img) {
+        if (cropOverlayDiv) cropOverlayDiv.remove();
+        
+        const rect = img.getBoundingClientRect();
+        const containerRect = largeViewContainer.getBoundingClientRect();
+        
+        // Initial crop box (80% of image)
+        const w = rect.width * 0.8;
+        const h = rect.height * 0.8;
+        const x = (rect.width - w) / 2;
+        const y = (rect.height - h) / 2;
+        
+        cropOverlayDiv = document.createElement('div');
+        cropOverlayDiv.className = 'crop-overlay';
+        cropOverlayDiv.style.width = `${w}px`;
+        cropOverlayDiv.style.height = `${h}px`;
+        cropOverlayDiv.style.left = `${img.offsetLeft + x}px`;
+        cropOverlayDiv.style.top = `${img.offsetTop + y}px`;
+        
+        // Dimensions Label
+        const dimLabel = document.createElement('div');
+        dimLabel.className = 'crop-dimensions';
+        // Calculate initial real dimensions
+        const scaleX = img.naturalWidth / img.width;
+        const scaleY = img.naturalHeight / img.height;
+        // Use offsetWidth/Height to include border
+        // We need to append first to get offset dimensions, or calculate manually (w + 4)
+        // Since we just set style.width = w, and border is 2px * 2 = 4px
+        // But w was calculated from rect.width * 0.8. 
+        // Let's just append and read.
+        cropOverlayDiv.appendChild(dimLabel);
+        largeViewContainer.appendChild(cropOverlayDiv);
+        
+        const currentW = cropOverlayDiv.offsetWidth;
+        const currentH = cropOverlayDiv.offsetHeight;
+        dimLabel.innerText = `${Math.round(currentW * scaleX)} x ${Math.round(currentH * scaleY)}`;
+
+        // Handles
+        ['tl', 'tr', 'bl', 'br'].forEach(pos => {
+            const handle = document.createElement('div');
+            handle.className = `crop-handle ${pos}`;
+            cropOverlayDiv.appendChild(handle);
+        });
+        
+        makeDraggableAndResizable(cropOverlayDiv, img);
+    }
+
+    function makeDraggableAndResizable(overlay, img) {
+        let isDragging = false;
+        let isResizing = false;
+        let startX, startY, startLeft, startTop, startW, startH;
+        let resizeHandle = null;
+
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('crop-handle')) {
+                isResizing = true;
+                resizeHandle = e.target;
+            } else {
+                isDragging = true;
+            }
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = overlay.offsetLeft;
+            startTop = overlay.offsetTop;
+            startW = overlay.offsetWidth;
+            startH = overlay.offsetHeight;
+            e.stopPropagation();
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging && !isResizing) return;
+            
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            
+            if (isDragging) {
+                overlay.style.left = `${startLeft + dx}px`;
+                overlay.style.top = `${startTop + dy}px`;
+            } else if (isResizing) {
+                if (resizeHandle.classList.contains('br')) {
+                    overlay.style.width = `${startW + dx}px`;
+                    overlay.style.height = `${startH + dy}px`;
+                } else if (resizeHandle.classList.contains('bl')) {
+                    overlay.style.left = `${startLeft + dx}px`;
+                    overlay.style.width = `${startW - dx}px`;
+                    overlay.style.height = `${startH + dy}px`;
+                } else if (resizeHandle.classList.contains('tr')) {
+                    overlay.style.top = `${startTop + dy}px`;
+                    overlay.style.width = `${startW + dx}px`;
+                    overlay.style.height = `${startH - dy}px`;
+                } else if (resizeHandle.classList.contains('tl')) {
+                    overlay.style.left = `${startLeft + dx}px`;
+                    overlay.style.top = `${startTop + dy}px`;
+                    overlay.style.width = `${startW - dx}px`;
+                    overlay.style.height = `${startH - dy}px`;
+                }
+
+                // Update dimensions label
+                const dimLabel = overlay.querySelector('.crop-dimensions');
+                if (dimLabel) {
+                    const scaleX = img.naturalWidth / img.width;
+                    const scaleY = img.naturalHeight / img.height;
+                    // Use offsetWidth/Height to include border, matching getBoundingClientRect used in cropApply
+                    const currentW = overlay.offsetWidth;
+                    const currentH = overlay.offsetHeight;
+                    dimLabel.innerText = `${Math.round(currentW * scaleX)} x ${Math.round(currentH * scaleY)}`;
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            isResizing = false;
+        });
+    }
+
+    cropApply.addEventListener('click', async () => {
+        const img = document.getElementById('large-image');
+        if (!img || !cropOverlayDiv) return;
+        
+        // Calculate crop coordinates relative to natural image size
+        // We need to account for the displayed size vs natural size
+        const displayedW = img.width; // CSS width (100% of container usually, but check computed)
+        const displayedH = img.height;
+        const naturalW = img.naturalWidth;
+        const naturalH = img.naturalHeight;
+        
+        const scaleX = naturalW / displayedW;
+        const scaleY = naturalH / displayedH;
+        
+        // Overlay position relative to image
+        const overlayRect = cropOverlayDiv.getBoundingClientRect();
+        const imgRect = img.getBoundingClientRect();
+        
+        const cropX = (overlayRect.left - imgRect.left) * scaleX;
+        const cropY = (overlayRect.top - imgRect.top) * scaleY;
+        const cropW = overlayRect.width * scaleX;
+        const cropH = overlayRect.height * scaleY;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = cropW;
+        canvas.height = cropH;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+        
+        await saveEditedImage(canvas.toDataURL('image/jpeg', 0.9));
+        closeModal();
+    });
+
+    cropCancel.addEventListener('click', closeModal);
+
+    // --- Filter ---
+    filterBtn.addEventListener('click', () => {
+        filterType.value = 'none';
+        thresholdSlider.value = 128;
+        brightnessSlider.value = 0;
+        contrastSlider.value = 0;
+        thresholdContainer.style.display = 'none';
+        openModal(filterModal);
+    });
+
+    filterType.addEventListener('change', () => {
+        thresholdContainer.style.display = filterType.value === 'blackwhite' ? 'block' : 'none';
+        applyFilterPreview();
+    });
+
+    [thresholdSlider, brightnessSlider, contrastSlider].forEach(el => {
+        el.addEventListener('input', () => {
+            document.getElementById(el.id.replace('slider', 'val')).textContent = el.value;
+            applyFilterPreview();
+        });
+    });
+
+    function applyFilterPreview() {
+        const img = document.getElementById('large-image');
+        if (!img) return;
+        
+        let filterString = '';
+        
+        // CSS Filters for preview (approximate)
+        filterString += `brightness(${100 + parseInt(brightnessSlider.value)}%) `;
+        filterString += `contrast(${100 + parseInt(contrastSlider.value)}%) `;
+        
+        if (filterType.value === 'grayscale') {
+            filterString += 'grayscale(100%) ';
+        } else if (filterType.value === 'blackwhite') {
+            filterString += 'grayscale(100%) contrast(200%) '; // Approx B&W
+        }
+        
+        img.style.filter = filterString;
+    }
+
+    filterApply.addEventListener('click', async () => {
+        const img = document.getElementById('large-image');
+        if (!img) return;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        const brightness = parseInt(brightnessSlider.value);
+        const contrast = parseInt(contrastSlider.value);
+        const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+        
+        for (let i = 0; i < data.length; i += 4) {
+            // Brightness
+            data[i] += brightness;
+            data[i+1] += brightness;
+            data[i+2] += brightness;
+            
+            // Contrast
+            data[i] = factor * (data[i] - 128) + 128;
+            data[i+1] = factor * (data[i+1] - 128) + 128;
+            data[i+2] = factor * (data[i+2] - 128) + 128;
+            
+            // Grayscale / B&W
+            if (filterType.value !== 'none') {
+                const avg = (data[i] + data[i+1] + data[i+2]) / 3;
+                if (filterType.value === 'grayscale') {
+                    data[i] = avg;
+                    data[i+1] = avg;
+                    data[i+2] = avg;
+                } else if (filterType.value === 'blackwhite') {
+                    const thresh = parseInt(thresholdSlider.value);
+                    const val = avg > thresh ? 255 : 0;
+                    data[i] = val;
+                    data[i+1] = val;
+                    data[i+2] = val;
+                }
+            }
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+        await saveEditedImage(canvas.toDataURL('image/jpeg', 0.9));
+        closeModal();
+    });
+
+    filterCancel.addEventListener('click', closeModal);
+
+    // --- Resize ---
+    resizeBtn.addEventListener('click', () => {
+        const img = document.getElementById('large-image');
+        if (!img) return;
+        
+        resizeWidth.value = img.naturalWidth;
+        resizeHeight.value = img.naturalHeight;
+        openModal(resizeModal);
+    });
+
+    resizeWidth.addEventListener('input', () => {
+        if (resizeAspect.checked) {
+            const img = document.getElementById('large-image');
+            const ratio = img.naturalHeight / img.naturalWidth;
+            resizeHeight.value = Math.round(resizeWidth.value * ratio);
+        }
+    });
+
+    resizeHeight.addEventListener('input', () => {
+        if (resizeAspect.checked) {
+            const img = document.getElementById('large-image');
+            const ratio = img.naturalWidth / img.naturalHeight;
+            resizeWidth.value = Math.round(resizeHeight.value * ratio);
+        }
+    });
+
+    resizeApply.addEventListener('click', async () => {
+        const img = document.getElementById('large-image');
+        if (!img) return;
+        
+        const w = parseInt(resizeWidth.value);
+        const h = parseInt(resizeHeight.value);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        
+        await saveEditedImage(canvas.toDataURL('image/jpeg', 0.9));
+        closeModal();
+    });
+
+    resizeCancel.addEventListener('click', closeModal);
+
+    // --- Undo / Redo ---
+    undoBtn.addEventListener('click', async () => {
+        if (currentPageIndex === -1) return;
+        const page = pages[currentPageIndex];
+        if (page.historyIndex > 0) {
+            await loadHistoryState(page, page.historyIndex - 1);
+        }
+    });
+
+    redoBtn.addEventListener('click', async () => {
+        if (currentPageIndex === -1) return;
+        const page = pages[currentPageIndex];
+        if (page.historyIndex < page.historyLength - 1) {
+            await loadHistoryState(page, page.historyIndex + 1);
+        }
+    });
+
+    async function loadHistoryState(page, newIndex) {
+        // 1. Get the blob from DB (Read-only transaction)
+        const blob = await new Promise((resolve, reject) => {
+            const transaction = db.transaction([storeName], 'readonly');
+            const store = transaction.objectStore(storeName);
+            const request = store.get(page.id);
+            request.onsuccess = () => {
+                const dbPage = request.result;
+                if (dbPage && dbPage.history && dbPage.history[newIndex]) {
+                    resolve(dbPage.history[newIndex]);
+                } else {
+                    resolve(null);
+                }
+            };
+            request.onerror = (e) => reject(e);
+        });
+
+        if (!blob) return;
+
+        // 2. Process image (Async)
+        const dataUrl = await blobToDataURL(blob);
+        const thumb = await createThumbnail(dataUrl);
+        
+        const img = new Image();
+        img.onload = () => {
+            // 3. Update DB state (New Read-Write transaction)
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const getReq = store.get(page.id);
+
+            getReq.onsuccess = () => {
+                const dbPage = getReq.result;
+                if (dbPage) {
+                    dbPage.historyIndex = newIndex;
+                    dbPage.blob = blob;
+                    dbPage.thumbnailDataUrl = thumb;
+                    dbPage.width = img.width;
+                    dbPage.height = img.height;
+                    
+                    store.put(dbPage).onsuccess = () => {
+                        // Update memory
+                        page.historyIndex = newIndex;
+                        page.width = img.width;
+                        page.height = img.height;
+                        page.thumbnailDataUrl = thumb;
+                        
+                        renderAllThumbnails();
+                        renderLargeView();
+                        updateUndoRedoButtons();
+                    };
+                }
+            };
+        };
+        img.src = dataUrl;
+    }
+
+    function updateUndoRedoButtons() {
+        if (currentPageIndex === -1) {
+            undoBtn.disabled = true;
+            redoBtn.disabled = true;
+            undoBtn.style.opacity = '0.5';
+            redoBtn.style.opacity = '0.5';
+            return;
+        }
+        const page = pages[currentPageIndex];
+        // Default to 0/1 if undefined
+        const idx = page.historyIndex !== undefined ? page.historyIndex : 0;
+        const len = page.historyLength !== undefined ? page.historyLength : 1;
+        
+        undoBtn.disabled = idx <= 0;
+        redoBtn.disabled = idx >= len - 1;
+        
+        undoBtn.style.opacity = undoBtn.disabled ? '0.5' : '1';
+        redoBtn.style.opacity = redoBtn.disabled ? '0.5' : '1';
+    }
+
+    async function saveEditedImage(dataUrl) {
+        const page = pages[currentPageIndex];
+        const blob = dataURLtoBlob(dataUrl);
+        const thumb = await createThumbnail(dataUrl);
+        
+        const img = new Image();
+        img.onload = async () => {
+            page.width = img.width;
+            page.height = img.height;
+            page.thumbnailDataUrl = thumb;
+            
+            // Update history in DB
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const getReq = store.get(page.id);
+            
+            getReq.onsuccess = () => {
+                const dbPage = getReq.result;
+                if (dbPage) {
+                    if (!dbPage.history) dbPage.history = [];
+                    
+                    // Truncate history if we are in the middle
+                    let idx = dbPage.historyIndex;
+                    if (idx === undefined || idx < 0) idx = dbPage.history.length - 1;
+                    
+                    if (idx < dbPage.history.length - 1) {
+                        dbPage.history = dbPage.history.slice(0, idx + 1);
+                    }
+                    
+                    dbPage.history.push(blob);
+                    dbPage.historyIndex = dbPage.history.length - 1;
+                    
+                    // Update other fields
+                    dbPage.width = page.width;
+                    dbPage.height = page.height;
+                    dbPage.thumbnailDataUrl = thumb;
+                    dbPage.blob = blob; 
+                    
+                    const putReq = store.put(dbPage);
+                    putReq.onsuccess = () => {
+                        // Update memory state
+                        page.historyIndex = dbPage.historyIndex;
+                        page.historyLength = dbPage.history.length;
+                        
+                        renderAllThumbnails();
+                        renderLargeView();
+                        updateUndoRedoButtons();
+                    };
+                }
+            };
+        };
+        img.src = dataUrl;
+    }
 });

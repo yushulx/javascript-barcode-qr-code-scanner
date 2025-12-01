@@ -22,6 +22,12 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_converte
     *   **Drag & Drop Upload**: Simply drag files into the window to add them.
     *   **Reorder Pages**: Drag and drop thumbnails to rearrange the page order.
     *   **Delete**: Remove individual pages or clear the entire workspace.
+*   **Image Editing**:
+    *   **Crop**: Crop images with a visual overlay and real-time dimension display.
+    *   **Rotate**: Rotate images by 90 degrees or custom angles.
+    *   **Filters**: Apply Grayscale, Black & White, Brightness, and Contrast adjustments.
+    *   **Resize**: Resize images while maintaining aspect ratio.
+    *   **Undo/Redo**: Full history support to undo or redo any edits.
 *   **Export Options**:
     *   **Save as PDF**: Merge all pages into a single PDF file.
     *   **Save as Word**: Export all pages into a Microsoft Word (`.docx`) document.
@@ -35,6 +41,8 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_converte
     *   Or simply drag and drop files directly onto the page.
 3.  **Edit**:
     *   Click on a thumbnail to view the page.
+    *   Use the toolbar above the image to **Rotate**, **Crop**, **Filter**, or **Resize**.
+    *   Use **Undo** and **Redo** buttons to manage your changes.
     *   Drag thumbnails to change the order.
     *   Use the **Delete Page** button to remove unwanted pages.
 4.  **Save**:
