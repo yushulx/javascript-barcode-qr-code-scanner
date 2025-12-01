@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Configure PDF.js worker
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+    }
+    
     const fileInput = document.getElementById('file-input');
     const cameraButton = document.getElementById('camera-button');
     const savePdfButton = document.getElementById('save-pdf-button');
