@@ -218,7 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         sourceFile: page.sourceFile,
                         thumbnailDataUrl: thumb,
                         historyIndex: page.historyIndex,
-                        historyLength: page.history.length
+                        historyLength: page.history.length,
+                        htmlContent: page.htmlContent // Load HTML content
                     });
                 }
 
@@ -528,6 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
         const html = result.value;
 
+        // Generate thumbnail from the first part of the document
         const tempContainer = document.createElement('div');
         const pageWidth = 800;
         tempContainer.style.width = `${pageWidth}px`;
@@ -538,51 +540,31 @@ document.addEventListener('DOMContentLoaded', () => {
         tempContainer.innerHTML = html;
         document.body.appendChild(tempContainer);
 
+        let thumbnailDataUrl;
         try {
+            // Capture just the top part for thumbnail
             const canvas = await html2canvas(tempContainer, {
-                scale: 1.5,
+                scale: 0.5,
+                height: 1100, // Approx A4 height
+                windowHeight: 1100,
                 useCORS: true
             });
-
-            const pageHeight = pageWidth * 1.414; // A4 aspect ratio
-            const totalHeight = canvas.height;
-            const scaledPageWidth = canvas.width;
-            const scaledPageHeight = pageHeight * 1.5;
-
-            let currentY = 0;
-            let pageNum = 1;
-
-            while (currentY < totalHeight) {
-                const pageCanvas = document.createElement('canvas');
-                pageCanvas.width = scaledPageWidth;
-                pageCanvas.height = scaledPageHeight;
-
-                const ctx = pageCanvas.getContext('2d');
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-
-                const heightToDraw = Math.min(scaledPageHeight, totalHeight - currentY);
-
-                ctx.drawImage(
-                    canvas,
-                    0, currentY, scaledPageWidth, heightToDraw,
-                    0, 0, scaledPageWidth, heightToDraw
-                );
-
-                await addPage({
-                    dataUrl: pageCanvas.toDataURL('image/jpeg', 0.9),
-                    width: scaledPageWidth,
-                    height: scaledPageHeight,
-                    sourceFile: `${file.name} (Page ${pageNum})`
-                });
-
-                currentY += scaledPageHeight;
-                pageNum++;
-            }
-
+            thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        } catch (e) {
+            console.error("Error generating thumbnail:", e);
+            // Fallback thumbnail
+            thumbnailDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=';
         } finally {
             document.body.removeChild(tempContainer);
         }
+
+        await addPage({
+            dataUrl: thumbnailDataUrl, // Used for thumbnail display
+            width: 800,
+            height: 1100,
+            sourceFile: file.name,
+            htmlContent: html // Store the editable HTML
+        });
     }
 
     // --- Page Management ---
@@ -601,7 +583,8 @@ document.addEventListener('DOMContentLoaded', () => {
             width: pageData.width,
             height: pageData.height,
             sourceFile: pageData.sourceFile,
-            thumbnailDataUrl: thumbnailDataUrl
+            thumbnailDataUrl: thumbnailDataUrl,
+            htmlContent: pageData.htmlContent // Store HTML content
         };
 
         await storeImageInDB(pageObject);
@@ -613,7 +596,8 @@ document.addEventListener('DOMContentLoaded', () => {
             sourceFile: pageData.sourceFile,
             thumbnailDataUrl: thumbnailDataUrl,
             historyIndex: 0,
-            historyLength: 1
+            historyLength: 1,
+            htmlContent: pageData.htmlContent // Store HTML content
         });
         renderAllThumbnails();
     }
@@ -769,9 +753,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        imageToolsGroup.style.display = 'flex';
-        historyGroup.style.display = 'flex';
-        
         const page = pages[currentPageIndex];
         largeViewContainer.innerHTML = '';
 
@@ -780,6 +761,41 @@ document.addEventListener('DOMContentLoaded', () => {
             URL.revokeObjectURL(currentObjectUrl);
             currentObjectUrl = null;
         }
+
+        // Check if it's an HTML page (editable Word doc)
+        if (page.htmlContent) {
+            imageToolsGroup.style.display = 'none'; // Hide image tools
+            historyGroup.style.display = 'none'; // Hide history for now (could implement undo/redo for text later)
+
+            const editorDiv = document.createElement('div');
+            editorDiv.contentEditable = true;
+            editorDiv.innerHTML = page.htmlContent;
+            editorDiv.className = 'page-editor';
+            // Style to look like a page
+            editorDiv.style.width = '800px';
+            editorDiv.style.minHeight = '1100px';
+            editorDiv.style.background = 'white';
+            editorDiv.style.padding = '60px';
+            editorDiv.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+            editorDiv.style.margin = '0 auto';
+            editorDiv.style.outline = 'none';
+            editorDiv.style.fontFamily = "'Times New Roman', Times, serif";
+            editorDiv.style.fontSize = "12pt";
+            editorDiv.style.lineHeight = "1.5";
+            editorDiv.style.color = "#000";
+
+            // Update model on input
+            editorDiv.addEventListener('input', () => {
+                page.htmlContent = editorDiv.innerHTML;
+            });
+
+            largeViewContainer.appendChild(editorDiv);
+            updateZoom();
+            return;
+        }
+
+        imageToolsGroup.style.display = 'flex';
+        historyGroup.style.display = 'flex';
 
         try {
             const blob = await getImageFromDB(page.id);
@@ -881,32 +897,73 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const doc = new jsPDF();
+        // We use the browser's print functionality because jsPDF requires large custom font files 
+        // to support non-Latin characters (like Chinese/Japanese) correctly. 
+        // The system print dialog ensures all characters are rendered correctly and remain editable/selectable.
+        
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+
+        let htmlContent = '<!DOCTYPE html><html><head><title>Document</title>';
+        htmlContent += `
+            <style>
+                @page { size: A4; margin: 20mm; }
+                body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+                .page-content { width: 100%; word-wrap: break-word; } 
+                img { max-width: 100%; } 
+                .page-break { page-break-after: always; }
+                /* Ensure text is visible and black */
+                p, div, span { color: #000; }
+            </style>`;
+        htmlContent += '</head><body>';
 
         for (let i = 0; i < pages.length; i++) {
             const page = pages[i];
-            if (i > 0) doc.addPage();
-
-            // Calculate aspect ratio to fit A4
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const pageHeight = doc.internal.pageSize.getHeight();
-            const ratio = Math.min(pageWidth / page.width, pageHeight / page.height);
-
-            const w = page.width * ratio;
-            const h = page.height * ratio;
-
-            try {
-                const blob = await getImageFromDB(page.id);
-                if (blob) {
-                    const dataUrl = await blobToDataURL(blob);
-                    doc.addImage(dataUrl, 'JPEG', 0, 0, w, h);
+            if (page.htmlContent) {
+                htmlContent += `<div class="page-content">${page.htmlContent}</div>`;
+            } else {
+                try {
+                    const blob = await getImageFromDB(page.id);
+                    if (blob) {
+                        const dataUrl = await blobToDataURL(blob);
+                        htmlContent += `<div class="page-content"><img src="${dataUrl}" /></div>`;
+                    }
+                } catch (err) {
+                    console.error(`Error adding page ${i + 1}:`, err);
                 }
-            } catch (err) {
-                console.error(`Error adding page ${i + 1} to PDF:`, err);
+            }
+            if (i < pages.length - 1) {
+                htmlContent += '<div class="page-break"></div>';
             }
         }
 
-        doc.save('combined_document.pdf');
+        htmlContent += '</body></html>';
+        
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(htmlContent);
+        doc.close();
+        
+        // Wait for content (especially images) to load
+        iframe.onload = function() {
+            try {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            } catch (e) {
+                console.error("Print failed", e);
+            } finally {
+                // Remove iframe after a delay to ensure print dialog has opened
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1000);
+            }
+        };
     });
 
     saveWordButton.addEventListener('click', async () => {
@@ -915,18 +972,45 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Create HTML content with images
+        // Create HTML content
         let htmlContent = '<!DOCTYPE html><html><head><title>Document</title></head><body>';
 
         for (const page of pages) {
-            try {
-                const blob = await getImageFromDB(page.id);
-                if (blob) {
-                    const dataUrl = await blobToDataURL(blob);
-                    htmlContent += `<p><img src="${dataUrl}" style="width: 100%; max-width: 600px;" /></p><br style="page-break-after: always;" />`;
+            if (page.htmlContent) {
+                htmlContent += page.htmlContent;
+                htmlContent += '<br style="page-break-after: always;" />';
+            } else {
+                try {
+                    const blob = await getImageFromDB(page.id);
+                    if (blob) {
+                        const dataUrl = await blobToDataURL(blob);
+                        
+                        // Load image to get dimensions and scale it to fit Word page
+                        const img = new Image();
+                        img.src = dataUrl;
+                        await new Promise(resolve => {
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                        });
+
+                        // A4 printable width is roughly 600-650px (at 96dpi) or ~16cm
+                        // We constrain it to 600px to be safe
+                        const maxWidth = 600;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            const ratio = maxWidth / width;
+                            width = maxWidth;
+                            height = Math.round(height * ratio);
+                        }
+
+                        // Use explicit width/height attributes which html-docx-js handles better than CSS
+                        htmlContent += `<p><img src="${dataUrl}" width="${width}" height="${height}" /></p><br style="page-break-after: always;" />`;
+                    }
+                } catch (err) {
+                    console.error("Error adding page to Word:", err);
                 }
-            } catch (err) {
-                console.error("Error adding page to Word:", err);
             }
         }
 
