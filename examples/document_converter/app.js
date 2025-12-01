@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteAllButton = document.getElementById('delete-all-button');
     const thumbnailsPanel = document.getElementById('thumbnails-panel');
     const viewerPanel = document.getElementById('viewer-panel');
+    const scrollWrapper = document.getElementById('scroll-wrapper');
     const largeViewContainer = document.getElementById('large-view-container');
     const zoomInBtn = document.getElementById('zoom-in');
     const zoomOutBtn = document.getElementById('zoom-out');
@@ -451,8 +452,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const img = document.createElement('img');
         img.src = page.dataUrl;
-        img.style.maxWidth = '100%';
+        img.style.width = '100%';
         img.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+        
+        // Prevent default drag behavior to allow panning
+        img.addEventListener('dragstart', (e) => e.preventDefault());
 
         largeViewContainer.appendChild(img);
         updateZoom();
@@ -460,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateZoom() {
         if (largeViewContainer.firstChild) {
-            largeViewContainer.style.transform = `scale(${currentZoom})`;
+            largeViewContainer.style.width = `${currentZoom * 100}%`;
         }
     }
 
@@ -475,6 +479,40 @@ document.addEventListener('DOMContentLoaded', () => {
             currentZoom -= 0.1;
             updateZoom();
         }
+    });
+
+    // --- Panning (Drag to Scroll) ---
+    let isPanning = false;
+    let startX, startY, initialScrollLeft, initialScrollTop;
+
+    scrollWrapper.addEventListener('mousedown', (e) => {
+        isPanning = true;
+        scrollWrapper.style.cursor = 'grabbing';
+        startX = e.pageX - scrollWrapper.offsetLeft;
+        startY = e.pageY - scrollWrapper.offsetTop;
+        initialScrollLeft = scrollWrapper.scrollLeft;
+        initialScrollTop = scrollWrapper.scrollTop;
+    });
+
+    scrollWrapper.addEventListener('mouseleave', () => {
+        isPanning = false;
+        scrollWrapper.style.cursor = 'grab';
+    });
+
+    scrollWrapper.addEventListener('mouseup', () => {
+        isPanning = false;
+        scrollWrapper.style.cursor = 'grab';
+    });
+
+    scrollWrapper.addEventListener('mousemove', (e) => {
+        if (!isPanning) return;
+        e.preventDefault();
+        const x = e.pageX - scrollWrapper.offsetLeft;
+        const y = e.pageY - scrollWrapper.offsetTop;
+        const walkX = (x - startX);
+        const walkY = (y - startY);
+        scrollWrapper.scrollLeft = initialScrollLeft - walkX;
+        scrollWrapper.scrollTop = initialScrollTop - walkY;
     });
 
     // --- Saving ---
