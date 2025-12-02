@@ -13,11 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const zoomInBtn = document.getElementById('zoom-in');
     const zoomOutBtn = document.getElementById('zoom-out');
     const infoBtn = document.getElementById('info-btn');
+    const zoomControlsGroup = document.querySelector('.zoom-controls');
     const hiddenContainer = document.getElementById('hidden-container');
     const mainContainer = document.querySelector('main');
 
     // Editor elements
     const imageToolsGroup = document.getElementById('image-tools-group');
+    const textToolsGroup = document.getElementById('text-tools-group');
+    const saveTextBtn = document.getElementById('save-text-btn');
     const historyGroup = document.getElementById('history-group');
     const rotateBtn = document.getElementById('rotate-btn');
     const cropBtn = document.getElementById('crop-btn');
@@ -696,6 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
         div.addEventListener('dragend', handleDragEnd);
 
         const img = document.createElement('img');
+        img.id = `thumb-img-${page.id}`; // Add ID for updates
         img.src = page.thumbnailDataUrl; // Use thumbnail
 
         const num = document.createElement('div');
@@ -832,9 +836,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (page.htmlContent) {
             scrollWrapper.style.cursor = 'default';
             imageToolsGroup.style.display = 'none'; // Hide image tools
-            historyGroup.style.display = 'none'; // Hide history for now (could implement undo/redo for text later)
+            historyGroup.style.display = 'none'; // Hide history for now
+            textToolsGroup.style.display = 'flex'; // Show text tools
+            if (zoomControlsGroup) zoomControlsGroup.style.display = 'none'; // Hide zoom controls
 
             const editorDiv = document.createElement('div');
+            editorDiv.id = 'current-page-editor'; // ID for easy access
             editorDiv.contentEditable = true;
             editorDiv.innerHTML = page.htmlContent;
             editorDiv.className = 'page-editor';
@@ -852,9 +859,20 @@ document.addEventListener('DOMContentLoaded', () => {
             editorDiv.style.color = "#000";
             editorDiv.style.cursor = "text"; // Ensure text cursor is shown
 
-            // Update model on input
+            // Reset save button state
+            saveTextBtn.disabled = false;
+            saveTextBtn.innerHTML = '<i class="fas fa-save"></i>';
+            saveTextBtn.classList.remove('btn-success');
+            saveTextBtn.classList.add('btn-primary');
+
+            // Re-enable save button on input
             editorDiv.addEventListener('input', () => {
-                page.htmlContent = editorDiv.innerHTML;
+                if (saveTextBtn.disabled) {
+                    saveTextBtn.disabled = false;
+                    saveTextBtn.innerHTML = '<i class="fas fa-save"></i>';
+                    saveTextBtn.classList.remove('btn-success');
+                    saveTextBtn.classList.add('btn-primary');
+                }
             });
 
             largeViewContainer.appendChild(editorDiv);
@@ -864,6 +882,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         imageToolsGroup.style.display = 'flex';
         historyGroup.style.display = 'flex';
+        textToolsGroup.style.display = 'none';
+        if (zoomControlsGroup) zoomControlsGroup.style.display = 'flex'; // Show zoom controls
         scrollWrapper.style.cursor = 'grab';
 
         try {
@@ -891,9 +911,40 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Error rendering large view:", err);
             largeViewContainer.textContent = "Error loading image.";
         }
-    }    function updateZoom() {
+    }
+
+    function updateZoom() {
         if (largeViewContainer.firstChild) {
-            largeViewContainer.style.width = `${currentZoom * 100}%`;
+            // For HTML content (div), we scale using transform to ensure layout remains consistent
+            // For Images, we can just set width, but transform is smoother for both
+            largeViewContainer.style.transform = `scale(${currentZoom})`;
+            largeViewContainer.style.transformOrigin = 'top left';
+            
+            // Adjust container size to match scaled content so scrolling works
+            // This is a bit tricky with transform, but setting width/height on the container helps
+            // Actually, for the scroll wrapper to work, the container needs to take up space.
+            // Transform doesn't affect layout flow size by default.
+            // So we might need to adjust margins or wrapper size.
+            
+            // Simplified approach: Just use CSS zoom if supported, or transform
+            // largeViewContainer.style.zoom = currentZoom; 
+            
+            // Let's stick to the previous simple width approach for images if it worked, 
+            // but for the editor div (fixed 800px), we need transform.
+            
+            const firstChild = largeViewContainer.firstChild;
+            if (firstChild.tagName === 'DIV' && firstChild.classList.contains('page-editor')) {
+                 largeViewContainer.style.width = 'fit-content';
+                 largeViewContainer.style.transform = `scale(${currentZoom})`;
+                 // Add margin to allow scrolling to the bottom/right edges when zoomed in
+                 largeViewContainer.style.marginBottom = `${(currentZoom - 1) * 1100}px`; 
+                 largeViewContainer.style.marginRight = `${(currentZoom - 1) * 800}px`;
+            } else {
+                 largeViewContainer.style.transform = 'none';
+                 largeViewContainer.style.width = `${currentZoom * 100}%`;
+                 largeViewContainer.style.marginBottom = '0';
+                 largeViewContainer.style.marginRight = '0';
+            }
         }
     }
 
@@ -1138,6 +1189,73 @@ document.addEventListener('DOMContentLoaded', () => {
             img.style.filter = 'none';
         }
     }
+
+    // --- Save Text ---
+    saveTextBtn.addEventListener('click', async () => {
+        const page = pages[currentPageIndex];
+        if (!page || !page.htmlContent) return;
+
+        const editorDiv = document.getElementById('current-page-editor');
+        if (!editorDiv) return;
+
+        // Update content
+        page.htmlContent = editorDiv.innerHTML;
+
+        // Visual feedback - Loading
+        const originalHtml = '<i class="fas fa-save"></i>';
+        saveTextBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        saveTextBtn.disabled = true;
+
+        try {
+            // Generate new thumbnail
+            // We need to temporarily ensure the editor is visible and styled correctly for the snapshot
+            // (It should already be visible if we are clicking the button)
+            
+            const canvas = await html2canvas(editorDiv, {
+                scale: 0.5, // Create a smaller thumbnail
+                useCORS: true,
+                logging: false
+            });
+            
+            page.thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+            // Save to DB
+            await storeImageInDB(page);
+
+            // Update sidebar thumbnail
+            const thumbImg = document.getElementById(`thumb-img-${page.id}`);
+            if (thumbImg) {
+                thumbImg.src = page.thumbnailDataUrl;
+            }
+
+            // Visual feedback - Success
+            saveTextBtn.innerHTML = '<i class="fas fa-check"></i>';
+            saveTextBtn.classList.remove('btn-primary');
+            saveTextBtn.classList.add('btn-success');
+
+            // Keep it disabled until user edits again? 
+            // The user said "after clicking save and add new text again, the save button is disabled"
+            // This implies they want it enabled when they edit.
+            // But right now, it should probably stay disabled to show "Saved" state until they edit.
+            // However, the timeout below resets it to enabled.
+            // If we want it to stay disabled until edit, we should NOT re-enable it in the timeout.
+            // But we should reset the icon.
+            
+            setTimeout(() => {
+                saveTextBtn.innerHTML = originalHtml;
+                saveTextBtn.classList.remove('btn-success');
+                saveTextBtn.classList.add('btn-primary');
+                // Keep disabled until input event fires
+                // saveTextBtn.disabled = false; 
+            }, 1500);
+
+        } catch (err) {
+            console.error("Error saving text page:", err);
+            alert("Failed to save changes.");
+            saveTextBtn.innerHTML = originalHtml;
+            saveTextBtn.disabled = false;
+        }
+    });
 
     // --- Rotate ---
     rotateBtn.addEventListener('click', () => {
@@ -1691,4 +1809,27 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         img.src = dataUrl;
     }
+
+    // --- Keyboard Shortcuts ---
+    document.addEventListener('keydown', (e) => {
+        // Ctrl + S: Save Text
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault(); // Prevent browser save dialog
+            // Only trigger if the save text button is visible (meaning we are in text mode)
+            if (textToolsGroup.style.display !== 'none' && !saveTextBtn.disabled) {
+                saveTextBtn.click();
+            }
+        }
+
+        // Delete: Delete Page
+        if (e.key === 'Delete') {
+            // Don't delete page if we are editing text in an input or contentEditable
+            const active = document.activeElement;
+            const isInput = active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable;
+            
+            if (!isInput && currentPageIndex !== -1) {
+                deletePageButton.click();
+            }
+        }
+    });
 });
