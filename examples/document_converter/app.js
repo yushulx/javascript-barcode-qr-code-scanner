@@ -80,6 +80,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeCameraBtn = document.getElementById('close-camera-btn');
     let mediaStream = null;
 
+    // Scanner elements
+    const scannerButton = document.getElementById('scanner-button');
+    const scannerModal = document.getElementById('scanner-modal');
+    const scannerSourceSelect = document.getElementById('scanner-source');
+    const refreshScannersBtn = document.getElementById('refresh-scanners');
+    const scanResolution = document.getElementById('scan-resolution');
+    const scanAdf = document.getElementById('scan-adf');
+    const dwtLicense = document.getElementById('dwt-license');
+    const scannerScanBtn = document.getElementById('scanner-scan');
+    const scannerCancelBtn = document.getElementById('scanner-cancel');
+    const host = 'http://127.0.0.1:18622';
+
     let pages = []; // Array of { id, width, height, sourceFile, thumbnailDataUrl }
     let currentPageIndex = -1;
     let currentZoom = 1.0;
@@ -401,6 +413,150 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Select the new page
         selectPage(pages.length - 1);
+    });
+
+    // --- Scanner Handling ---
+
+    scannerButton.addEventListener('click', () => {
+        openModal(scannerModal);
+        fetchScanners();
+    });
+
+    scannerCancelBtn.addEventListener('click', () => {
+        closeModal();
+    });
+
+    refreshScannersBtn.addEventListener('click', fetchScanners);
+
+    async function fetchScanners() {
+        try {
+            scannerSourceSelect.innerHTML = '<option>Loading...</option>';
+            let url = host + '/api/device/scanners';
+            let response = await fetch(url);
+
+            if (response.ok) {
+                let devices = await response.json();
+                scannerSourceSelect.innerHTML = '';
+
+                if (devices.length === 0) {
+                    let option = document.createElement("option");
+                    option.text = "No scanners found";
+                    scannerSourceSelect.add(option);
+                    return;
+                }
+
+                for (let i = 0; i < devices.length; i++) {
+                    let device = devices[i];
+                    let option = document.createElement("option");
+                    option.text = device['name'];
+                    option.value = JSON.stringify(device);
+                    scannerSourceSelect.add(option);
+                };
+            } else {
+                scannerSourceSelect.innerHTML = '<option>Error fetching scanners</option>';
+            }
+
+        } catch (error) {
+            console.error(error);
+            scannerSourceSelect.innerHTML = '<option>Service not connected</option>';
+            alert("Could not connect to Dynamsoft Service. Please ensure it is installed and running.");
+        }
+    }
+
+    scannerScanBtn.addEventListener('click', async () => {
+        const scanner = scannerSourceSelect.value;
+        if (!scanner || scanner.startsWith('No') || scanner.startsWith('Loading') || scanner.startsWith('Service') || scanner.startsWith('Error')) {
+            alert("Please select a valid scanner.");
+            return;
+        }
+
+        const license = dwtLicense.value.trim();
+        if (!license) {
+            alert("Please enter a valid license.");
+            return;
+        }
+
+        scannerScanBtn.disabled = true;
+        scannerScanBtn.textContent = "Scanning...";
+
+        let parameters = {
+            license: license,
+            device: JSON.parse(scanner)['device'],
+        };
+
+        parameters.config = {
+            PixelType: 2,
+            Resolution: parseInt(scanResolution.value),
+            IfFeederEnabled: scanAdf.checked,
+        };
+
+        // REST endpoint to create a scan job
+        let url = host + '/api/device/scanners/jobs';
+
+        try {
+            let response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(parameters)
+            });
+
+            if (response.ok) {
+                let job = await response.json();
+                let jobId = job.jobuid;
+
+                // Get document data
+                let nextUrl = host + '/api/device/scanners/jobs/' + jobId + '/next-page';
+                let pageCount = 0;
+
+                while (true) {
+                    try {
+                        let imgResponse = await fetch(nextUrl);
+
+                        if (imgResponse.status == 200) {
+                            const arrayBuffer = await imgResponse.arrayBuffer();
+                            const blob = new Blob([arrayBuffer], { type: imgResponse.headers.get('Content-Type') || 'image/jpeg' });
+                            
+                            // Convert blob to dataURL for addPage
+                            const dataUrl = await blobToDataURL(blob);
+                            
+                            // Get image dimensions (optional, addPage handles it but good to have)
+                            // We can just pass dataUrl and let addPage handle it
+                            await addPage({
+                                dataUrl: dataUrl,
+                                sourceFile: `Scan Job ${jobId} - Page ${pageCount + 1}`
+                            });
+                            
+                            pageCount++;
+                        }
+                        else {
+                            break;
+                        }
+
+                    } catch (error) {
+                        console.error('No more images or error:', error);
+                        break;
+                    }
+                }
+                
+                if (pageCount > 0) {
+                    closeModal();
+                    selectPage(pages.length - 1);
+                } else {
+                    alert("No pages scanned.");
+                }
+            } else {
+                const errText = await response.text();
+                alert("Scan failed: " + errText);
+            }
+
+        } catch (error) {
+            alert("Error during scan: " + error);
+        } finally {
+            scannerScanBtn.disabled = false;
+            scannerScanBtn.textContent = "Scan Now";
+        }
     });
 
     // --- File Handling ---
@@ -1144,6 +1300,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Editor Features ---
 
     function openModal(modal, blocking = true) {
+        // Hide all modals first
+        rotateModal.style.display = 'none';
+        cropModal.style.display = 'none';
+        filterModal.style.display = 'none';
+        resizeModal.style.display = 'none';
+        infoModal.style.display = 'none';
+        scannerModal.style.display = 'none';
+
         modalOverlay.style.display = 'flex';
         modal.style.display = 'block';
         if (!blocking) {
@@ -1161,6 +1325,7 @@ document.addEventListener('DOMContentLoaded', () => {
         filterModal.style.display = 'none';
         resizeModal.style.display = 'none';
         infoModal.style.display = 'none';
+        scannerModal.style.display = 'none';
         
         // Cleanup crop overlay
         if (cropOverlayDiv) {
@@ -1626,15 +1791,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Update modal content
         document.getElementById('info-type').textContent = typeDisplay;
-        document.getElementById('info-dimensions').textContent = `${img.naturalWidth} × ${img.naturalHeight} px`;
+        document.getElementById('info-dimensions').textContent = `${img.naturalWidth} x ${img.naturalHeight} px`;
         document.getElementById('info-size').textContent = sizeString;
         
         // Clean up
         URL.revokeObjectURL(objectUrl);
         
         // Show modal
-        infoModal.style.display = 'block';
-        modalOverlay.style.display = 'flex'; // Ensure flex for centering
+        openModal(infoModal);
     }
 
     // --- Undo / Redo ---
