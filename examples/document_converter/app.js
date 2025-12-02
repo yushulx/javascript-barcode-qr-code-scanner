@@ -1245,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Create HTML content
-        let htmlContent = '<!DOCTYPE html><html><head><title>Document</title></head><body>';
+        let htmlContent = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Document</title></head><body>';
 
         for (const page of pages) {
             if (page.htmlContent) {
