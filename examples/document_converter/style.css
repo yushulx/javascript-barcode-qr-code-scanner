@@ -249,7 +249,7 @@ label[title]:hover::before {
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    cursor: grab;
+    /* cursor: grab; Removed to allow text selection in editor mode */
 }
 
 #large-view-container {

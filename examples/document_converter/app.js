@@ -764,6 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check if it's an HTML page (editable Word doc)
         if (page.htmlContent) {
+            scrollWrapper.style.cursor = 'default';
             imageToolsGroup.style.display = 'none'; // Hide image tools
             historyGroup.style.display = 'none'; // Hide history for now (could implement undo/redo for text later)
 
@@ -783,6 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
             editorDiv.style.fontSize = "12pt";
             editorDiv.style.lineHeight = "1.5";
             editorDiv.style.color = "#000";
+            editorDiv.style.cursor = "text"; // Ensure text cursor is shown
 
             // Update model on input
             editorDiv.addEventListener('input', () => {
@@ -796,6 +798,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         imageToolsGroup.style.display = 'flex';
         historyGroup.style.display = 'flex';
+        scrollWrapper.style.cursor = 'grab';
 
         try {
             const blob = await getImageFromDB(page.id);
@@ -860,6 +863,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let startX, startY, initialScrollLeft, initialScrollTop;
 
     scrollWrapper.addEventListener('mousedown', (e) => {
+        // Only enable panning if the cursor is set to 'grab' (Image Mode)
+        if (scrollWrapper.style.cursor !== 'grab') return;
+
         isPanning = true;
         scrollWrapper.style.cursor = 'grabbing';
         startX = e.pageX - scrollWrapper.offsetLeft;
@@ -870,12 +876,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     scrollWrapper.addEventListener('mouseleave', () => {
         isPanning = false;
-        scrollWrapper.style.cursor = 'grab';
+        if (scrollWrapper.style.cursor === 'grabbing') {
+            scrollWrapper.style.cursor = 'grab';
+        }
     });
 
     scrollWrapper.addEventListener('mouseup', () => {
         isPanning = false;
-        scrollWrapper.style.cursor = 'grab';
+        if (scrollWrapper.style.cursor === 'grabbing') {
+            scrollWrapper.style.cursor = 'grab';
+        }
     });
 
     scrollWrapper.addEventListener('mousemove', (e) => {
