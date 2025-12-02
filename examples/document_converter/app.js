@@ -738,7 +738,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 scale: 0.5,
                 height: 1100, // Approx A4 height
                 windowHeight: 1100,
-                useCORS: true
+                useCORS: true,
+                ignoreElements: (element) => {
+                    return element.tagName === 'VIDEO' || element.id === 'camera-overlay';
+                }
             });
             thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8);
         } catch (e) {
