@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterModal = document.getElementById('filter-modal');
     const resizeModal = document.getElementById('resize-modal');
     const infoModal = document.getElementById('info-modal');
+    const loadingOverlay = document.getElementById('loading-overlay');
 
     // Rotate Controls
     const rotateLeftBtn = document.getElementById('rotate-left');
@@ -605,49 +606,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleDOCX(file) {
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-        const html = result.value;
-
-        // Generate thumbnail from the first part of the document
-        const tempContainer = document.createElement('div');
-        const pageWidth = 800;
-        tempContainer.style.width = `${pageWidth}px`;
-        tempContainer.style.background = 'white';
-        tempContainer.style.padding = '40px';
-        tempContainer.style.position = 'absolute';
-        tempContainer.style.left = '-9999px';
-        tempContainer.innerHTML = html;
-        document.body.appendChild(tempContainer);
-
-        let thumbnailDataUrl;
+        loadingOverlay.style.display = 'flex';
         try {
-            // Capture just the top part for thumbnail
-            const canvas = await html2canvas(tempContainer, {
-                scale: 0.5,
-                height: 1100, // Approx A4 height
-                windowHeight: 1100,
-                useCORS: true,
-                ignoreElements: (element) => {
-                    return element.tagName === 'VIDEO' || element.id === 'camera-overlay';
-                }
-            });
-            thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        } catch (e) {
-            console.error("Error generating thumbnail:", e);
-            // Fallback thumbnail
-            thumbnailDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=';
-        } finally {
-            document.body.removeChild(tempContainer);
-        }
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+            const html = result.value;
 
-        await addPage({
-            dataUrl: thumbnailDataUrl, // Used for thumbnail display
-            width: 800,
-            height: 1100,
-            sourceFile: file.name,
-            htmlContent: html // Store the HTML content for editing
-        });
+            // Generate thumbnail from the first part of the document
+            const tempContainer = document.createElement('div');
+            const pageWidth = 800;
+            tempContainer.style.width = `${pageWidth}px`;
+            tempContainer.style.background = 'white';
+            tempContainer.style.padding = '40px';
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.left = '-9999px';
+            tempContainer.innerHTML = html;
+            document.body.appendChild(tempContainer);
+
+            let thumbnailDataUrl;
+            try {
+                // Capture just the top part for thumbnail
+                const canvas = await html2canvas(tempContainer, {
+                    scale: 0.5,
+                    height: 1100, // Approx A4 height
+                    windowHeight: 1100,
+                    useCORS: true,
+                    ignoreElements: (element) => {
+                        return element.tagName === 'VIDEO' || element.id === 'camera-overlay';
+                    }
+                });
+                thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            } catch (e) {
+                console.error("Error generating thumbnail:", e);
+                // Fallback thumbnail
+                thumbnailDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=';
+            } finally {
+                document.body.removeChild(tempContainer);
+            }
+
+            await addPage({
+                dataUrl: thumbnailDataUrl, // Used for thumbnail display
+                width: 800,
+                height: 1100,
+                sourceFile: file.name,
+                htmlContent: html // Store the HTML content for editing
+            });
+        } catch (error) {
+            console.error('Error processing DOCX:', error);
+            alert('Failed to load DOCX file.');
+        } finally {
+            loadingOverlay.style.display = 'none';
+        }
     }
 
     async function handleTXT(file) {
