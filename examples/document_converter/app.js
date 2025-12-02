@@ -921,17 +921,6 @@ document.addEventListener('DOMContentLoaded', () => {
             largeViewContainer.style.transformOrigin = 'top left';
             
             // Adjust container size to match scaled content so scrolling works
-            // This is a bit tricky with transform, but setting width/height on the container helps
-            // Actually, for the scroll wrapper to work, the container needs to take up space.
-            // Transform doesn't affect layout flow size by default.
-            // So we might need to adjust margins or wrapper size.
-            
-            // Simplified approach: Just use CSS zoom if supported, or transform
-            // largeViewContainer.style.zoom = currentZoom; 
-            
-            // Let's stick to the previous simple width approach for images if it worked, 
-            // but for the editor div (fixed 800px), we need transform.
-            
             const firstChild = largeViewContainer.firstChild;
             if (firstChild.tagName === 'DIV' && firstChild.classList.contains('page-editor')) {
                  largeViewContainer.style.width = 'fit-content';
@@ -1207,10 +1196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveTextBtn.disabled = true;
 
         try {
-            // Generate new thumbnail
-            // We need to temporarily ensure the editor is visible and styled correctly for the snapshot
-            // (It should already be visible if we are clicking the button)
-            
+            // Generate new thumbnail            
             const canvas = await html2canvas(editorDiv, {
                 scale: 0.5, // Create a smaller thumbnail
                 useCORS: true,
@@ -1232,14 +1218,6 @@ document.addEventListener('DOMContentLoaded', () => {
             saveTextBtn.innerHTML = '<i class="fas fa-check"></i>';
             saveTextBtn.classList.remove('btn-primary');
             saveTextBtn.classList.add('btn-success');
-
-            // Keep it disabled until user edits again? 
-            // The user said "after clicking save and add new text again, the save button is disabled"
-            // This implies they want it enabled when they edit.
-            // But right now, it should probably stay disabled to show "Saved" state until they edit.
-            // However, the timeout below resets it to enabled.
-            // If we want it to stay disabled until edit, we should NOT re-enable it in the timeout.
-            // But we should reset the icon.
             
             setTimeout(() => {
                 saveTextBtn.innerHTML = originalHtml;
@@ -1346,11 +1324,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Calculate initial real dimensions
         const scaleX = img.naturalWidth / img.width;
         const scaleY = img.naturalHeight / img.height;
-        // Use offsetWidth/Height to include border
-        // We need to append first to get offset dimensions, or calculate manually (w + 4)
-        // Since we just set style.width = w, and border is 2px * 2 = 4px
-        // But w was calculated from rect.width * 0.8. 
-        // Let's just append and read.
+
         cropOverlayDiv.appendChild(dimLabel);
         largeViewContainer.appendChild(cropOverlayDiv);
         

@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const fileInput = document.getElementById('file-input');
     const cameraButton = document.getElementById('camera-button');
+    const addPageButton = document.getElementById('add-page-button');
     const savePdfButton = document.getElementById('save-pdf-button');
     const saveWordButton = document.getElementById('save-word-button');
     const deletePageButton = document.getElementById('delete-page-button');
@@ -17,11 +18,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const zoomInBtn = document.getElementById('zoom-in');
     const zoomOutBtn = document.getElementById('zoom-out');
     const infoBtn = document.getElementById('info-btn');
+    const zoomControlsGroup = document.querySelector('.zoom-controls');
     const hiddenContainer = document.getElementById('hidden-container');
     const mainContainer = document.querySelector('main');
 
     // Editor elements
     const imageToolsGroup = document.getElementById('image-tools-group');
+    const textToolsGroup = document.getElementById('text-tools-group');
+    const saveTextBtn = document.getElementById('save-text-btn');
     const historyGroup = document.getElementById('history-group');
     const rotateBtn = document.getElementById('rotate-btn');
     const cropBtn = document.getElementById('crop-btn');
@@ -223,7 +227,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         sourceFile: page.sourceFile,
                         thumbnailDataUrl: thumb,
                         historyIndex: page.historyIndex,
-                        historyLength: page.history.length
+                        historyLength: page.history.length,
+                        htmlContent: page.htmlContent // Restore HTML content
                     });
                 }
 
@@ -282,6 +287,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    async function saveImageToDB(id, blob, htmlContent = null) {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            const getReq = store.get(id);
+
+            getReq.onsuccess = () => {
+                let data = getReq.result;
+                if (!data) {
+                    data = { id: id, history: [], historyIndex: -1 };
+                }
+
+                if (htmlContent !== null) {
+                    data.htmlContent = htmlContent;
+                }
+
+                if (blob) {
+                    // If blob is provided, update it. 
+                    // Note: History management is usually done before calling this in the main app,
+                    // but here we just ensure the record is updated.
+                    // For text pages, blob is null.
+                }
+
+                const putReq = store.put(data);
+                putReq.onsuccess = () => resolve();
+                putReq.onerror = (e) => reject(e);
+            };
+            getReq.onerror = (e) => reject(e);
+        });
+    }
+
     function dataURLtoBlob(dataurl) {
         const arr = dataurl.split(',');
         const mime = arr[0].match(/:(.*?);/)[1];
@@ -325,6 +361,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const { jsPDF } = window.jspdf;
 
     // --- Camera Handling ---
+
+    addPageButton.addEventListener('click', async () => {
+        const blankHtml = '<div style="font-family: \'Times New Roman\', Times, serif; font-size: 12pt; line-height: 1.5; color: #000;"></div>';
+        
+        // Create a temporary div to generate thumbnail
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = blankHtml;
+        tempDiv.style.width = '800px';
+        tempDiv.style.minHeight = '1100px';
+        tempDiv.style.background = 'white';
+        tempDiv.style.padding = '60px';
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        document.body.appendChild(tempDiv);
+
+        try {
+            const canvas = await html2canvas(tempDiv, {
+                scale: 0.2, // Small thumbnail
+                logging: false
+            });
+            const thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            document.body.removeChild(tempDiv);
+
+            const pageData = {
+                width: 800,
+                height: 1100,
+                sourceFile: "New Page",
+                htmlContent: blankHtml,
+                dataUrl: thumbnailDataUrl // Pass thumbnail as dataUrl for addPage
+            };
+
+            await addPage(pageData);
+            selectPage(pages.length - 1);
+        } catch (err) {
+            console.error("Error creating blank page:", err);
+            if (tempDiv.parentNode) document.body.removeChild(tempDiv);
+        }
+    });
 
     cameraButton.addEventListener('click', async () => {
         try {
@@ -430,6 +504,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     await handleTIFF(file);
                 } else if (extension === 'docx') {
                     await handleDOCX(file);
+                } else if (extension === 'txt') {
+                    await handleTXT(file);
                 } else {
                     console.warn(`Unsupported file type: ${file.name}`);
                 }
@@ -533,6 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
         const html = result.value;
 
+        // Generate thumbnail from the first part of the document
         const tempContainer = document.createElement('div');
         const pageWidth = 800;
         tempContainer.style.width = `${pageWidth}px`;
@@ -543,51 +620,72 @@ document.addEventListener('DOMContentLoaded', () => {
         tempContainer.innerHTML = html;
         document.body.appendChild(tempContainer);
 
+        let thumbnailDataUrl;
         try {
+            // Capture just the top part for thumbnail
             const canvas = await html2canvas(tempContainer, {
-                scale: 1.5,
+                scale: 0.5,
+                height: 1100, // Approx A4 height
+                windowHeight: 1100,
                 useCORS: true
             });
-
-            const pageHeight = pageWidth * 1.414; // A4 aspect ratio
-            const totalHeight = canvas.height;
-            const scaledPageWidth = canvas.width;
-            const scaledPageHeight = pageHeight * 1.5;
-
-            let currentY = 0;
-            let pageNum = 1;
-
-            while (currentY < totalHeight) {
-                const pageCanvas = document.createElement('canvas');
-                pageCanvas.width = scaledPageWidth;
-                pageCanvas.height = scaledPageHeight;
-
-                const ctx = pageCanvas.getContext('2d');
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-
-                const heightToDraw = Math.min(scaledPageHeight, totalHeight - currentY);
-
-                ctx.drawImage(
-                    canvas,
-                    0, currentY, scaledPageWidth, heightToDraw,
-                    0, 0, scaledPageWidth, heightToDraw
-                );
-
-                await addPage({
-                    dataUrl: pageCanvas.toDataURL('image/jpeg', 0.9),
-                    width: scaledPageWidth,
-                    height: scaledPageHeight,
-                    sourceFile: `${file.name} (Page ${pageNum})`
-                });
-
-                currentY += scaledPageHeight;
-                pageNum++;
-            }
-
+            thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        } catch (e) {
+            console.error("Error generating thumbnail:", e);
+            // Fallback thumbnail
+            thumbnailDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=';
         } finally {
             document.body.removeChild(tempContainer);
         }
+
+        await addPage({
+            dataUrl: thumbnailDataUrl, // Used for thumbnail display
+            width: 800,
+            height: 1100,
+            sourceFile: file.name,
+            htmlContent: html // Store the HTML content for editing
+        });
+    }
+
+    async function handleTXT(file) {
+        const text = await file.text();
+        // Convert newlines to breaks for HTML display
+        const html = `<div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; white-space: pre-wrap;">${text}</div>`;
+        
+        // Generate thumbnail
+        const tempContainer = document.createElement('div');
+        const pageWidth = 800;
+        tempContainer.style.width = `${pageWidth}px`;
+        tempContainer.style.background = 'white';
+        tempContainer.style.padding = '40px';
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.innerHTML = html;
+        document.body.appendChild(tempContainer);
+
+        let thumbnailDataUrl;
+        try {
+            const canvas = await html2canvas(tempContainer, {
+                scale: 0.5,
+                height: 1100,
+                windowHeight: 1100,
+                useCORS: true
+            });
+            thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        } catch (e) {
+            console.error("Error generating thumbnail:", e);
+            thumbnailDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=';
+        } finally {
+            document.body.removeChild(tempContainer);
+        }
+
+        await addPage({
+            dataUrl: thumbnailDataUrl,
+            width: 800,
+            height: 1100,
+            sourceFile: file.name,
+            htmlContent: html
+        });
     }
 
     // --- Page Management ---
@@ -606,7 +704,8 @@ document.addEventListener('DOMContentLoaded', () => {
             width: pageData.width,
             height: pageData.height,
             sourceFile: pageData.sourceFile,
-            thumbnailDataUrl: thumbnailDataUrl
+            thumbnailDataUrl: thumbnailDataUrl,
+            htmlContent: pageData.htmlContent // Store HTML content
         };
 
         await storeImageInDB(pageObject);
@@ -618,7 +717,8 @@ document.addEventListener('DOMContentLoaded', () => {
             sourceFile: pageData.sourceFile,
             thumbnailDataUrl: thumbnailDataUrl,
             historyIndex: 0,
-            historyLength: 1
+            historyLength: 1,
+            htmlContent: pageData.htmlContent // Store HTML content
         });
         renderAllThumbnails();
     }
@@ -651,6 +751,7 @@ document.addEventListener('DOMContentLoaded', () => {
         div.addEventListener('dragend', handleDragEnd);
 
         const img = document.createElement('img');
+        img.id = `thumb-img-${page.id}`; // Add ID for updates
         img.src = page.thumbnailDataUrl; // Use thumbnail
 
         const num = document.createElement('div');
@@ -771,12 +872,10 @@ document.addEventListener('DOMContentLoaded', () => {
             largeViewContainer.innerHTML = '';
             imageToolsGroup.style.display = 'none';
             historyGroup.style.display = 'none';
+            if (textToolsGroup) textToolsGroup.style.display = 'none';
             return;
         }
 
-        imageToolsGroup.style.display = 'flex';
-        historyGroup.style.display = 'flex';
-        
         const page = pages[currentPageIndex];
         largeViewContainer.innerHTML = '';
 
@@ -786,30 +885,93 @@ document.addEventListener('DOMContentLoaded', () => {
             currentObjectUrl = null;
         }
 
-        try {
-            const blob = await getImageFromDB(page.id);
-            if (!blob) {
-                largeViewContainer.textContent = "Error loading image.";
-                return;
+        if (page.htmlContent) {
+            // --- Text Mode ---
+            scrollWrapper.style.cursor = 'default';
+            imageToolsGroup.style.display = 'none';
+            historyGroup.style.display = 'none';
+            if (textToolsGroup) textToolsGroup.style.display = 'flex';
+            if (zoomControlsGroup) zoomControlsGroup.style.display = 'none';
+            if (infoBtn) infoBtn.style.display = 'none';
+
+            const editorDiv = document.createElement('div');
+            editorDiv.contentEditable = "true";
+            editorDiv.className = "text-editor-page";
+            editorDiv.innerHTML = page.htmlContent;
+            editorDiv.id = 'text-editor'; // For easy access
+
+            // Basic styling for the editor page to look like a document
+            editorDiv.style.width = '800px'; // Fixed width for document feel
+            editorDiv.style.minHeight = '1100px';
+            editorDiv.style.backgroundColor = 'white';
+            editorDiv.style.padding = '60px';
+            editorDiv.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+            editorDiv.style.margin = '0 auto';
+            editorDiv.style.outline = 'none';
+            editorDiv.style.fontFamily = "'Times New Roman', Times, serif";
+            editorDiv.style.fontSize = "12pt";
+            editorDiv.style.lineHeight = "1.5";
+            editorDiv.style.color = "#000";
+            editorDiv.style.cursor = "text";
+
+            // Reset container style from potential image zoom
+            largeViewContainer.style.width = 'auto';
+            largeViewContainer.style.transform = 'none';
+
+            // Reset save button state
+            if (saveTextBtn) {
+                saveTextBtn.disabled = false;
+                saveTextBtn.innerHTML = '<i class="fas fa-file-upload"></i>';
+                saveTextBtn.classList.remove('btn-success');
+                saveTextBtn.classList.add('btn-primary');
             }
 
-            currentObjectUrl = URL.createObjectURL(blob);
+            // Re-enable save button on input
+            editorDiv.addEventListener('input', () => {
+                if (saveTextBtn && saveTextBtn.disabled) {
+                    saveTextBtn.disabled = false;
+                    saveTextBtn.innerHTML = '<i class="fas fa-file-upload"></i>';
+                    saveTextBtn.classList.remove('btn-success');
+                    saveTextBtn.classList.add('btn-primary');
+                }
+            });
 
-            const img = document.createElement('img');
-            img.src = currentObjectUrl;
-            img.style.width = '100%';
-            img.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
-            img.id = 'large-image';
+            largeViewContainer.appendChild(editorDiv);
 
-            // Prevent default drag behavior to allow panning
-            img.addEventListener('dragstart', (e) => e.preventDefault());
+        } else {
+            // --- Image Mode ---
+            scrollWrapper.style.cursor = 'grab';
+            imageToolsGroup.style.display = 'flex';
+            historyGroup.style.display = 'flex';
+            if (textToolsGroup) textToolsGroup.style.display = 'none';
+            if (zoomControlsGroup) zoomControlsGroup.style.display = 'flex';
+            if (infoBtn) infoBtn.style.display = '';
 
-            largeViewContainer.appendChild(img);
+            try {
+                const blob = await getImageFromDB(page.id);
+                if (!blob) {
+                    largeViewContainer.textContent = "Error loading image.";
+                    return;
+                }
 
-            updateZoom();
-        } catch (err) {
-            console.error("Error rendering large view:", err);
-            largeViewContainer.textContent = "Error loading image.";
+                currentObjectUrl = URL.createObjectURL(blob);
+
+                const img = document.createElement('img');
+                img.src = currentObjectUrl;
+                img.style.width = '100%';
+                img.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+                img.id = 'large-image';
+
+                // Prevent default drag behavior to allow panning
+                img.addEventListener('dragstart', (e) => e.preventDefault());
+
+                largeViewContainer.appendChild(img);
+
+                updateZoom();
+            } catch (err) {
+                console.error("Error rendering large view:", err);
+                largeViewContainer.textContent = "Error loading image.";
+            }
         }
     }    function updateZoom() {
         if (largeViewContainer.firstChild) {
@@ -827,6 +989,107 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentZoom > 0.2) {
             currentZoom -= 0.1;
             updateZoom();
+        }
+    });
+
+    // --- Text Saving ---
+    if (saveTextBtn) {
+        saveTextBtn.addEventListener('click', async () => {
+            if (currentPageIndex === -1) return;
+            const page = pages[currentPageIndex];
+            if (!page.htmlContent) return; // Only for text pages
+
+            const editor = document.getElementById('text-editor');
+            if (!editor) return;
+
+            // 1. Update in-memory model
+            page.htmlContent = editor.innerHTML;
+
+            // Visual feedback - Loading
+            const originalHtml = '<i class="fas fa-file-upload"></i>';
+            saveTextBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            saveTextBtn.disabled = true;
+
+            try {
+                // 2. Update Thumbnail (Snapshot)
+                const canvas = await html2canvas(editor, {
+                    scale: 0.2, // Low scale for thumbnail
+                    useCORS: true,
+                    logging: false
+                });
+                
+                page.thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                // 3. Update IndexedDB (Save everything including new thumbnail and htmlContent)
+                const transaction = db.transaction([storeName], 'readwrite');
+                const store = transaction.objectStore(storeName);
+                const getReq = store.get(page.id);
+                
+                getReq.onsuccess = () => {
+                    const dbRecord = getReq.result;
+                    if (dbRecord) {
+                        dbRecord.htmlContent = page.htmlContent;
+                        dbRecord.thumbnailDataUrl = page.thumbnailDataUrl;
+                        
+                        const putReq = store.put(dbRecord);
+                        putReq.onsuccess = () => {
+                            // Success
+                            // Update sidebar thumbnail
+                            const thumbImg = document.getElementById(`thumb-img-${page.id}`);
+                            if (thumbImg) {
+                                thumbImg.src = page.thumbnailDataUrl;
+                            }
+
+                            // Visual feedback - Success
+                            saveTextBtn.innerHTML = 'Saved';
+                            saveTextBtn.classList.remove('btn-primary');
+                            saveTextBtn.classList.add('btn-success');
+
+                            setTimeout(() => {
+                                saveTextBtn.innerHTML = originalHtml;
+                                saveTextBtn.classList.remove('btn-success');
+                                saveTextBtn.classList.add('btn-primary');
+                                // Keep disabled until input event fires (handled in renderLargeView)
+                            }, 1000);
+                        };
+                        putReq.onerror = (e) => {
+                            console.error("Error saving to DB:", e);
+                            alert("Failed to save changes.");
+                            saveTextBtn.disabled = false;
+                            saveTextBtn.innerHTML = originalHtml;
+                        };
+                    }
+                };
+                
+            } catch (err) {
+                console.error("Error generating thumbnail from text:", err);
+                saveTextBtn.disabled = false;
+                saveTextBtn.innerHTML = originalHtml;
+            }
+        });
+    }
+
+    // --- Keyboard Shortcuts ---
+    document.addEventListener('keydown', (e) => {
+        // Ctrl+S to save (if text editor is active)
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            if (currentPageIndex !== -1 && pages[currentPageIndex].htmlContent) {
+                if (saveTextBtn) saveTextBtn.click();
+            }
+        }
+
+        // Delete key to delete page
+        if (e.key === 'Delete') {
+            // Check if we are NOT inside the text editor
+            const activeEl = document.activeElement;
+            const isEditor = activeEl && (activeEl.id === 'text-editor' || activeEl.isContentEditable);
+            
+            if (!isEditor) {
+                if (currentPageIndex !== -1) {
+                    deletePageButton.click();
+                }
+            }
         }
     });
 

@@ -34,7 +34,9 @@
                         class="fas fa-file-upload"></i></label>
                 <button id="camera-button" class="button btn-primary btn-icon-only" title="Open Camera"><i
                         class="fas fa-camera"></i></button>
-                <input type="file" id="file-input" accept=".docx,.pdf,.jpg,.jpeg,.png,.bmp,.webp,.tiff" multiple>
+                <button id="add-page-button" class="button btn-primary btn-icon-only" title="Create Blank Page"><i
+                        class="fas fa-file-image"></i></button>
+                <input type="file" id="file-input" accept=".docx,.pdf,.jpg,.jpeg,.png,.bmp,.webp,.tiff,.txt" multiple>
             </div>
             <div class="controls-group">
                 <button id="save-pdf-button" class="button btn-success btn-icon-only" title="Save as PDF"><i
@@ -56,6 +58,13 @@
                 <button id="resize-btn" class="button btn-edit btn-icon-only" title="Resize Image"><i
                         class="fas fa-expand"></i></button>
             </div>
+
+            <!-- Text Editing Tools -->
+            <div class="controls-group" id="text-tools-group" style="display: none;">
+                <button id="save-text-btn" class="button btn-primary btn-icon-only" title="Save Text Changes"><i
+                        class="fas fa-file-upload"></i></button>
+            </div>
+
             <div class="controls-group" id="history-group">
                 <button id="undo-btn" class="button btn-secondary btn-icon-only" title="Undo" disabled><i
                         class="fas fa-undo"></i></button>
