@@ -1177,8 +1177,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let htmlContent = '<!DOCTYPE html><html><head><title>Document</title>';
         htmlContent += `
             <style>
-                @page { size: A4; margin: 20mm; }
-                body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+                @page { size: A4; margin: 0; }
+                body { margin: 20mm; padding: 0; font-family: Arial, sans-serif; }
                 .page-content { width: 100%; word-wrap: break-word; } 
                 img { max-width: 100%; } 
                 .page-break { page-break-after: always; }
