@@ -14,6 +14,7 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_converte
     *   **Documents**: PDF (`.pdf`), Word (`.docx`), Text (`.txt`)
     *   **Images**: JPEG (`.jpg`, `.jpeg`), PNG (`.png`), BMP (`.bmp`), WebP (`.webp`), TIFF (`.tiff`, `.tif`)
 *   **Camera Capture**: Directly capture images from your device's camera and add them to your document.
+*   **Scanner Integration**: Scan documents directly from physical scanners (TWAIN, WIA, SANE, ICA) using Dynamic Web TWAIN.
 *   **Document Editing**:
     *   **Editable Text**: Import Word and Text files as editable pages. Modify content directly in the browser.
     *   **Create New Pages**: Add blank pages to start writing from scratch.
@@ -43,6 +44,7 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_converte
 2.  **Add Content**:
     *   Click the **Add Files** button to select files from your computer.
     *   Click the **Camera** button to capture a photo.
+    *   Click the **Scanner** button to scan documents from a connected scanner.
     *   Click the **New Page** button to create a blank document.
     *   Or simply drag and drop files directly onto the page.
 3.  **Edit**:
@@ -65,4 +67,5 @@ This project utilizes several open-source libraries to provide robust functional
 *   **[html-docx-js](https://github.com/evidenceprime/html-docx-js)**: For generating Word documents.
 *   **[html2canvas](https://html2canvas.hertzen.com/)**: For taking screenshots of rendered content.
 *   **[UTIF.js](https://github.com/photopea/UTIF.js)**: For decoding TIFF images.
+*   **[Dynamic Web TWAIN](https://www.dynamsoft.com/web-twain/overview/)**: For web-based document scanning.
 
