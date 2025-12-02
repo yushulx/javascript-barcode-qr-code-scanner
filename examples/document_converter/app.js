@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('file-input');
     const cameraButton = document.getElementById('camera-button');
+    const addPageButton = document.getElementById('add-page-button');
     const savePdfButton = document.getElementById('save-pdf-button');
     const saveWordButton = document.getElementById('save-word-button');
     const deletePageButton = document.getElementById('delete-page-button');
@@ -320,6 +321,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize PDF.js
     const { jsPDF } = window.jspdf;
 
+    // --- Add Blank Page ---
+    addPageButton.addEventListener('click', async () => {
+        // Generate simple thumbnail for blank page
+        const canvas = document.createElement('canvas');
+        canvas.width = 200;
+        canvas.height = 280;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, 200, 280);
+        ctx.strokeStyle = '#ddd';
+        ctx.strokeRect(0, 0, 200, 280);
+        ctx.fillStyle = '#999';
+        ctx.font = '10px Arial';
+        ctx.fillText('New Page', 10, 20);
+        
+        const thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+        await addPage({
+            dataUrl: thumbnailDataUrl,
+            width: 800,
+            height: 1100,
+            sourceFile: 'New Page',
+            htmlContent: '<p><br></p>' // Empty paragraph to start editing
+        });
+
+        // Select the new page
+        selectPage(pages.length - 1);
+    });
+
     // --- Camera Handling ---
 
     cameraButton.addEventListener('click', async () => {
@@ -426,6 +456,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     await handleTIFF(file);
                 } else if (extension === 'docx') {
                     await handleDOCX(file);
+                } else if (extension === 'txt') {
+                    await handleTXT(file);
                 } else {
                     console.warn(`Unsupported file type: ${file.name}`);
                 }
@@ -564,6 +596,40 @@ document.addEventListener('DOMContentLoaded', () => {
             height: 1100,
             sourceFile: file.name,
             htmlContent: html // Store the editable HTML
+        });
+    }
+
+    async function handleTXT(file) {
+        const text = await file.text();
+        // Convert newlines to breaks and wrap in paragraphs
+        const html = text.split('\n').map(line => {
+            const div = document.createElement('div');
+            div.textContent = line;
+            return `<p>${div.innerHTML}</p>`;
+        }).join('');
+
+        // Generate simple thumbnail
+        const canvas = document.createElement('canvas');
+        canvas.width = 200;
+        canvas.height = 280;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, 200, 280);
+        ctx.fillStyle = '#333';
+        ctx.font = '10px Arial';
+        ctx.fillText('Text Document', 10, 20);
+        // Draw some lines to simulate text
+        for(let i=0; i<10; i++) {
+            ctx.fillRect(10, 40 + (i*15), 180, 2);
+        }
+        const thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+        await addPage({
+            dataUrl: thumbnailDataUrl,
+            width: 800,
+            height: 1100,
+            sourceFile: file.name,
+            htmlContent: html
         });
     }
 

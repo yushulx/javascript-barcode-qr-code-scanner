@@ -10,9 +10,12 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_converte
 ## Features
 
 *   **Wide Format Support**: View and process multiple file types including:
-    *   **Documents**: PDF (`.pdf`), Word (`.docx`)
+    *   **Documents**: PDF (`.pdf`), Word (`.docx`), Text (`.txt`)
     *   **Images**: JPEG (`.jpg`, `.jpeg`), PNG (`.png`), BMP (`.bmp`), WebP (`.webp`), TIFF (`.tiff`, `.tif`)
 *   **Camera Capture**: Directly capture images from your device's camera and add them to your document.
+*   **Document Editing**:
+    *   **Editable Text**: Import Word and Text files as editable pages. Modify content directly in the browser.
+    *   **Create New Pages**: Add blank pages to start writing from scratch.
 *   **Interactive Viewer**:
     *   Zoom in/out capabilities.
     *   Thumbnail navigation.
@@ -37,11 +40,13 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_converte
 2.  **Add Content**:
     *   Click the **Add Files** button to select files from your computer.
     *   Click the **Camera** button to capture a photo.
+    *   Click the **New Page** button to create a blank document.
     *   Or simply drag and drop files directly onto the page.
 3.  **Edit**:
     *   Click on a thumbnail to view the page.
-    *   Use the toolbar above the image to **Rotate**, **Crop**, **Filter**, or **Resize**.
-    *   Use **Undo** and **Redo** buttons to manage your changes.
+    *   **For Images**: Use the toolbar above the image to **Rotate**, **Crop**, **Filter**, or **Resize**.
+    *   **For Documents**: Click directly on the page content to edit text (Word/Text files).
+    *   Use **Undo** and **Redo** buttons to manage your changes (Images only).
     *   Drag thumbnails to change the order.
     *   Use the **Delete Page** button to remove unwanted pages.
 4.  **Save**:
