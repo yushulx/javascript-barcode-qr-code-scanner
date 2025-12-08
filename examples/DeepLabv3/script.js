@@ -1,17 +1,14 @@
 // Configuration
-const QUANTIZED_MODEL_PATH = 'document_detector_quant.onnx';
-const FP32_MODEL_PATH = 'document_detector.onnx';
 const INPUT_SIZE = 384;
-const MEAN = [0.485, 0.456, 0.406];
-const STD = [0.229, 0.224, 0.225];
 
 // State
-let session = null;
+let worker = null;
 let isWebcamActive = false;
 let webcamStream = null;
 let isProcessing = false;
 let frameCount = 0;
 let fpsInterval = null;
+let latestResult = null;
 
 // DOM Elements
 const statusText = document.getElementById('status-text');
@@ -31,88 +28,34 @@ const postprocessEl = document.getElementById('postprocess-time');
 const totalEl = document.getElementById('total-time');
 const fpsEl = document.getElementById('fps-counter');
 
-// Suppress ONNX Runtime warnings (only show errors)
-ort.env.logLevel = 'error';
-ort.env.wasm.logLevel = 'error';
-
-// Helper: Fetch and Cache Model
-async function getModelBuffer(path) {
-    try {
-        const cache = await caches.open('onnx-models-v1');
-        let response = await cache.match(path);
-
-        if (!response) {
-            console.log(`Downloading ${path}...`);
-            response = await fetch(path);
-            if (response.ok) {
-                cache.put(path, response.clone());
-            }
-        } else {
-            console.log(`Loading ${path} from cache...`);
-        }
-
-        if (!response.ok) throw new Error(`Failed to fetch ${path}`);
-        return await response.arrayBuffer();
-    } catch (e) {
-        console.error('Caching failed:', e);
-        return path; // Fallback to path string
-    }
-}
-
 // Initialization
-async function init(backend = 'wasm') {
-    try {
-        webcamBtn.disabled = true;
-        updateStatus(`Initializing ${backend}...`, 'loading');
+function init(backend = 'wasm') {
+    webcamBtn.disabled = true;
+    updateStatus(`Initializing ${backend}...`, 'loading');
 
-        // Initialize ONNX Runtime
-        const option = {
-            executionProviders: [backend],
-            graphOptimizationLevel: 'all',
-            logSeverityLevel: 3 // 0:Verbose, 1:Info, 2:Warning, 3:Error, 4:Fatal
-        };
-
-        // Optimization for WASM
-        if (backend === 'wasm') {
-            option.executionMode = 'parallel';
-            option.intraOpNumThreads = navigator.hardwareConcurrency || 4;
-        }
-
-        // Select model based on backend
-        // WASM -> Quantized (INT8) for CPU speed
-        // WebGPU -> FP32 for GPU shader compatibility
-        const modelPath = backend === 'wasm' ? QUANTIZED_MODEL_PATH : FP32_MODEL_PATH;
-
-        updateStatus(`Loading Model (${backend})...`, 'loading');
-
-        // Release existing session if any
-        if (session) {
-            session = null;
-        }
-
-        // Try to load from cache
-        const modelData = await getModelBuffer(modelPath);
-
-        session = await ort.InferenceSession.create(modelData, option);
-
-        // Log the execution provider
-        console.log('Inference Session created with provider:', session.handler.backendName);
-        document.getElementById('backend-type').textContent = session.handler.backendName;
-
-        updateStatus('Ready', 'ready');
-        webcamBtn.disabled = false;
-
-        // Warmup
-        console.log('Warming up model...');
-        const dummyInput = new Float32Array(1 * 3 * INPUT_SIZE * INPUT_SIZE).fill(0);
-        const tensor = new ort.Tensor('float32', dummyInput, [1, 3, INPUT_SIZE, INPUT_SIZE]);
-        await session.run({ input: tensor });
-        console.log('Warmup complete');
-
-    } catch (e) {
-        console.error(e);
-        updateStatus(`Error: ${e.message}`, 'error');
+    if (worker) {
+        worker.terminate();
     }
+
+    worker = new Worker('worker.js');
+
+    worker.onmessage = (e) => {
+        const { type, data, backend: backendName, output, timings, error } = e.data;
+
+        if (type === 'init_complete') {
+            console.log('Inference Session created with provider:', backendName);
+            document.getElementById('backend-type').textContent = backendName;
+            updateStatus('Ready', 'ready');
+            webcamBtn.disabled = false;
+        } else if (type === 'detect_complete') {
+            handleDetectionResult(output, timings);
+        } else if (type === 'error') {
+            console.error(error);
+            updateStatus(`Error: ${error}`, 'error');
+        }
+    };
+
+    worker.postMessage({ type: 'init', data: { backend } });
 }
 
 // Handle Backend Change
@@ -129,45 +72,7 @@ function updateStatus(text, type) {
     statusDot.className = `status-dot ${type}`;
 }
 
-// Helper: Preprocess Image
-function preprocess(imageData) {
-    const startTime = performance.now();
-
-    // 1. Resize to 384x384
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = INPUT_SIZE;
-    tempCanvas.height = INPUT_SIZE;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(imageData, 0, 0, INPUT_SIZE, INPUT_SIZE);
-
-    const resizedData = tempCtx.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE);
-    const { data } = resizedData;
-
-    // 2. Normalize and HWC -> CHW
-    const float32Data = new Float32Array(3 * INPUT_SIZE * INPUT_SIZE);
-
-    for (let i = 0; i < INPUT_SIZE * INPUT_SIZE; i++) {
-        const r = data[i * 4] / 255.0;
-        const g = data[i * 4 + 1] / 255.0;
-        const b = data[i * 4 + 2] / 255.0;
-
-        // Normalize: (value - mean) / std
-        float32Data[i] = (r - MEAN[0]) / STD[0]; // R
-        float32Data[INPUT_SIZE * INPUT_SIZE + i] = (g - MEAN[1]) / STD[1]; // G
-        float32Data[2 * INPUT_SIZE * INPUT_SIZE + i] = (b - MEAN[2]) / STD[2]; // B
-    }
-
-    const tensor = new ort.Tensor('float32', float32Data, [1, 3, INPUT_SIZE, INPUT_SIZE]);
-
-    return {
-        tensor,
-        time: performance.now() - startTime
-    };
-}
-
-// === Pure JS Geometry Utils ===
-
-// Find convex hull using Monotone Chain algorithm
+// === Pure JS Geometry Utils ===// Find convex hull using Monotone Chain algorithm
 function convexHull(points) {
     points.sort((a, b) => a.x === b.x ? a.y - b.y : a.x - b.x);
 
@@ -228,10 +133,10 @@ function findCorners(points) {
 }
 
 // Helper: Postprocess
-function postprocess(outputTensor, originalWidth, originalHeight) {
+function postprocess(outputData, originalWidth, originalHeight) {
     const startTime = performance.now();
 
-    const data = outputTensor.data;
+    const data = outputData;
     const size = INPUT_SIZE * INPUT_SIZE;
 
     // Create mask array (0 or 1)
@@ -287,13 +192,10 @@ function postprocess(outputTensor, originalWidth, originalHeight) {
     };
 }
 
-// Helper: Draw Results
-function drawResults(imageSource, mask, corners) {
+// Helper: Draw Overlay
+function drawOverlay(mask, corners) {
     const width = canvas.width;
     const height = canvas.height;
-
-    // Draw original image
-    ctx.drawImage(imageSource, 0, 0, width, height);
 
     const showMask = document.getElementById('show-mask').checked;
     const showBoundary = document.getElementById('show-boundary').checked;
@@ -345,40 +247,44 @@ function drawResults(imageSource, mask, corners) {
     }
 }
 
+function handleDetectionResult(output, timings) {
+    // 3. Postprocess
+    const postResult = postprocess(output, canvas.width, canvas.height);
+    postprocessEl.textContent = `${postResult.time.toFixed(1)} ms`;
+
+    // Update timings
+    preprocessEl.textContent = `${timings.preprocess.toFixed(1)} ms`;
+    inferenceEl.textContent = `${timings.inference.toFixed(1)} ms`;
+
+    // Total Time
+    const totalTime = timings.preprocess + timings.inference + postResult.time;
+    totalEl.textContent = `${totalTime.toFixed(1)} ms`;
+
+    // Update global state
+    latestResult = postResult;
+
+    // If not webcam, we need to explicitly draw because there is no loop
+    if (!isWebcamActive) {
+        ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+        drawOverlay(postResult.mask, postResult.corners);
+    }
+
+    isProcessing = false;
+    frameCount++;
+}
+
 // Main Processing Loop
 async function processFrame(imageSource) {
     if (isProcessing) return;
     isProcessing = true;
 
     try {
-        // 1. Preprocess
-        const preResult = preprocess(imageSource);
-        preprocessEl.textContent = `${preResult.time.toFixed(1)} ms`;
-
-        // 2. Inference
-        const startTime = performance.now();
-        const feeds = { input: preResult.tensor };
-        const results = await session.run(feeds);
-        const output = results.output; // Assuming output name is 'output'
-        const inferTime = performance.now() - startTime;
-        inferenceEl.textContent = `${inferTime.toFixed(1)} ms`;
-
-        // 3. Postprocess
-        const postResult = postprocess(output, canvas.width, canvas.height);
-        postprocessEl.textContent = `${postResult.time.toFixed(1)} ms`;
-
-        // Total Time
-        const totalTime = preResult.time + inferTime + postResult.time;
-        totalEl.textContent = `${totalTime.toFixed(1)} ms`;
-
-        // Draw
-        drawResults(imageSource, postResult.mask, postResult.corners);
-
+        // Create ImageBitmap to send to worker (transferable and efficient)
+        const bitmap = await createImageBitmap(imageSource);
+        worker.postMessage({ type: 'detect', data: { image: bitmap } }, [bitmap]);
     } catch (e) {
         console.error(e);
-    } finally {
         isProcessing = false;
-        frameCount++;
     }
 }
 
@@ -426,6 +332,7 @@ async function startWebcam() {
             canvas.width = webcamVideo.videoWidth;
             canvas.height = webcamVideo.videoHeight;
             isWebcamActive = true;
+            latestResult = null; // Reset result
             webcamBtn.textContent = 'Stop Webcam';
             webcamBtn.classList.replace('primary', 'secondary');
 
@@ -459,7 +366,19 @@ function stopWebcam() {
 function webcamLoop() {
     if (!isWebcamActive) return;
 
-    processFrame(webcamVideo).then(() => {
-        requestAnimationFrame(webcamLoop);
-    });
+    // 1. Render immediately
+    const width = canvas.width;
+    const height = canvas.height;
+    ctx.drawImage(webcamVideo, 0, 0, width, height);
+
+    // 2. Draw overlay if available
+    if (latestResult) {
+        drawOverlay(latestResult.mask, latestResult.corners);
+    }
+
+    // 3. Try to process frame (will skip if busy)
+    processFrame(webcamVideo);
+
+    // 4. Loop
+    requestAnimationFrame(webcamLoop);
 }
