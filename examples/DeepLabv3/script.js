@@ -30,6 +30,35 @@ const inferenceEl = document.getElementById('inference-time');
 const postprocessEl = document.getElementById('postprocess-time');
 const totalEl = document.getElementById('total-time');
 const fpsEl = document.getElementById('fps-counter');
+
+// Suppress ONNX Runtime warnings (only show errors)
+ort.env.logLevel = 'error';
+ort.env.wasm.logLevel = 'error';
+
+// Helper: Fetch and Cache Model
+async function getModelBuffer(path) {
+    try {
+        const cache = await caches.open('onnx-models-v1');
+        let response = await cache.match(path);
+
+        if (!response) {
+            console.log(`Downloading ${path}...`);
+            response = await fetch(path);
+            if (response.ok) {
+                cache.put(path, response.clone());
+            }
+        } else {
+            console.log(`Loading ${path} from cache...`);
+        }
+
+        if (!response.ok) throw new Error(`Failed to fetch ${path}`);
+        return await response.arrayBuffer();
+    } catch (e) {
+        console.error('Caching failed:', e);
+        return path; // Fallback to path string
+    }
+}
+
 // Initialization
 async function init(backend = 'wasm') {
     try {
@@ -39,7 +68,8 @@ async function init(backend = 'wasm') {
         // Initialize ONNX Runtime
         const option = {
             executionProviders: [backend],
-            graphOptimizationLevel: 'all'
+            graphOptimizationLevel: 'all',
+            logSeverityLevel: 3 // 0:Verbose, 1:Info, 2:Warning, 3:Error, 4:Fatal
         };
 
         // Optimization for WASM
@@ -50,7 +80,7 @@ async function init(backend = 'wasm') {
 
         // Select model based on backend
         // WASM -> Quantized (INT8) for CPU speed
-        // WebGL/WebGPU -> FP32 for GPU shader compatibility
+        // WebGPU -> FP32 for GPU shader compatibility
         const modelPath = backend === 'wasm' ? QUANTIZED_MODEL_PATH : FP32_MODEL_PATH;
 
         updateStatus(`Loading Model (${backend})...`, 'loading');
@@ -60,7 +90,10 @@ async function init(backend = 'wasm') {
             session = null;
         }
 
-        session = await ort.InferenceSession.create(modelPath, option);
+        // Try to load from cache
+        const modelData = await getModelBuffer(modelPath);
+
+        session = await ort.InferenceSession.create(modelData, option);
 
         // Log the execution provider
         console.log('Inference Session created with provider:', session.handler.backendName);

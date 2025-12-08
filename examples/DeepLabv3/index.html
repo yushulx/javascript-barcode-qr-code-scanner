@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document Detection Web App</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Import ONNX Runtime Web (full bundle with all backends: WASM, WebGL, WebGPU) -->
+    <!-- Import ONNX Runtime Web (full bundle with all backends: WASM, WebGPU) -->
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.all.min.js"></script>
 </head>
 
@@ -39,7 +39,6 @@
                         <select id="backend-select"
                             style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
                             <option value="wasm">WASM (CPU)</option>
-                            <option value="webgl">WebGL (GPU)</option>
                             <option value="webgpu" selected>WebGPU (GPU)</option>
                         </select>
                     </div>
