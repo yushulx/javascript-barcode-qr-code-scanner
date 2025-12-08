@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Detection Web App (TFJS)</title>
+    <title>Document Detection Web App (TensorFlow.js)</title>
     <link rel="stylesheet" href="style.css">
     <!-- Import TensorFlow.js -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
@@ -31,7 +31,7 @@
                     </div>
                     <div class="status-item">
                         <span>Backend:</span>
-                        <span id="backend-type">WebGL</span>
+                        <span id="backend-type">-</span>
                     </div>
                 </div>
 
@@ -44,7 +44,6 @@
                             style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
                             <option value="webgpu">WebGPU (GPU - Fastest)</option>
                             <option value="webgl" selected>WebGL (GPU)</option>
-                            <option value="cpu">CPU</option>
                         </select>
                     </div>
                     <button id="webcam-btn" class="btn primary" disabled>Start Webcam</button>

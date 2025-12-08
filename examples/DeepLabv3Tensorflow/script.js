@@ -34,6 +34,9 @@ const fpsEl = document.getElementById('fps-counter');
 // Initialization
 async function init(backend = 'webgl') {
     try {
+        // Enable production mode for performance
+        tf.enableProdMode();
+
         webcamBtn.disabled = true;
         updateStatus(`Initializing ${backend}...`, 'loading');
 
@@ -172,11 +175,10 @@ function convexHull(points) {
     return lower.concat(upper);
 }
 
-// Find 4 corners from a set of points (simplified approximation)
+// Find 4 corners from a set of points
 function findCorners(points) {
     if (points.length < 4) return null;
 
-    // Find center
     let cx = 0, cy = 0;
     for (let p of points) {
         cx += p.x;
@@ -185,8 +187,6 @@ function findCorners(points) {
     cx /= points.length;
     cy /= points.length;
 
-    // Find top-left, top-right, bottom-right, bottom-left
-    // based on quadrants relative to center
     let tl = points[0], tr = points[0], br = points[0], bl = points[0];
     let maxDistTL = -1, maxDistTR = -1, maxDistBR = -1, maxDistBL = -1;
 
