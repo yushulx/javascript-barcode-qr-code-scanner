@@ -89,7 +89,6 @@ backendSelect.addEventListener('change', (e) => {
 
 // Start initialization immediately
 init(backendSelect.value);
-init();
 
 // Helper: Update Status
 function updateStatus(text, type) {
