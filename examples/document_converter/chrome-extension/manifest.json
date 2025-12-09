@@ -22,7 +22,6 @@
         "service_worker": "background.js"
     },
     "permissions": [
-        "storage",
         "unlimitedStorage"
     ],
     "content_security_policy": {
