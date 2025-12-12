@@ -2,6 +2,9 @@
 
 A web-based passport and ID document scanner that extracts MRZ (Machine Readable Zone) data, detects faces, and performs OCR on document text.
 
+## Online Demo
+https://yushulx.me/javascript-barcode-qr-code-scanner/examples/mrz_solution/
+
 ## Features
 
 - **MRZ Detection & Parsing** - Powered by [Dynamsoft Capture Vision SDK](https://www.dynamsoft.com/capture-vision/docs/web/programming/javascript/)
