@@ -24,7 +24,7 @@
                     placeholder="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==">
                 <button id="initBtn">Initialize SDK</button>
                 <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
-                    target="_blank" class="trial-link">Get Trial License</a>
+                    target="_blank" rel="noopener noreferrer" class="trial-link">Get Trial License</a>
             </div>
         </header>
 
@@ -40,12 +40,10 @@
                 </div>
 
                 <div class="viewer-container" id="dropZone">
-                    <div id="cameraView" class="hidden" style="width:100%; height:100%;"></div>
+                    <div id="cameraView" class="hidden"></div>
                     <div id="imageView" class="hidden">
-                        <div>
-                            <img id="displayImage" src="" alt="Input">
-                            <canvas id="overlayCanvas"></canvas>
-                        </div>
+                        <img id="displayImage" src="" alt="Input">
+                        <canvas id="overlayCanvas"></canvas>
                     </div>
                     <div class="placeholder-text" id="placeholderText">
                         Drag & Drop Image Here<br>or Select Source

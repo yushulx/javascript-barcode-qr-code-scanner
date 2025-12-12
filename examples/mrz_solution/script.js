@@ -459,6 +459,8 @@ function drawOverlay(location) {
 }
 
 function resizeCanvas() {
+    // Canvas backing store matches image natural dimensions
+    // CSS object-fit: contain scales both image and canvas identically
     els.overlayCanvas.width = els.displayImage.naturalWidth;
     els.overlayCanvas.height = els.displayImage.naturalHeight;
 }
