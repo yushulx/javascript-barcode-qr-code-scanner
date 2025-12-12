@@ -1,0 +1,507 @@
+{
+  "CaptureVisionModelOptions": [
+    {
+      "ModelArgs": {
+        "CharSet": {
+          "ExcludeChars": [
+            "O",
+            "Q",
+            "I"
+          ]
+        }
+      },
+      "Name": "VINCharRecognition"
+    },
+    {
+      "Name": "MRZCharRecognition",
+      "DirectoryPath": "",
+      "MaxModelInstances": 4
+    },
+    {
+      "Name": "MRZTextLineRecognition",
+      "DirectoryPath": "",
+      "MaxModelInstances": 1
+    }
+  ],
+  "CaptureVisionTemplates": [
+    {
+      "ImageROIProcessingNameArray": [
+        "roi-read-vin-text"
+      ],
+      "Name": "ReadVINText"
+    },
+    {
+      "ImageROIProcessingNameArray": [
+        "roi-mrz"
+      ],
+      "Name": "ReadMRZ",
+      "SemanticProcessingNameArray": [
+        "sp-mrz"
+      ],
+      "Timeout": 1000000
+    }
+  ],
+  "CodeParserTaskSettingOptions": [
+    {
+      "CodeSpecifications": [
+        "MRTD_TD3_PASSPORT",
+        "MRTD_TD2_VISA",
+        "MRTD_TD3_VISA",
+        "MRTD_TD1_ID",
+        "MRTD_TD2_ID"
+      ],
+      "Name": "dcp-mrz"
+    }
+  ],
+  "ImageParameterOptions": [
+    {
+      "ApplicableStages": [
+        {
+          "Stage": "SST_INPUT_COLOR_IMAGE"
+        },
+        {
+          "Stage": "SST_SCALE_IMAGE"
+        },
+        {
+          "Stage": "SST_CONVERT_TO_GRAYSCALE"
+        },
+        {
+          "GrayscaleTransformationModes": [
+            {
+              "Mode": "GTM_ORIGINAL"
+            },
+            {
+              "Mode": "GTM_INVERTED"
+            }
+          ],
+          "Stage": "SST_TRANSFORM_GRAYSCALE"
+        },
+        {
+          "Stage": "SST_ENHANCE_GRAYSCALE"
+        },
+        {
+          "Stage": "SST_BINARIZE_IMAGE"
+        },
+        {
+          "Stage": "SST_DETECT_TEXTURE"
+        },
+        {
+          "Stage": "SST_REMOVE_TEXTURE_FROM_GRAYSCALE"
+        },
+        {
+          "Stage": "SST_BINARIZE_TEXTURE_REMOVED_GRAYSCALE"
+        },
+        {
+          "Stage": "SST_FIND_CONTOURS"
+        },
+        {
+          "Stage": "SST_DETECT_SHORTLINES"
+        },
+        {
+          "Stage": "SST_ASSEMBLE_LINES"
+        },
+        {
+          "Stage": "SST_DETECT_TEXT_ZONES",
+          "TextDetectionMode": {
+            "CharHeightRange": [
+              5,
+              1000,
+              1
+            ],
+            "Direction": "HORIZONTAL",
+            "Mode": "TTDM_LINE",
+            "Sensitivity": 7
+          }
+        },
+        {
+          "Stage": "SST_REMOVE_TEXT_ZONES_FROM_BINARY"
+        }
+      ],
+      "Name": "ip_recognize_text"
+    },
+    {
+      "ApplicableStages": [
+        {
+          "Stage": "SST_INPUT_COLOR_IMAGE"
+        },
+        {
+          "Stage": "SST_SCALE_IMAGE"
+        },
+        {
+          "Stage": "SST_CONVERT_TO_GRAYSCALE"
+        },
+        {
+          "Stage": "SST_TRANSFORM_GRAYSCALE"
+        },
+        {
+          "Stage": "SST_ENHANCE_GRAYSCALE"
+        },
+        {
+          "BinarizationModes": [
+            {
+              "EnableFillBinaryVacancy": 0,
+              "Mode": "BM_LOCAL_BLOCK",
+              "ThresholdCompensation": 21
+            }
+          ],
+          "Stage": "SST_BINARIZE_IMAGE"
+        },
+        {
+          "Stage": "SST_DETECT_TEXTURE",
+          "TextureDetectionModes": [
+            {
+              "Mode": "TDM_GENERAL_WIDTH_CONCENTRATION",
+              "Sensitivity": 8
+            }
+          ]
+        },
+        {
+          "Stage": "SST_REMOVE_TEXTURE_FROM_GRAYSCALE"
+        },
+        {
+          "Stage": "SST_BINARIZE_TEXTURE_REMOVED_GRAYSCALE"
+        },
+        {
+          "Stage": "SST_FIND_CONTOURS"
+        },
+        {
+          "Stage": "SST_DETECT_SHORTLINES"
+        },
+        {
+          "Stage": "SST_ASSEMBLE_LINES"
+        },
+        {
+          "Stage": "SST_DETECT_TEXT_ZONES",
+          "TextDetectionMode": {
+            "CharHeightRange": [
+              5,
+              1000,
+              1
+            ],
+            "Direction": "HORIZONTAL",
+            "Mode": "TTDM_LINE",
+            "Sensitivity": 7
+          }
+        },
+        {
+          "Stage": "SST_REMOVE_TEXT_ZONES_FROM_BINARY"
+        }
+      ],
+      "Name": "ip-mrz"
+    }
+  ],
+  "LabelRecognizerTaskSettingOptions": [
+    {
+      "Name": "task-read-vin-text",
+      "SectionArray": [
+        {
+          "ImageParameterName": "ip_recognize_text",
+          "Section": "ST_REGION_PREDETECTION",
+          "StageArray": [
+            {
+              "Stage": "SST_PREDETECT_REGIONS"
+            }
+          ]
+        },
+        {
+          "ImageParameterName": "ip_recognize_text",
+          "Section": "ST_TEXT_LINE_LOCALIZATION",
+          "StageArray": [
+            {
+              "Stage": "SST_LOCALIZE_TEXT_LINES"
+            }
+          ]
+        },
+        {
+          "ImageParameterName": "ip_recognize_text",
+          "Section": "ST_TEXT_LINE_RECOGNITION",
+          "StageArray": [
+            {
+              "Stage": "SST_RECOGNIZE_RAW_TEXT_LINES"
+            },
+            {
+              "Stage": "SST_ASSEMBLE_TEXT_LINES"
+            }
+          ]
+        }
+      ],
+      "TextLineSpecificationNameArray": [
+        "tls_vin_text"
+      ]
+    },
+    {
+      "Name": "task-mrz",
+      "SectionArray": [
+        {
+          "ImageParameterName": "ip-mrz",
+          "Section": "ST_REGION_PREDETECTION",
+          "StageArray": [
+            {
+              "Stage": "SST_PREDETECT_REGIONS"
+            }
+          ]
+        },
+        {
+          "ImageParameterName": "ip-mrz",
+          "Section": "ST_TEXT_LINE_LOCALIZATION",
+          "StageArray": [
+            {
+              "Stage": "SST_LOCALIZE_TEXT_LINES"
+            }
+          ]
+        },
+        {
+          "ImageParameterName": "ip-mrz",
+          "Section": "ST_TEXT_LINE_RECOGNITION",
+          "StageArray": [
+            {
+              "ConfusableCharactersPath": "ConfusableChars.data",
+              "Stage": "SST_RECOGNIZE_RAW_TEXT_LINES"
+            },
+            {
+              "Stage": "SST_ASSEMBLE_TEXT_LINES"
+            }
+          ]
+        }
+      ],
+      "TextLineSpecificationNameArray": [
+        "tls-mrz-passport",
+        "tls-mrz-visa-td3",
+        "tls-mrz-id-td1",
+        "tls-mrz-id-td2",
+        "tls-mrz-visa-td2"
+      ]
+    }
+  ],
+  "SemanticProcessingOptions": [
+    {
+      "Name": "sp-mrz",
+      "ReferenceObjectFilter": {
+        "ReferenceTargetROIDefNameArray": [
+          "roi-mrz"
+        ]
+      },
+      "TaskSettingNameArray": [
+        "dcp-mrz"
+      ]
+    }
+  ],
+  "TargetROIDefOptions": [
+    {
+      "Name": "roi-read-vin-text",
+      "TaskSettingNameArray": [
+        "task-read-vin-text"
+      ]
+    },
+    {
+      "Name": "roi-mrz",
+      "TaskSettingNameArray": [
+        "task-mrz"
+      ]
+    }
+  ],
+  "TextLineSpecificationOptions": [
+    {
+      "CharHeightRange": [
+        5,
+        1000,
+        1
+      ],
+      "CharacterModelName": "VINCharRecognition",
+      "ConcatSeparator": "",
+      "Name": "tls_vin_text",
+      "StringLengthRange": [
+        17,
+        17
+      ],
+      "StringRegExPattern": "[0-9A-HJ-NPR-Z]{9}[1-9A-HJ-NPR-TV-Y][0-9A-HJ-NPR-Z]{2}[0-9]{5}",
+      "TextLinesCount": 1
+    },
+    {
+      "BaseTextLineSpecificationName": "tls-base",
+      "ConcatResults": 1,
+      "ConcatSeparator": "",
+      "Name": "tls-mrz-passport",
+      "StringLengthRange": [
+        44,
+        44
+      ],
+      "SubGroups": [
+        {
+          "BaseTextLineSpecificationName": "tls-base",
+          "StringLengthRange": [
+            44,
+            44
+          ],
+          "StringRegExPattern": "(P[A-Z<][A-Z<]{3}[A-Z<]{39}){(44)}"
+        },
+        {
+          "BaseTextLineSpecificationName": "tls-base",
+          "StringLengthRange": [
+            44,
+            44
+          ],
+          "StringRegExPattern": "([A-Z0-9<]{9}[0-9][A-Z<]{3}[0-9]{2}[(01-12)][(01-31)][0-9][MF<][0-9]{2}[(01-12)][(01-31)][0-9][A-Z0-9<]{14}[0-9<][0-9]){(44)}"
+        }
+      ]
+    },
+    {
+      "BaseTextLineSpecificationName": "tls-base",
+      "ConcatResults": 1,
+      "ConcatSeparator": "",
+      "Name": "tls-mrz-visa-td3",
+      "StringLengthRange": [
+        44,
+        44
+      ],
+      "SubGroups": [
+        {
+          "BaseTextLineSpecificationName": "tls-base",
+          "StringLengthRange": [
+            44,
+            44
+          ],
+          "StringRegExPattern": "(V[A-Z<][A-Z<]{3}[A-Z<]{39}){(44)}"
+        },
+        {
+          "BaseTextLineSpecificationName": "tls-base",
+          "StringLengthRange": [
+            44,
+            44
+          ],
+          "StringRegExPattern": "([A-Z0-9<]{9}[0-9][A-Z<]{3}[0-9]{2}[(01-12)][(01-31)][0-9][MF<][0-9]{2}[(01-12)][(01-31)][0-9][A-Z0-9<]{14}[A-Z0-9<]{2}){(44)}"
+        }
+      ]
+    },
+    {
+      "BaseTextLineSpecificationName": "tls-base",
+      "ConcatResults": 1,
+      "ConcatSeparator": "",
+      "Name": "tls-mrz-visa-td2",
+      "StringLengthRange": [
+        36,
+        36
+      ],
+      "SubGroups": [
+        {
+          "BaseTextLineSpecificationName": "tls-base",
+          "StringLengthRange": [
+            36,
+            36
+          ],
+          "StringRegExPattern": "(V[A-Z<][A-Z<]{3}[A-Z<]{31}){(36)}"
+        },
+        {
+          "BaseTextLineSpecificationName": "tls-base",
+          "StringLengthRange": [
+            36,
+            36
+          ],
+          "StringRegExPattern": "([A-Z0-9<]{9}[0-9][A-Z<]{3}[0-9]{2}[(01-12)][(01-31)][0-9][MF<][0-9]{2}[(01-12)][(01-31)][0-9][A-Z0-9<]{8}){(36)}"
+        }
+      ]
+    },
+    {
+      "BaseTextLineSpecificationName": "tls-base",
+      "ConcatResults": 1,
+      "ConcatSeparator": "",
+      "Name": "tls-mrz-id-td2",
+      "StringLengthRange": [
+        36,
+        36
+      ],
+      "SubGroups": [
+        {
+          "BaseTextLineSpecificationName": "tls-base",
+          "StringLengthRange": [
+            36,
+            36
+          ],
+          "StringRegExPattern": "([ACI][A-Z<][A-Z<]{3}[A-Z<]{31}){(36)}"
+        },
+        {
+          "BaseTextLineSpecificationName": "tls-base",
+          "StringLengthRange": [
+            36,
+            36
+          ],
+          "StringRegExPattern": "([A-Z0-9<]{9}[0-9][A-Z<]{3}[0-9]{2}[(01-12)][(01-31)][0-9][MF<][0-9]{2}[(01-12)][(01-31)][0-9][A-Z0-9<]{8}){(36)}"
+        }
+      ]
+    },
+    {
+      "BaseTextLineSpecificationName": "tls-base",
+      "ConcatResults": 1,
+      "ConcatSeparator": "",
+      "Name": "tls-mrz-id-td1",
+      "StringLengthRange": [
+        30,
+        30
+      ],
+      "SubGroups": [
+        {
+          "BaseTextLineSpecificationName": "tls-base",
+          "StringLengthRange": [
+            30,
+            30
+          ],
+          "StringRegExPattern": "([ACI][A-Z<][A-Z<]{3}[A-Z0-9<]{9}[0-9][A-Z0-9<]{15}){(30)}"
+        },
+        {
+          "BaseTextLineSpecificationName": "tls-base",
+          "StringLengthRange": [
+            30,
+            30
+          ],
+          "StringRegExPattern": "([0-9]{2}[(01-12)][(01-31)][0-9][MF<][0-9]{2}[(01-12)][(01-31)][0-9][A-Z<]{3}[A-Z0-9<]{11}[0-9]){(30)}"
+        },
+        {
+          "BaseTextLineSpecificationName": "tls-base",
+          "StringLengthRange": [
+            30,
+            30
+          ],
+          "StringRegExPattern": "([A-Z<]{30}){(30)}"
+        }
+      ]
+    },
+    {
+      "BinarizationModes": [
+        {
+          "BlockSizeX": 30,
+          "BlockSizeY": 30,
+          "EnableFillBinaryVacancy": 0,
+          "Mode": "BM_LOCAL_BLOCK",
+          "ThresholdCompensation": 15
+        }
+      ],
+      "CharHeightRange": [
+        5,
+        1000,
+        1
+      ],
+      "CharacterModelName": "MRZCharRecognition",
+      "TextLineRecModelName": "MRZTextLineRecognition",
+      "ConfusableCharactersCorrection": {
+        "ConfusableCharacters": [
+          [
+            "0",
+            "O"
+          ],
+          [
+            "1",
+            "I"
+          ],
+          [
+            "5",
+            "S"
+          ]
+        ],
+        "FontNameArray": [
+          "OCR_B"
+        ]
+      },
+      "Name": "tls-base"
+    }
+  ]
+}

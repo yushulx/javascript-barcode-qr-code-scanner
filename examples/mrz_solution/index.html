@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered MRZ & Passport Scanner</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Dynamsoft Capture Vision Bundle for MRZ -->
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.2.4000/dist/dcv.bundle.min.js"></script>
+    <!-- ONNX Runtime Web for OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.all.min.js"></script>
+    <!-- face-api.js for accurate face detection (MTCNN-like) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header / License Config -->
+        <header>
+            <h1>🛂 MRZ & Passport Scanner</h1>
+            <div class="license-bar">
+                <input type="text" id="licenseKey"
+                    placeholder="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==">
+                <button id="initBtn">Initialize SDK</button>
+                <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                    target="_blank" class="trial-link">Get Trial License</a>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Left Panel: Image Source & Display -->
+            <section class="panel left-panel">
+                <div class="toolbar">
+                    <button id="btnLoad" title="Load Image" disabled>📂 Load</button>
+                    <button id="btnCamera" title="Start Camera" disabled>📷 Camera</button>
+                    <button id="btnPaste" title="Paste from Clipboard" disabled>📋 Paste</button>
+                    <span id="status">Ready</span>
+                </div>
+
+                <div class="viewer-container" id="dropZone">
+                    <div id="cameraView" class="hidden" style="width:100%; height:100%;"></div>
+                    <div id="imageView" class="hidden">
+                        <div>
+                            <img id="displayImage" src="" alt="Input">
+                            <canvas id="overlayCanvas"></canvas>
+                        </div>
+                    </div>
+                    <div class="placeholder-text" id="placeholderText">
+                        Drag & Drop Image Here<br>or Select Source
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Results -->
+            <section class="panel right-panel">
+                <div class="result-group">
+                    <h3>👤 Face Detection</h3>
+                    <div class="face-container">
+                        <canvas id="faceCropCanvas" width="150" height="150"></canvas>
+                    </div>
+                </div>
+
+                <div class="result-group">
+                    <h3>📝 MRZ Raw Text</h3>
+                    <div id="mrzRawText" class="data-box monospace">Waiting for scan...</div>
+                </div>
+
+                <div class="result-group">
+                    <h3>📋 MRZ Parsed Data</h3>
+                    <div id="mrzResults" class="data-box">Waiting for scan...</div>
+                </div>
+
+                <div class="result-group">
+                    <h3>🔤 OCR Results</h3>
+                    <div id="ocrResults" class="data-box">Waiting for scan...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="ocr-processor.js"></script>
+    <script src="face-processor.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

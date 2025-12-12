@@ -1,0 +1,220 @@
+:root {
+    --bg-color: #1e1e1e;
+    --panel-bg: #252526;
+    --accent: #007acc;
+    --text: #cccccc;
+    --border: #3e3e42;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+header {
+    padding: 10px 20px;
+    background-color: #333333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+}
+
+.license-bar {
+    display: flex;
+    gap: 10px;
+}
+
+input[type="text"] {
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background: #1e1e1e;
+    color: white;
+    width: 250px;
+}
+
+button {
+    padding: 6px 12px;
+    background-color: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #005a9e;
+}
+
+button:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+}
+
+.trial-link {
+    color: #4daafc;
+    text-decoration: none;
+    font-size: 0.9em;
+    align-self: center;
+}
+
+main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.panel {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.left-panel {
+    flex: 2;
+    border-right: 1px solid var(--border);
+}
+
+.right-panel {
+    flex: 1;
+    background-color: var(--panel-bg);
+    overflow-y: auto;
+}
+
+.toolbar {
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.viewer-container {
+    flex: 1;
+    background-color: #000;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px dashed #444;
+    overflow: hidden;
+}
+
+.viewer-container.drag-over {
+    border-color: var(--accent);
+    background-color: #2d2d30;
+}
+
+#displayImage,
+#video {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+#imageView {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    display: inline-block;
+}
+
+#imageView>div {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+#displayImage {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#overlayCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.placeholder-text {
+    position: absolute;
+    color: #666;
+    text-align: center;
+    pointer-events: none;
+}
+
+.result-group {
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #2d2d30;
+    border-radius: 6px;
+}
+
+h3 {
+    margin-top: 0;
+    color: white;
+    border-bottom: 1px solid #444;
+    padding-bottom: 5px;
+}
+
+.face-container {
+    text-align: center;
+}
+
+#faceCropCanvas {
+    border: 2px solid var(--accent);
+    border-radius: 4px;
+    background-color: #000;
+}
+
+.data-box {
+    font-family: 'Consolas', monospace;
+    font-size: 0.9em;
+    white-space: pre-wrap;
+    color: #dcdcdc;
+    overflow-x: auto;
+}
+
+.ocr-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ocr-line {
+    padding: 2px 0;
+}
+
+.ocr-num {
+    color: #00ffff;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.highlight {
+    color: #4ec9b0;
+}
+
+.label {
+    color: #569cd6;
+}
