@@ -1,6 +1,7 @@
 let cvr = null;
 let parser = null;
-let isSDKReady = false;
+let isMRZReady = false;
+let isFreeModelsReady = false;
 let isCameraRunning = false;
 let videoStream = null;
 
@@ -16,6 +17,43 @@ if ('serviceWorker' in navigator) {
             });
     });
 }
+
+// Initialize free models (OCR & Face Detection) on page load
+async function initFreeModels() {
+    const statusEl = document.getElementById('status');
+    try {
+        statusEl.textContent = "Loading OCR models...";
+        
+        // Initialize OCR (PaddleOCR) - free
+        if (window.initOCR) {
+            await window.initOCR();
+        }
+
+        // Initialize Face Detection - free
+        if (window.initFaceDetection) {
+            statusEl.textContent = "Loading face detection model...";
+            await window.initFaceDetection();
+        }
+
+        isFreeModelsReady = true;
+        statusEl.textContent = "Ready (OCR & Face Detection available)";
+        
+        // Enable buttons for free features
+        document.getElementById('btnLoad').disabled = false;
+        document.getElementById('btnCamera').disabled = false;
+        document.getElementById('btnPaste').disabled = false;
+        
+        console.log("✅ Free models (OCR & Face Detection) initialized");
+    } catch (ex) {
+        console.error("Failed to initialize free models:", ex);
+        statusEl.textContent = "Failed to load free models: " + ex.message;
+    }
+}
+
+// Start loading free models when page loads
+window.addEventListener('DOMContentLoaded', () => {
+    initFreeModels();
+});
 
 // DOM Elements
 const els = {
@@ -35,7 +73,7 @@ const els = {
     loadingSpinner: document.getElementById('loadingSpinner')
 };
 
-// 1. Initialization
+// 1. Initialization - MRZ only (requires license)
 els.initBtn.addEventListener('click', async () => {
     let key = els.licenseKey.value.trim();
     if (!key) {
@@ -43,7 +81,7 @@ els.initBtn.addEventListener('click', async () => {
     }
 
     try {
-        els.status.textContent = "Initializing SDK...";
+        els.status.textContent = "Initializing MRZ SDK...";
         els.initBtn.disabled = true;
 
         // Initialize License
@@ -71,32 +109,16 @@ els.initBtn.addEventListener('click', async () => {
         // Load MRZ template
         await cvr.initSettings("./full.json");
 
-        // Initialize OCR (PaddleOCR)
-        if (window.initOCR) {
-            els.status.textContent = "Loading OCR models...";
-            await window.initOCR();
-        }
-
-        // Initialize Face Detection
-        if (window.initFaceDetection) {
-            els.status.textContent = "Loading face detection model...";
-            await window.initFaceDetection();
-        }
-
-        isSDKReady = true;
-        els.status.textContent = "SDK Initialized. Ready.";
+        isMRZReady = true;
+        els.status.textContent = "MRZ SDK Initialized. All features ready.";
         els.licenseKey.disabled = true;
-
-        // Enable buttons
-        document.getElementById('btnLoad').disabled = false;
-        document.getElementById('btnCamera').disabled = false;
-        document.getElementById('btnPaste').disabled = false;
+        els.initBtn.textContent = "✓ MRZ Ready";
 
     } catch (ex) {
         console.error(ex);
-        alert("Initialization failed: " + ex.message);
+        alert("MRZ initialization failed: " + ex.message + "\n\nYou can still use Face Detection and OCR.");
         els.initBtn.disabled = false;
-        els.status.textContent = "Initialization failed.";
+        els.status.textContent = "MRZ failed. OCR & Face Detection still available.";
     }
 });
 
@@ -104,7 +126,7 @@ els.initBtn.addEventListener('click', async () => {
 
 // Load from Disk
 document.getElementById('btnLoad').addEventListener('click', () => {
-    if (!isSDKReady) return alert("Please initialize SDK first.");
+    if (!isFreeModelsReady) return alert("Please wait for models to load.");
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -118,7 +140,7 @@ document.getElementById('btnLoad').addEventListener('click', () => {
 
 // Paste from Clipboard
 document.getElementById('btnPaste').addEventListener('click', async () => {
-    if (!isSDKReady) return alert("Please initialize SDK first.");
+    if (!isFreeModelsReady) return alert("Please wait for models to load.");
     try {
         const items = await navigator.clipboard.read();
         for (const item of items) {
@@ -144,7 +166,7 @@ els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('
 els.dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     els.dropZone.classList.remove('drag-over');
-    if (!isSDKReady) return alert("Please initialize SDK first.");
+    if (!isFreeModelsReady) return alert("Please wait for models to load.");
     if (e.dataTransfer.files.length > 0) {
         processFile(e.dataTransfer.files[0]);
     }
@@ -152,7 +174,7 @@ els.dropZone.addEventListener('drop', (e) => {
 
 // Camera Toggle - Simple webcam snapshot
 document.getElementById('btnCamera').addEventListener('click', async () => {
-    if (!isSDKReady) return alert("Please initialize SDK first.");
+    if (!isFreeModelsReady) return alert("Please wait for models to load.");
 
     if (isCameraRunning) {
         captureSnapshot();
@@ -260,61 +282,72 @@ function loadImage(base64Image) {
         let mrzZone = null; // Track MRZ zone to exclude from PaddleOCR
 
         try {
-            // Run MRZ detection
-            const result = await cvr.capture(base64Image, "ReadMRZ");
-            const items = result.items;
+            // Run MRZ detection (only if license is initialized)
+            if (isMRZReady && cvr) {
+                try {
+                    const result = await cvr.capture(base64Image, "ReadMRZ");
+                    const items = result.items;
 
-            let mrzTexts = [];
-            for (const item of items) {
-                if (item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_TEXT_LINE) {
-                    mrzTexts.push(item.text);
+                    let mrzTexts = [];
+                    for (const item of items) {
+                        if (item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_TEXT_LINE) {
+                            mrzTexts.push(item.text);
 
-                    // Draw overlay and capture MRZ zone
-                    const location = item.location;
-                    if (location && location.points) {
-                        drawOverlay(location);
+                            // Draw overlay and capture MRZ zone
+                            const location = item.location;
+                            if (location && location.points) {
+                                drawOverlay(location);
 
-                        // Calculate MRZ bounding box for OCR exclusion
-                        const points = location.points;
-                        const minX = Math.min(...points.map(p => p.x));
-                        const maxX = Math.max(...points.map(p => p.x));
-                        const minY = Math.min(...points.map(p => p.y));
-                        const maxY = Math.max(...points.map(p => p.y));
+                                // Calculate MRZ bounding box for OCR exclusion
+                                const points = location.points;
+                                const minX = Math.min(...points.map(p => p.x));
+                                const maxX = Math.max(...points.map(p => p.x));
+                                const minY = Math.min(...points.map(p => p.y));
+                                const maxY = Math.max(...points.map(p => p.y));
 
-                        if (!mrzZone) {
-                            mrzZone = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-                        } else {
-                            // Expand zone to include all MRZ lines
-                            mrzZone.x = Math.min(mrzZone.x, minX);
-                            mrzZone.y = Math.min(mrzZone.y, minY);
-                            mrzZone.width = Math.max(mrzZone.x + mrzZone.width, maxX) - mrzZone.x;
-                            mrzZone.height = Math.max(mrzZone.y + mrzZone.height, maxY) - mrzZone.y;
+                                if (!mrzZone) {
+                                    mrzZone = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+                                } else {
+                                    // Expand zone to include all MRZ lines
+                                    mrzZone.x = Math.min(mrzZone.x, minX);
+                                    mrzZone.y = Math.min(mrzZone.y, minY);
+                                    mrzZone.width = Math.max(mrzZone.x + mrzZone.width, maxX) - mrzZone.x;
+                                    mrzZone.height = Math.max(mrzZone.y + mrzZone.height, maxY) - mrzZone.y;
+                                }
+                            }
                         }
                     }
+
+                    if (mrzTexts.length > 0) {
+                        // Display raw MRZ text with newlines for readability
+                        els.mrzRawText.textContent = mrzTexts.join('\\n');
+
+                        // Parse MRZ - join all lines into single string (no separators)
+                        // TD3 passport has 2 lines of 44 chars each = 88 chars total
+                        const mrzForParsing = mrzTexts.map(t => t.trim()).join('');
+
+                        const parseResults = await parser.parse(mrzForParsing);
+                        displayParsedMrz(parseResults);
+                    } else {
+                        els.mrzRawText.textContent = "No MRZ detected.";
+                        els.mrzResults.textContent = "No MRZ detected.";
+                    }
+                } catch (mrzEx) {
+                    console.error("MRZ detection error:", mrzEx);
+                    els.mrzRawText.textContent = "MRZ detection error.";
+                    els.mrzResults.textContent = "MRZ detection error.";
                 }
-            }
-
-            if (mrzTexts.length > 0) {
-                // Display raw MRZ text with newlines for readability
-                els.mrzRawText.textContent = mrzTexts.join('\n');
-
-                // Parse MRZ - join all lines into single string (no separators)
-                // TD3 passport has 2 lines of 44 chars each = 88 chars total
-                const mrzForParsing = mrzTexts.map(t => t.trim()).join('');
-
-                const parseResults = await parser.parse(mrzForParsing);
-                displayParsedMrz(parseResults);
             } else {
-                els.mrzRawText.textContent = "No MRZ detected.";
-                els.mrzResults.textContent = "No MRZ detected.";
+                els.mrzRawText.textContent = "MRZ not initialized. Click 'Initialize SDK' with a valid license.";
+                els.mrzResults.textContent = "MRZ requires Dynamsoft license.";
             }
 
-            // Run face detection (ONNX)
+            // Run face detection (ONNX) - always available
             if (window.runFaceDetection) {
                 await window.runFaceDetection(els.displayImage, els.faceCropCanvas, els.overlayCanvas);
             }
 
-            // Run OCR (PaddleOCR) - skip MRZ zone
+            // Run OCR (PaddleOCR) - skip MRZ zone if detected
             if (window.runOCR) {
                 els.status.textContent = "Running OCR...";
                 await window.runOCR(els.displayImage, els.ocrResults, els.overlayCanvas, mrzZone);
