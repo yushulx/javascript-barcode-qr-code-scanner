@@ -4,6 +4,19 @@ let isSDKReady = false;
 let isCameraRunning = false;
 let videoStream = null;
 
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+            .then(registration => {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(err => {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+    });
+}
+
 // DOM Elements
 const els = {
     licenseKey: document.getElementById('licenseKey'),
@@ -18,7 +31,8 @@ const els = {
     ocrResults: document.getElementById('ocrResults'),
     faceCropCanvas: document.getElementById('faceCropCanvas'),
     status: document.getElementById('status'),
-    placeholderText: document.getElementById('placeholderText')
+    placeholderText: document.getElementById('placeholderText'),
+    loadingSpinner: document.getElementById('loadingSpinner')
 };
 
 // 1. Initialization
@@ -237,6 +251,9 @@ function loadImage(base64Image) {
         els.status.textContent = "Processing...";
         clearResults();
 
+        // Show spinner
+        els.loadingSpinner.classList.add('visible');
+
         const ctx = els.overlayCanvas.getContext('2d', { willReadFrequently: true });
         ctx.clearRect(0, 0, els.overlayCanvas.width, els.overlayCanvas.height);
 
@@ -306,9 +323,11 @@ function loadImage(base64Image) {
         } catch (ex) {
             console.error(ex);
             els.status.textContent = "Error: " + ex.message;
+        } finally {
+            // Hide spinner
+            els.loadingSpinner.classList.remove('visible');
+            els.status.textContent = "Ready";
         }
-
-        els.status.textContent = "Ready";
     };
 }
 
