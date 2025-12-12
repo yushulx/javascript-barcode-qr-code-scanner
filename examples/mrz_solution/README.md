@@ -30,6 +30,9 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/mrz_solution/
 
 ### Running Locally
 
+<img width="800" alt="Face Detection, MRZ Recognition and OCR Visualization in a Web App" src="https://github.com/user-attachments/assets/8a0369f4-084e-4463-b0a7-b1c0e9236ce0" />
+
+
 1. Navigate to the web folder:
    ```bash
    cd web
