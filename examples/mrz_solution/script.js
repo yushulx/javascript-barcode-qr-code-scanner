@@ -73,6 +73,16 @@ const els = {
     loadingSpinner: document.getElementById('loadingSpinner')
 };
 
+// OCR Engine Selection Logic
+document.getElementById('ocrEngineSelect').addEventListener('change', (e) => {
+    const keyContainer = document.getElementById('googleKeyContainer');
+    if (e.target.value === 'google') {
+        keyContainer.style.display = 'inline-block';
+    } else {
+        keyContainer.style.display = 'none';
+    }
+});
+
 // 1. Initialization - MRZ only (requires license)
 els.initBtn.addEventListener('click', async () => {
     let key = els.licenseKey.value.trim();
@@ -350,7 +360,9 @@ function loadImage(base64Image) {
             // Run OCR (PaddleOCR) - skip MRZ zone if detected
             if (window.runOCR) {
                 els.status.textContent = "Running OCR...";
-                await window.runOCR(els.displayImage, els.ocrResults, els.overlayCanvas, mrzZone);
+                const engine = document.getElementById('ocrEngineSelect').value;
+                const apiKey = document.getElementById('googleApiKey').value.trim();
+                await window.runOCR(els.displayImage, els.ocrResults, els.overlayCanvas, mrzZone, engine, apiKey);
             }
 
         } catch (ex) {

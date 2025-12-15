@@ -76,7 +76,11 @@ class OCRProcessor {
         return chars;
     }
 
-    async run(imageElement, ocrResultsDiv, canvasOverlay, mrzZone = null) {
+    async run(imageElement, ocrResultsDiv, canvasOverlay, mrzZone = null, engine = 'paddle', apiKey = '') {
+        if (engine === 'google') {
+            return await this.runGoogleOCR(imageElement, ocrResultsDiv, canvasOverlay, mrzZone, apiKey);
+        }
+
         if (!this.isInitialized) {
             ocrResultsDiv.textContent = "OCR not initialized. Models may be missing.";
             return [];
@@ -109,6 +113,96 @@ class OCRProcessor {
         } catch (e) {
             console.error("OCR processing error:", e);
             ocrResultsDiv.textContent = "OCR Error: " + e.message;
+            return [];
+        }
+    }
+
+    async runGoogleOCR(imageElement, ocrResultsDiv, canvasOverlay, mrzZone, apiKey) {
+        ocrResultsDiv.textContent = "Running Google OCR...";
+        
+        try {
+            let base64Image = imageElement.src;
+            if (base64Image.startsWith('data:image')) {
+                base64Image = base64Image.split(',')[1];
+            }
+
+            let url = 'https://vision.googleapis.com/v1/images:annotate';
+            if (apiKey) {
+                url += `?key=${apiKey}`;
+            }
+
+            const requestBody = {
+                requests: [
+                    {
+                        image: {
+                            content: base64Image
+                        },
+                        features: [
+                            {
+                                type: "TEXT_DETECTION"
+                            }
+                        ]
+                    }
+                ]
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error?.message || 'Google OCR API failed');
+            }
+
+            const data = await response.json();
+            const annotations = data.responses[0].textAnnotations;
+
+            if (!annotations || annotations.length === 0) {
+                ocrResultsDiv.textContent = "No text detected by Google OCR.";
+                return [];
+            }
+
+            const results = [];
+            // Skip the first one (full text) and iterate over the rest (words/lines)
+            for (let i = 1; i < annotations.length; i++) {
+                const ann = annotations[i];
+                const text = ann.description;
+                const vertices = ann.boundingPoly.vertices;
+                
+                const xs = vertices.map(v => v.x || 0);
+                const ys = vertices.map(v => v.y || 0);
+                const minX = Math.min(...xs);
+                const maxX = Math.max(...xs);
+                const minY = Math.min(...ys);
+                const maxY = Math.max(...ys);
+                
+                const box = {
+                    x: minX,
+                    y: minY,
+                    width: maxX - minX,
+                    height: maxY - minY
+                };
+
+                if (mrzZone && this.overlapsWithMrz(box, mrzZone)) {
+                    continue;
+                }
+
+                results.push({ box, text });
+            }
+
+            this.drawOverlays(canvasOverlay, results);
+            this.displayResults(ocrResultsDiv, results);
+
+            return results;
+
+        } catch (e) {
+            console.error("Google OCR Error:", e);
+            ocrResultsDiv.textContent = "Google OCR Error: " + e.message;
             return [];
         }
     }
@@ -421,6 +515,6 @@ window.initOCR = async function () {
     await ocrProcessor.init();
 };
 
-window.runOCR = async function (imageElement, ocrResultsDiv, canvasOverlay, mrzZone = null) {
-    return await ocrProcessor.run(imageElement, ocrResultsDiv, canvasOverlay, mrzZone);
+window.runOCR = async function (imageElement, ocrResultsDiv, canvasOverlay, mrzZone = null, engine = 'paddle', apiKey = '') {
+    return await ocrProcessor.run(imageElement, ocrResultsDiv, canvasOverlay, mrzZone, engine, apiKey);
 };
