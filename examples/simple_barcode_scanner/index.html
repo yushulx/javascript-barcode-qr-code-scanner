@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <script src="dist/dcv.bundle.js"></script>
+    <script src="utils.js"></script>
+    <title>Barcode Scanner - Dynamsoft</title>
+</head>
+
+<body>
+    <div class="header">
+        <h1>📷 Barcode Scanner</h1>
+        <p class="subtitle">Scan barcodes from your camera or upload an image</p>
+    </div>
+
+    <div id="loading-indicator" class="loading-indicator">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- License Configuration -->
+    <div class="container">
+        <div class="license-section">
+            <label for="license_key" class="label-text">
+                <strong>License Key</strong>
+                <span class="hint">Get your license <a
+                        href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                        target="_blank" class="link">here</a></span>
+            </label>
+            <div class="input-group">
+                <input type="text" id="license_key" class="form-input"
+                    value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=="
+                    placeholder="Enter your license key">
+                <button onclick="activate()" class="btn btn-primary">Activate</button>
+            </div>
+        </div>
+
+        <div class="mode-selector">
+            <label class="label-text"><strong>Scan Mode</strong></label>
+            <select onchange="selectChanged()" id="dropdown" class="form-select">
+                <option value="file">📁 Upload Image</option>
+                <option value="camera">📹 Live Camera</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Image File -->
+    <div class="container" id="file_container">
+        <div class="file-upload-section">
+            <label for="pick_file" class="file-upload-label">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span>Click to upload or drag & drop an image</span>
+                <span class="hint">Supports: JPG, PNG, GIF</span>
+            </label>
+            <input type="file" id="pick_file" accept="image/*" class="file-input" />
+        </div>
+
+        <div class="imageview-container">
+            <div class="imageview">
+                <img id="image_file" src="default.png" alt="Preview" />
+                <canvas id="overlay_canvas" class="overlay"></canvas>
+            </div>
+        </div>
+
+        <div class="result-section">
+            <label class="label-text"><strong>Detection Results</strong></label>
+            <textarea id="detection_result" placeholder="Results will appear here..." readonly></textarea>
+        </div>
+    </div>
+
+    <!-- Camera Stream -->
+    <div class="container" id="camera_container">
+        <div class="controls">
+            <div class="control-group">
+                <label class="label-text"><strong>Select Camera</strong></label>
+                <select onchange="cameraChanged()" id="camera_source" class="form-select"></select>
+            </div>
+            <button onclick="scan()" id="scan_button" class="btn btn-primary btn-large">
+                <span id="scan_icon">▶</span> <span id="scan_text">Start Scanning</span>
+            </button>
+        </div>
+        <div id="videoview" class="video-wrapper">
+            <video id="camera_view" autoplay playsinline></video>
+            <canvas id="camera_overlay"></canvas>
+        </div>
+
+        <div class="result-section">
+            <label class="label-text"><strong>Scan Results</strong></label>
+            <textarea id="scan_result" placeholder="Scan results will appear here..." readonly></textarea>
+        </div>
+    </div>
+
+
+
+    <script src="main.js"></script>
+</body>
+
+</html>
