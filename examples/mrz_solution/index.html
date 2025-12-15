@@ -26,14 +26,16 @@
                 <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
                     target="_blank" rel="noopener noreferrer" class="trial-link">Get MRZ License</a>
             </div>
-            <div class="config-bar" style="margin-top: 10px; display: flex; gap: 10px; align-items: center; justify-content: center;">
+            <div class="config-bar"
+                style="margin-top: 10px; display: flex; gap: 10px; align-items: center; justify-content: center;">
                 <label for="ocrEngineSelect" style="color: white;">OCR Engine:</label>
                 <select id="ocrEngineSelect" style="padding: 5px;">
                     <option value="paddle">PaddleOCR (Local)</option>
                     <option value="google">Google OCR (Cloud)</option>
                 </select>
                 <span id="googleKeyContainer" style="display:none;">
-                    <input type="text" id="googleApiKey" placeholder="Google Cloud Vision API Key (Optional)" style="width: 250px; padding: 5px;">
+                    <input type="text" id="googleApiKey" placeholder="Google Cloud Vision API Key (Optional)"
+                        style="width: 250px; padding: 5px;">
                 </span>
             </div>
         </header>

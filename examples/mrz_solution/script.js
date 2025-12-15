@@ -23,7 +23,7 @@ async function initFreeModels() {
     const statusEl = document.getElementById('status');
     try {
         statusEl.textContent = "Loading OCR models...";
-        
+
         // Initialize OCR (PaddleOCR) - free
         if (window.initOCR) {
             await window.initOCR();
@@ -37,12 +37,12 @@ async function initFreeModels() {
 
         isFreeModelsReady = true;
         statusEl.textContent = "Ready (OCR & Face Detection available)";
-        
+
         // Enable buttons for free features
         document.getElementById('btnLoad').disabled = false;
         document.getElementById('btnCamera').disabled = false;
         document.getElementById('btnPaste').disabled = false;
-        
+
         console.log("✅ Free models (OCR & Face Detection) initialized");
     } catch (ex) {
         console.error("Failed to initialize free models:", ex);

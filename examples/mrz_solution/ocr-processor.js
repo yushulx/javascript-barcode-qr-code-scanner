@@ -119,7 +119,7 @@ class OCRProcessor {
 
     async runGoogleOCR(imageElement, ocrResultsDiv, canvasOverlay, mrzZone, apiKey) {
         ocrResultsDiv.textContent = "Running Google OCR...";
-        
+
         try {
             let base64Image = imageElement.src;
             if (base64Image.startsWith('data:image')) {
@@ -173,14 +173,14 @@ class OCRProcessor {
                 const ann = annotations[i];
                 const text = ann.description;
                 const vertices = ann.boundingPoly.vertices;
-                
+
                 const xs = vertices.map(v => v.x || 0);
                 const ys = vertices.map(v => v.y || 0);
                 const minX = Math.min(...xs);
                 const maxX = Math.max(...xs);
                 const minY = Math.min(...ys);
                 const maxY = Math.max(...ys);
-                
+
                 const box = {
                     x: minX,
                     y: minY,
