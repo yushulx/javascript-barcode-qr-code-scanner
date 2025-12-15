@@ -5,9 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css">
-    <script src="dist/dcv.bundle.js"></script>
+    <script src="dist/dcv/dcv.bundle.js"></script>
+    <script src="dist/zxing-wasm/iife/full/index.js"></script>
     <script src="utils.js"></script>
-    <title>Barcode Scanner - Dynamsoft</title>
+    <title>Barcode Scanner</title>
 </head>
 
 <body>
@@ -23,7 +24,15 @@
 
     <!-- License Configuration -->
     <div class="container">
-        <div class="license-section">
+        <div class="mode-selector">
+            <label class="label-text"><strong>Barcode SDK</strong></label>
+            <select onchange="sdkChanged()" id="sdk_selector" class="form-select">
+                <option value="zxing">ZXing (Free)</option>
+                <option value="dynamsoft">Dynamsoft</option>
+            </select>
+        </div>
+
+        <div class="license-section" id="license_section" style="display: none;">
             <label for="license_key" class="label-text">
                 <strong>License Key</strong>
                 <span class="hint">Get your license <a
@@ -34,11 +43,11 @@
                 <input type="text" id="license_key" class="form-input"
                     value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=="
                     placeholder="Enter your license key">
-                <button onclick="activate()" class="btn btn-primary">Activate</button>
+                <button onclick="activateDynamsoft()" class="btn btn-primary">Activate</button>
             </div>
         </div>
 
-        <div class="mode-selector">
+        <div class="mode-selector" id="scan_mode_selector">
             <label class="label-text"><strong>Scan Mode</strong></label>
             <select onchange="selectChanged()" id="dropdown" class="form-select">
                 <option value="file">📁 Upload Image</option>

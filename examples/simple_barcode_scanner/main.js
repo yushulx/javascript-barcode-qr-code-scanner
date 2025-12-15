@@ -8,6 +8,8 @@ let videoElement = document.getElementById('camera_view');
 let scanResult = document.getElementById('scan_result');
 
 let cvr;
+let zxingReader;
+let currentSDK = 'zxing'; // Default to free ZXing
 let isSDKReady = false;
 let img = new Image();
 let isDetecting = false;
@@ -73,9 +75,16 @@ function loadImage2Canvas(base64Image) {
         let context = overlayCanvas.getContext('2d');
         context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         try {
-            await cvr.resetSettings();
-            let result = await cvr.capture(img.src, 'ReadBarcodes_Default');
-            showFileResult(context, result);
+            if (currentSDK === 'dynamsoft') {
+                await cvr.resetSettings();
+                let result = await cvr.capture(img.src, 'ReadBarcodes_Default');
+                showFileResult(context, result);
+            } else {
+                // ZXing - convert base64 to blob then read
+                const blob = await fetch(base64Image).then(res => res.blob());
+                let result = await ZXingWASM.readBarcodesFromImageFile(blob);
+                showFileResultZXing(context, result);
+            }
         }
         catch (ex) {
             console.error(ex);
@@ -123,6 +132,34 @@ function showFileResult(context, result) {
     }
 }
 
+function showFileResultZXing(context, results) {
+    let detection_result = document.getElementById('detection_result');
+    detection_result.innerHTML = '';
+    let txts = [];
+
+    if (results && results.length > 0) {
+        for (let result of results) {
+            txts.push(result.text);
+
+            // Draw bounding box
+            if (result.position) {
+                context.strokeStyle = '#ff0000';
+                context.lineWidth = 2;
+                context.beginPath();
+                context.moveTo(result.position.topLeft.x, result.position.topLeft.y);
+                context.lineTo(result.position.topRight.x, result.position.topRight.y);
+                context.lineTo(result.position.bottomRight.x, result.position.bottomRight.y);
+                context.lineTo(result.position.bottomLeft.x, result.position.bottomLeft.y);
+                context.closePath();
+                context.stroke();
+            }
+        }
+        detection_result.innerHTML += txts.join('\n') + '\n\n';
+    } else {
+        detection_result.innerHTML += 'Nothing found\n';
+    }
+}
+
 document.addEventListener('paste', (event) => {
     const items = (event.clipboardData || event.originalEvent.clipboardData).items;
 
@@ -139,7 +176,38 @@ document.addEventListener('paste', (event) => {
     }
 });
 
-async function activate() {
+function sdkChanged() {
+    let sdkSelector = document.getElementById('sdk_selector');
+    let licenseSection = document.getElementById('license_section');
+    currentSDK = sdkSelector.value;
+
+    if (currentSDK === 'dynamsoft') {
+        licenseSection.style.display = 'block';
+        isSDKReady = false;
+    } else {
+        licenseSection.style.display = 'none';
+        initZXing();
+    }
+}
+
+async function initZXing() {
+    toggleLoading(true);
+    try {
+        // ZXingWASM is loaded from the script tag
+        if (typeof ZXingWASM === 'undefined') {
+            throw new Error('ZXingWASM is not loaded');
+        }
+        isSDKReady = true;
+        currentSDK = 'zxing';
+        console.log('ZXing SDK ready');
+    } catch (ex) {
+        console.error(ex);
+        alert('Failed to initialize ZXing SDK: ' + ex.message);
+    }
+    toggleLoading(false);
+}
+
+async function activateDynamsoft() {
     toggleLoading(true);
     let divElement = document.getElementById('license_key');
     let licenseKey = divElement.value == '' ? divElement.placeholder : divElement.value;
@@ -154,13 +222,21 @@ async function activate() {
         cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
 
         isSDKReady = true;
+        currentSDK = 'dynamsoft';
+        console.log('Dynamsoft SDK activated');
     }
     catch (ex) {
         console.error(ex);
+        alert('Failed to activate Dynamsoft SDK. You can use ZXing (free) instead.');
     }
 
     toggleLoading(false);
 }
+
+// Initialize ZXing by default on page load
+window.addEventListener('DOMContentLoaded', function () {
+    initZXing();
+});
 
 function toggleLoading(isLoading) {
     if (isLoading) {
@@ -222,9 +298,17 @@ function startScanning() {
             }
 
             try {
-                let result = await cvr.capture(canvas, 'ReadBarcodes_Default');
-                if (isDetecting) {
-                    showCameraResult(result);
+                if (currentSDK === 'dynamsoft') {
+                    let result = await cvr.capture(canvas, 'ReadBarcodes_Default');
+                    if (isDetecting) {
+                        showCameraResult(result);
+                    }
+                } else {
+                    // ZXing
+                    let result = await ZXingWASM.readBarcodesFromImageData(ctx.getImageData(0, 0, canvas.width, canvas.height));
+                    if (isDetecting) {
+                        showCameraResultZXing(result);
+                    }
                 }
             } catch (ex) {
                 console.error(ex);
@@ -343,6 +427,37 @@ function showCameraResult(result) {
         } else {
             scanResult.innerHTML += 'Recognition Failed\n';
         }
+    } else {
+        scanResult.innerHTML += 'Nothing found\n';
+    }
+}
+
+function showCameraResultZXing(results) {
+    scanResult.innerHTML = '';
+    let txts = [];
+
+    // Clear overlay
+    let ctx = cameraOverlay.getContext('2d');
+    ctx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
+
+    if (results && results.length > 0) {
+        for (let result of results) {
+            txts.push(result.text);
+
+            // Draw bounding box
+            if (result.position) {
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(result.position.topLeft.x, result.position.topLeft.y);
+                ctx.lineTo(result.position.topRight.x, result.position.topRight.y);
+                ctx.lineTo(result.position.bottomRight.x, result.position.bottomRight.y);
+                ctx.lineTo(result.position.bottomLeft.x, result.position.bottomLeft.y);
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+        scanResult.innerHTML += txts.join('\n') + '\n\n';
     } else {
         scanResult.innerHTML += 'Nothing found\n';
     }
