@@ -10,8 +10,10 @@ A modern web application that uses Dynamsoft Capture Vision to scan **1D/2D barc
 - 🔄 **Multiple camera support** with device selection
 
 ## Prerequisites
-- Obtain a [30-day free trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform) for Dynamsoft Capture Vision.
+- Obtain a [30-day free trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform) for Dynamsoft Barcode Reader.
 
+## Online Demo
+https://yushulx.me/javascript-barcode-qr-code-scanner/examples/simple_barcode_scanner/
 
 ## How to Run
 
