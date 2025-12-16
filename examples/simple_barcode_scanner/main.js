@@ -341,7 +341,7 @@ async function initCamera() {
                 if (device.kind === 'videoinput') {
                     let option = document.createElement('option');
                     option.value = device.deviceId;
-                    option.text = device.label || Camera;
+                    option.text = device.label;
                     cameraSource.appendChild(option);
                 }
             });
