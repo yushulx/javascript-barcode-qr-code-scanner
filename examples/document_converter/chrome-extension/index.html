@@ -34,6 +34,8 @@
                         class="fas fa-file-upload"></i></label>
                 <button id="camera-button" class="button btn-primary btn-icon-only" title="Open Camera"><i
                         class="fas fa-camera"></i></button>
+                <button id="scanner-button" class="button btn-primary btn-icon-only" title="Scan from Scanner"><i
+                        class="fas fa-print"></i></button>
                 <button id="add-page-button" class="button btn-primary btn-icon-only" title="Create Blank Page"><i
                         class="fas fa-file-image"></i></button>
                 <input type="file" id="file-input" accept=".docx,.pdf,.jpg,.jpeg,.png,.bmp,.webp,.tiff,.txt" multiple>
@@ -62,7 +64,7 @@
             <!-- Text Editing Tools -->
             <div class="controls-group" id="text-tools-group" style="display: none;">
                 <button id="save-text-btn" class="button btn-primary btn-icon-only" title="Save Text Changes"><i
-                        class="fas fa-file-upload"></i></button>
+                        class="fas fa-save"></i></button>
             </div>
 
             <div class="controls-group" id="history-group">
@@ -227,6 +229,92 @@
                 </div>
                 <div class="modal-footer">
                     <button id="info-ok" class="button btn-primary">OK</button>
+                </div>
+            </div>
+            <!-- Scanner Modal -->
+            <div id="scanner-modal" class="modal-content" style="display:none; width: 600px; max-width: 90%;">
+                <div class="modal-header">
+                    <h3>Scan from Scanner</h3>
+                </div>
+                <div class="modal-body">
+                    <div class="control-group" style="margin-bottom: 15px;">
+                        <label style="display:block; margin-bottom:5px; font-weight:bold;">Dynamic Web TWAIN
+                            License:</label>
+                        <textarea id="dwt-license"
+                            style="width:100%; height:60px; padding:8px; border:1px solid #ccc; border-radius:4px; resize:vertical;">DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==</textarea>
+                        <small style="color:#666; display:block; margin-top:5px;">
+                            Default is a one-day trial. Get a 30-day trial from <a
+                                href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                                target="_blank">Dynamsoft</a>.
+                        </small>
+                    </div>
+
+                    <div class="control-group"
+                        style="margin-bottom: 15px; background:#f9f9f9; padding:10px; border-radius:4px;">
+                        <label style="display:block; margin-bottom:5px; font-weight:bold;">Install Service
+                            (Required):</label>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <a href="https://demo.dynamsoft.com/DWT/DWTResources/dist/DynamsoftServiceSetup.msi"
+                                class="button btn-secondary" style="text-decoration:none; font-size:0.8rem;">Windows
+                                (MSI)</a>
+                            <a href="https://demo.dynamsoft.com/DWT/DWTResources/dist/DynamsoftServiceSetup.pkg"
+                                class="button btn-secondary" style="text-decoration:none; font-size:0.8rem;">macOS
+                                (PKG)</a>
+                            <div style="display:inline-block; position:relative;">
+                                <button id="linux-toggle-btn" class="button btn-secondary"
+                                    style="font-size:0.8rem;">Linux
+                                    ▼</button>
+                                <div id="linux-links"
+                                    style="display:none; position:absolute; top:100%; left:0; background:white; border:1px solid #ccc; padding:5px; z-index:100; box-shadow:0 2px 5px rgba(0,0,0,0.2); min-width:200px;">
+                                    <a href="https://demo.dynamsoft.com/DWT/DWTResources/dist/DynamsoftServiceSetup.deb"
+                                        style="display:block; padding:5px; text-decoration:none; color:#333;">Debian/Ubuntu
+                                        (.deb)</a>
+                                    <a href="https://demo.dynamsoft.com/DWT/DWTResources/dist/DynamsoftServiceSetup-arm64.deb"
+                                        style="display:block; padding:5px; text-decoration:none; color:#333;">ARM64
+                                        (.deb)</a>
+                                    <a href="https://demo.dynamsoft.com/DWT/DWTResources/dist/DynamsoftServiceSetup-mips64el.deb"
+                                        style="display:block; padding:5px; text-decoration:none; color:#333;">MIPS64
+                                        (.deb)</a>
+                                    <a href="https://demo.dynamsoft.com/DWT/DWTResources/dist/DynamsoftServiceSetup.rpm"
+                                        style="display:block; padding:5px; text-decoration:none; color:#333;">RedHat/Fedora
+                                        (.rpm)</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-group" style="margin-bottom: 15px;">
+                        <label style="display:block; margin-bottom:5px; font-weight:bold;">Select Scanner:</label>
+                        <div style="display:flex; gap:10px;">
+                            <select id="scanner-source"
+                                style="flex:1; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                                <option value="">No scanners found</option>
+                            </select>
+                            <button id="refresh-scanners" class="button btn-secondary" title="Refresh Scanners"><i
+                                    class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="control-group" style="display:flex; gap:20px; margin-bottom: 15px;">
+                        <div style="flex:1;">
+                            <label style="display:block; margin-bottom:5px; font-weight:bold;">Resolution (DPI):</label>
+                            <select id="scan-resolution"
+                                style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                                <option value="100">100</option>
+                                <option value="200" selected>200</option>
+                                <option value="300">300</option>
+                                <option value="600">600</option>
+                            </select>
+                        </div>
+                        <div style="flex:1; display:flex; align-items:center; padding-top:25px;">
+                            <input type="checkbox" id="scan-adf" style="margin-right:8px;">
+                            <label for="scan-adf">Use ADF (Feeder)</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="scanner-cancel" class="button btn-secondary">Cancel</button>
+                    <button id="scanner-scan" class="button btn-primary">Scan Now</button>
                 </div>
             </div>
         </div>

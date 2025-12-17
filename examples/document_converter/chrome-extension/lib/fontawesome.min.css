@@ -121,3 +121,37 @@
 .fa-weight:before {
     content: "\f496"
 }
+
+.fa-print:before {
+    content: "\f02f"
+}
+
+.fa-save:before {
+    content: "\f0c7"
+}
+
+.fa-sync-alt:before {
+    content: "\f2f1"
+}
+
+.fa-spinner:before {
+    content: "\f110"
+}
+
+.fa-spin {
+    animation: fa-spin 2s infinite linear;
+}
+
+.fa-3x {
+    font-size: 3em;
+}
+
+@keyframes fa-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
