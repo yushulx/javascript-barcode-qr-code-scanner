@@ -14,6 +14,8 @@ let cameraSource = document.getElementById('camera_source');
 let imageFile = document.getElementById('image_file');
 let overlayCanvas = document.getElementById('overlay_canvas');
 let uploadArea = document.getElementById('upload_area');
+let viewContainer = document.getElementById('view_container');
+let imageContainer = document.getElementById('image_container');
 
 let cvr;
 let reader;
@@ -61,6 +63,55 @@ uploadArea.addEventListener('drop', function (event) {
         }
     }
 }, false);
+
+// Add drag-drop and click functionality to image-container
+imageContainer.addEventListener('dragover', function (event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+}, false);
+
+imageContainer.addEventListener('dragenter', function (event) {
+    event.preventDefault();
+    imageContainer.classList.add('drag-over');
+}, false);
+
+imageContainer.addEventListener('dragleave', function (event) {
+    event.preventDefault();
+    if (event.target === imageContainer || event.target.closest('.image-container') === null) {
+        imageContainer.classList.remove('drag-over');
+    }
+}, false);
+
+imageContainer.addEventListener('drop', function (event) {
+    event.preventDefault();
+    imageContainer.classList.remove('drag-over');
+    if (event.dataTransfer.files.length > 0) {
+        let file = event.dataTransfer.files[0];
+        if (file.type.match('image.*')) {
+            let reader = new FileReader();
+            reader.onload = function (e) {
+                loadImage2Canvas(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            alert("Please drop an image file.");
+        }
+    }
+}, false);
+
+imageContainer.addEventListener('click', function (event) {
+    // Trigger file input when clicking on image container
+    document.getElementById('pick_file').click();
+});
+
+function showUploadArea() {
+    viewContainer.classList.remove('show-image');
+    // Clear the image
+    imageFile.src = 'default.png';
+    let context = overlayCanvas.getContext('2d');
+    context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    document.getElementById('detection_result').innerHTML = '';
+}
 
 async function selectChanged() {
     if (dropdown.value === 'file') {
@@ -126,6 +177,9 @@ function loadImage2Canvas(base64Image) {
 
         targetCanvas.width = width;
         targetCanvas.height = height;
+
+        // Switch to image view
+        viewContainer.classList.add('show-image');
 
         if (!isSDKReady) {
             alert("Please activate the SDK first.");

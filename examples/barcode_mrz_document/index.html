@@ -71,18 +71,22 @@
         <!-- Image File -->
         <div class="card" id="file_container">
             <h2>📂 Image Upload</h2>
-            <div class="upload-area" id="upload_area">
-                <label for="pick_file" class="file-label">
-                    <div class="upload-icon">📤</div>
-                    <span>Click to upload or drag & drop an image</span>
-                    <input type="file" id="pick_file" accept="image/*" />
-                </label>
-            </div>
+            <div class="view-container" id="view_container">
+                <!-- Upload View -->
+                <div class="upload-area" id="upload_area">
+                    <label for="pick_file" class="file-label">
+                        <div class="upload-icon">📤</div>
+                        <span>Click to upload or drag & drop an image</span>
+                        <input type="file" id="pick_file" accept="image/*" />
+                    </label>
+                </div>
 
-            <div class="image-container">
-                <div class="imageview">
-                    <img id="image_file" src="default.png" alt="Preview" />
-                    <canvas id="overlay_canvas" class="overlay"></canvas>
+                <!-- Image View -->
+                <div class="image-container" id="image_container">
+                    <div class="imageview">
+                        <img id="image_file" src="default.png" alt="Preview" />
+                        <canvas id="overlay_canvas" class="overlay"></canvas>
+                    </div>
                 </div>
             </div>
 

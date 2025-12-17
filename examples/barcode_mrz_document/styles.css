@@ -264,8 +264,25 @@ button {
 }
 
 /* Upload Area */
+.view-container {
+    position: relative;
+}
+
 .upload-area {
     margin-bottom: 20px;
+}
+
+.image-container {
+    display: none;
+    cursor: pointer;
+}
+
+.view-container.show-image .upload-area {
+    display: none;
+}
+
+.view-container.show-image .image-container {
+    display: block;
 }
 
 .file-label {
@@ -319,11 +336,6 @@ button {
 
 #pick_file {
     display: none;
-}
-
-/* Image Container */
-.image-container {
-    margin: 20px 0;
 }
 
 .imageview {
