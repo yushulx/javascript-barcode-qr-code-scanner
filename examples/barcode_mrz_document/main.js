@@ -66,6 +66,7 @@ async function selectChanged() {
     if (dropdown.value === 'file') {
         if (cameraEnhancer != null) {
             await stopScanning();
+            await closeCamera(cameraEnhancer);
         }
         let divElement = document.getElementById("file_container");
         divElement.style.display = "block";
