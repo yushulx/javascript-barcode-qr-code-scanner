@@ -66,3 +66,5 @@ The Dynamsoft SDK requires a license key. You can:
 - Use the default trial key (included)
 - [Get a free trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform)
 
+## Blog
+[Building an AI-Powered Passport Scanner with MRZ, OCR, and Face Detection in JavaScript](https://www.dynamsoft.com/codepool/build-javascript-passport-scanner-mrz-ocr-face-detection.html)
