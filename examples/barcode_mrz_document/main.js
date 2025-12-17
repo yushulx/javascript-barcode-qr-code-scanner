@@ -2,7 +2,8 @@ let dropdown = document.getElementById("dropdown");
 let barcodeCheckbox = document.getElementById("barcode_checkbox");
 let mrzCheckbox = document.getElementById("mrz_checkbox");
 let documentCheckbox = document.getElementById("document_checkbox");
-let scanButton = document.getElementById('scan_button');
+let captureButton = document.getElementById('capture_button');
+let saveButton = document.getElementById('save_button');
 let targetFile = document.getElementById('target_file');
 let targetCanvas = document.getElementById('target_canvas');
 let rectifiedImage = document.getElementById('rectified_image');
@@ -12,6 +13,7 @@ let rectifyView = document.getElementById('rectify_view');
 let cameraSource = document.getElementById('camera_source');
 let imageFile = document.getElementById('image_file');
 let overlayCanvas = document.getElementById('overlay_canvas');
+let uploadArea = document.getElementById('upload_area');
 
 let cvr;
 let reader;
@@ -25,13 +27,27 @@ let isDetecting = false;
 let isCaptured = false;
 let parser;
 
-overlayCanvas.addEventListener('dragover', function (event) {
+uploadArea.addEventListener('dragover', function (event) {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
 }, false);
 
-overlayCanvas.addEventListener('drop', function (event) {
+uploadArea.addEventListener('dragenter', function (event) {
     event.preventDefault();
+    uploadArea.classList.add('drag-over');
+}, false);
+
+uploadArea.addEventListener('dragleave', function (event) {
+    event.preventDefault();
+    // Only remove if leaving the upload area itself, not child elements
+    if (event.target === uploadArea) {
+        uploadArea.classList.remove('drag-over');
+    }
+}, false);
+
+uploadArea.addEventListener('drop', function (event) {
+    event.preventDefault();
+    uploadArea.classList.remove('drag-over');
     if (event.dataTransfer.files.length > 0) {
         let file = event.dataTransfer.files[0];
         if (file.type.match('image.*')) {
@@ -49,14 +65,7 @@ overlayCanvas.addEventListener('drop', function (event) {
 async function selectChanged() {
     if (dropdown.value === 'file') {
         if (cameraEnhancer != null) {
-            closeCamera(cameraEnhancer);
-
-            if (cvr != null) {
-                await cvr.stopCapturing();
-            }
-
-            scanButton.innerHTML = "Scan";
-            isDetecting = false;
+            await stopScanning();
         }
         let divElement = document.getElementById("file_container");
         divElement.style.display = "block";
@@ -75,6 +84,8 @@ async function selectChanged() {
         divElement.style.display = "none";
 
         await cameraChanged();
+        // Auto-start scanning in camera mode
+        await startScanning();
     }
 }
 
@@ -84,13 +95,20 @@ function capture() {
 
 const form = document.getElementById('modeSelector');
 
-form.addEventListener('change', (e) => {
+form.addEventListener('change', async (e) => {
     if (e.target.name === 'scanMode') {
+        // Show/hide capture button based on mode
         if (e.target.value === "document") {
-            documentEditor.style.display = "block";
+            captureButton.style.display = "block";
         }
         else {
-            documentEditor.style.display = "none";
+            captureButton.style.display = "none";
+        }
+
+        // Restart scanning if in camera mode
+        if (dropdown.value === 'camera' && isDetecting) {
+            await stopScanning();
+            await startScanning();
         }
     }
 });
@@ -293,12 +311,23 @@ function openEditor(image) {
     drawQuad(target_context, targetCanvas);
     targetFile.src = image;
 
+    // Show modal and hide save button initially
+    documentEditor.style.display = "block";
+    saveButton.style.display = "none";
     edit();
+}
+
+async function closeEditor() {
+    documentEditor.style.display = "none";
+    if (dropdown.value === 'camera') {
+        await startScanning();
+    }
 }
 
 async function edit() {
     editView.style.display = "block";
     rectifyView.style.display = "none";
+    saveButton.style.display = "none";
 }
 
 async function rectify() {
@@ -310,14 +339,19 @@ async function rectify() {
     rectifiedImage.src = final_canvas.toDataURL();
     rectifyView.style.display = "block";
     editView.style.display = "none";
+    saveButton.style.display = "block";
 }
 
 async function save() {
     let imageUrl = rectifiedImage.src;
 
+    // Generate filename based on timestamp
+    const timestamp = new Date().getTime();
+    const filename = `document_${timestamp}.png`;
+
     const a = document.createElement('a');
     a.href = imageUrl;
-    a.download = 'image';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -434,10 +468,14 @@ function drawQuad(context, canvas) {
     context.stroke();
 }
 
-async function scan() {
+async function startScanning() {
     if (!isSDKReady) {
         alert("Please activate the SDK first.");
         return;
+    }
+
+    if (isDetecting) {
+        return; // Already scanning
     }
 
     let selectedMode = document.querySelector('input[name="scanMode"]:checked').value;
@@ -456,33 +494,38 @@ async function scan() {
         cameraEnhancer.setScanRegion(null);
     }
 
-    if (!isDetecting) {
-        scanButton.innerHTML = "Stop";
-        isDetecting = true;
-        cvr.setInput(cameraEnhancer);
+    isDetecting = true;
+    cvr.setInput(cameraEnhancer);
 
-        if (selectedMode == "mrz") {
-            await cvr.initSettings("./full.json");
-            cvr.startCapturing("ReadMRZ");
-        }
-        else if (selectedMode == "barcode") {
-            await cvr.resetSettings();
-            cvr.startCapturing("ReadBarcodes_Default");
-        }
-        else if (selectedMode == "document") {
-            await cvr.resetSettings();
-            let params = await cvr.getSimplifiedSettings("DetectDocumentBoundaries_Default");
-            params.outputOriginalImage = true;
-            await cvr.updateSettings("DetectDocumentBoundaries_Default", params);
-            cvr.startCapturing("DetectDocumentBoundaries_Default");
-        }
+    if (selectedMode == "mrz") {
+        await cvr.initSettings("./full.json");
+        cvr.startCapturing("ReadMRZ");
     }
-    else {
-        scanButton.innerHTML = "Scan";
-        isDetecting = false;
+    else if (selectedMode == "barcode") {
+        await cvr.resetSettings();
+        cvr.startCapturing("ReadBarcodes_Default");
+    }
+    else if (selectedMode == "document") {
+        await cvr.resetSettings();
+        let params = await cvr.getSimplifiedSettings("DetectDocumentBoundaries_Default");
+        params.outputOriginalImage = true;
+        await cvr.updateSettings("DetectDocumentBoundaries_Default", params);
+        cvr.startCapturing("DetectDocumentBoundaries_Default");
+    }
+}
 
+async function stopScanning() {
+    if (!isDetecting) {
+        return; // Not scanning
+    }
+
+    isDetecting = false;
+
+    if (cvr != null) {
         await cvr.stopCapturing();
+    }
 
+    if (cameraView) {
         cameraView.clearAllInnerDrawingItems();
     }
 }
@@ -634,8 +677,20 @@ async function initCamera() {
 
 async function cameraChanged() {
     if (cameras != null && cameras.length > 0) {
+        let wasDetecting = isDetecting;
+
+        // Stop scanning if active
+        if (wasDetecting) {
+            await stopScanning();
+        }
+
         let index = cameraSource.selectedIndex;
         await openCamera(cameraEnhancer, cameras[index]);
+
+        // Restart scanning if it was active
+        if (wasDetecting) {
+            await startScanning();
+        }
     }
 }
 
@@ -689,7 +744,7 @@ async function showCameraResult(result) {
                 if (selectedMode == "document") {
                     if (isCaptured) {
                         isCaptured = false;
-                        await scan();
+                        await stopScanning();
                         targetCanvas.width = resolution.width;
                         targetCanvas.height = resolution.height;
                         openEditor(item.imageData.toCanvas().toDataURL());

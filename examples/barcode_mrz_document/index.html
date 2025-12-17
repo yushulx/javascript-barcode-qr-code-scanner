@@ -11,112 +11,137 @@
 </head>
 
 <body>
-    <h1>Scan Barcode, Document and Machine-readable Zone (MRZ)</h1>
     <div id="loading-indicator" class="loading-indicator">
         <div class="spinner"></div>
     </div>
 
-    <!-- Get Dynamsoft Products -->
-    <div class="container">
-        <div class="row">
-            <div>
-                <label>
-                    Get a License key from <a
-                        href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
-                        target="_blank">here</a>
-                </label>
+    <header>
+        <h1>📱 Vision Scanner</h1>
+        <p class="subtitle">Scan Barcode, Document and Machine-readable Zone (MRZ)</p>
+    </header>
+
+    <div class="main-container">
+        <!-- License Activation Card -->
+        <div class="card license-card">
+            <h2>🔑 Activate SDK</h2>
+            <p class="info-text">
+                Get a License key from <a
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                    target="_blank">here</a>
+            </p>
+            <div class="input-group">
                 <input type="text" id="license_key"
                     value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=="
-                    placeholder="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==">
-                <button onclick="activate()">Activate SDK</button>
+                    placeholder="Enter your license key">
+                <button onclick="activate()" class="btn-primary">Activate</button>
             </div>
         </div>
 
-        <div class="row">
-            <div>
-                <select onchange="selectChanged()" id="dropdown">
-                    <option value="file">File</option>
-                    <option value="camera">Camera</option>
-                </select>
+        <!-- Controls Card -->
+        <div class="card controls-card">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label class="control-label">Input Source</label>
+                    <select onchange="selectChanged()" id="dropdown" class="select-modern">
+                        <option value="file">📁 File</option>
+                        <option value="camera">📷 Camera</option>
+                    </select>
+                </div>
 
-                <form id="modeSelector">
-                    <label>
-                        <input type="radio" name="scanMode" value="barcode" checked>
-                        Barcode
-                    </label>
-                    <label>
-                        <input type="radio" name="scanMode" value="mrz">
-                        MRZ
-                    </label>
-                    <label>
-                        <input type="radio" name="scanMode" value="document">
-                        Document
-                    </label>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Image File -->
-    <div class="container" id="file_container">
-        <div>
-            <input type="file" id="pick_file" accept="image/*" />
-        </div>
-
-        <div class="row">
-            <div class="imageview">
-                <img id="image_file" src="default.png" />
-                <canvas id="overlay_canvas" class="overlay"></canvas>
+                <div class="control-group">
+                    <label class="control-label">Scan Mode</label>
+                    <form id="modeSelector" class="mode-selector">
+                        <label class="radio-card">
+                            <input type="radio" name="scanMode" value="barcode" checked>
+                            <span class="radio-label">📊 Barcode</span>
+                        </label>
+                        <label class="radio-card">
+                            <input type="radio" name="scanMode" value="mrz">
+                            <span class="radio-label">🛂 MRZ</span>
+                        </label>
+                        <label class="radio-card">
+                            <input type="radio" name="scanMode" value="document">
+                            <span class="radio-label">📄 Document</span>
+                        </label>
+                    </form>
+                </div>
             </div>
         </div>
 
-        <div class="row">
-            <div>
-                <textarea id="detection_result"></textarea>
+        <!-- Image File -->
+        <div class="card" id="file_container">
+            <h2>📂 Image Upload</h2>
+            <div class="upload-area" id="upload_area">
+                <label for="pick_file" class="file-label">
+                    <div class="upload-icon">📤</div>
+                    <span>Click to upload or drag & drop an image</span>
+                    <input type="file" id="pick_file" accept="image/*" />
+                </label>
             </div>
-        </div>
 
-        <div class="row">
-            <div>
+            <div class="image-container">
+                <div class="imageview">
+                    <img id="image_file" src="default.png" alt="Preview" />
+                    <canvas id="overlay_canvas" class="overlay"></canvas>
+                </div>
+            </div>
+
+            <div class="result-container">
+                <h3>Results</h3>
+                <textarea id="detection_result" placeholder="Detection results will appear here..."></textarea>
+            </div>
+
+            <div class="result-container">
                 <img id="document-rectified-image" />
             </div>
         </div>
 
-    </div>
-
-    <!-- Camera Stream -->
-    <div class="container" id="camera_container">
-        <div>
-            <select onchange="cameraChanged()" id="camera_source">
-            </select>
-            <button onclick="scan()" id="scan_button">Start</button>
-            <button onclick="capture()">Capture a document</button>
-            <div id="videoview">
-                <div id="camera_view"></div>
+        <!-- Camera Stream -->
+        <div class="card" id="camera_container">
+            <h2>📹 Live Camera</h2>
+            <div class="camera-controls">
+                <label class="control-label">Camera Source</label>
+                <select onchange="cameraChanged()" id="camera_source" class="select-modern">
+                </select>
+                <button onclick="capture()" id="capture_button" class="btn-capture">📸 Capture Document</button>
             </div>
 
-            <div class="row">
-                <div>
-                    <textarea id="scan_result"></textarea>
+            <div class="video-wrapper">
+                <div id="videoview">
+                    <div id="camera_view"></div>
                 </div>
             </div>
 
+            <div class="result-container">
+                <h3>Scan Results</h3>
+                <textarea id="scan_result" placeholder="Scan results will appear here..."></textarea>
+            </div>
         </div>
     </div>
 
-    <!-- Document Editor -->
-    <div class="container" id="document_editor">
-        <div>
-            <button onclick="edit()">Edit</button>
-            <button onclick="rectify()">Rectify</button>
-            <button onclick="save()">Save</button>
-        </div>
-        <div class="imageview" id="edit_view">
-            <img id="target_file" src="default.png" />
-            <canvas id="target_canvas" class="overlay"></canvas>
-        </div>
-        <div class="imageview" id="rectify_view">
-            <img id="rectified_image" src="default.png" />
+    <!-- Document Editor Modal -->
+    <div id="document_editor" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📝 Document Editor</h2>
+                <button onclick="closeEditor()" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="editor-controls">
+                    <button onclick="edit()" class="btn-secondary">✏️ Edit</button>
+                    <button onclick="rectify()" class="btn-secondary">🔄 Rectify</button>
+                    <button onclick="save()" id="save_button" class="btn-primary">💾 Save</button>
+                </div>
+                <div class="editor-view">
+                    <div class="imageview" id="edit_view">
+                        <img id="target_file" src="default.png" alt="Edit" />
+                        <canvas id="target_canvas" class="overlay"></canvas>
+                    </div>
+                    <div class="imageview" id="rectify_view">
+                        <img id="rectified_image" src="default.png" alt="Rectified" />
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
