@@ -1,7 +1,7 @@
 # Scan Barcode, Document and Machine-readable Zone (MRZ) in JavaScript
 The sample demonstrates how to use Dynamsoft Capture Vision to scan **1D/2D barcodes**, **document** and **machine-readable zone (MRZ)** within a web browser with a modern, responsive UI.
 
-https://github.com/user-attachments/assets/e205a602-b838-46fa-ac8e-45a009e64ae0
+https://github.com/user-attachments/assets/46faffc1-b4c2-496a-8a25-b69bb8dc657c
 
 ## Prerequisites
 - Obtain a [30-day free trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform) for Dynamsoft Capture Vision.
