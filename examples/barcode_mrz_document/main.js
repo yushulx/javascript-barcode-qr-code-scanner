@@ -757,7 +757,8 @@ async function showCameraResult(result) {
                 else if (selectedMode == "mrz") {
                     if (txts.length > 0) {
                         scan_result.innerHTML += txts.join('\n') + '\n\n';
-                        parseResults = await parser.parse(item.text);
+                        let newText = item.text.replace(/\\n/g, '');
+                        parseResults = await parser.parse(newText);
                         scan_result.innerHTML += JSON.stringify(extractMrzInfo(parseResults));
                     }
                     else {
