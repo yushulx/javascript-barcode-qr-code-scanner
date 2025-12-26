@@ -259,8 +259,9 @@ async function showFileResult(selectedMode, context, result, img, type) {
             }
             else if (selectedMode == "mrz") {
                 if (txts.length > 0) {
-                    detection_result.innerHTML += txts.join('\n') + '\n\n';
-                    parseResults = await parser.parse(item.text);
+                    detection_result.innerHTML += txts.join('') + '\n\n';
+                    let newText = item.text.replace(/\\n/g, '');
+                    parseResults = await parser.parse(newText);
                     detection_result.innerHTML += JSON.stringify(extractMrzInfo(parseResults));
                 }
                 else {
@@ -327,6 +328,11 @@ async function activate() {
 
                 showCameraResult(result);
             },
+
+            onOriginalImageResultReceived: (imageData) => {
+                // Handle original image if needed
+                // console.log(imageData);
+            }
         });
 
         isSDKReady = true;
@@ -459,18 +465,27 @@ function updatePoint(e, context, canvas) {
         let scaleX = canvas.clientWidth / canvas.width;
         let scaleY = canvas.clientHeight / canvas.height;
 
-        let mouseX = e.clientX || e.touches[0].clientX;
-        let mouseY = e.clientX || e.touches[0].clientY;
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        }
+
+        let mouseX = clientX;
+        let mouseY = clientY;
+
         if (scaleX < scaleY) {
-            mouseX = e.clientX - rect.left;
-            mouseY = e.clientY - rect.top - (canvas.clientHeight - canvas.height * scaleX) / 2;
+            mouseX = clientX - rect.left;
+            mouseY = clientY - rect.top - (canvas.clientHeight - canvas.height * scaleX) / 2;
 
             mouseX = mouseX / scaleX;
             mouseY = mouseY / scaleX;
         }
         else {
-            mouseX = e.clientX - rect.left - (canvas.clientWidth - canvas.width * scaleY) / 2;
-            mouseY = e.clientY - rect.top;
+            mouseX = clientX - rect.left - (canvas.clientWidth - canvas.width * scaleY) / 2;
+            mouseY = clientY - rect.top;
 
             mouseX = mouseX / scaleY;
             mouseY = mouseY / scaleY;
@@ -479,16 +494,18 @@ function updatePoint(e, context, canvas) {
         return { x: Math.round(mouseX), y: Math.round(mouseY) };
     }
 
-    let delta = 10;
+    let delta = 20;
     let coordinates = getCoordinates(e);
 
     for (let i = 0; i < globalPoints.length; i++) {
         if (Math.abs(globalPoints[i].x - coordinates.x) < delta && Math.abs(globalPoints[i].y - coordinates.y) < delta) {
+            e.preventDefault();
             canvas.addEventListener("mousemove", dragPoint);
             canvas.addEventListener("mouseup", releasePoint);
             canvas.addEventListener("touchmove", dragPoint);
             canvas.addEventListener("touchend", releasePoint);
             function dragPoint(e) {
+                e.preventDefault();
                 coordinates = getCoordinates(e);
                 globalPoints[i].x = coordinates.x;
                 globalPoints[i].y = coordinates.y;
@@ -511,7 +528,7 @@ function drawQuad(context, canvas) {
     context.lineWidth = 2;
     for (let i = 0; i < globalPoints.length; i++) {
         context.beginPath();
-        context.arc(globalPoints[i].x, globalPoints[i].y, 5, 0, 2 * Math.PI);
+        context.arc(globalPoints[i].x, globalPoints[i].y, 10, 0, 2 * Math.PI);
         context.stroke();
     }
     context.beginPath();
@@ -564,6 +581,7 @@ async function startScanning() {
         await cvr.resetSettings();
         let params = await cvr.getSimplifiedSettings("DetectDocumentBoundaries_Default");
         params.outputOriginalImage = true;
+        // params.documentSettings.colourMode = 1; // Color
         await cvr.updateSettings("DetectDocumentBoundaries_Default", params);
         cvr.startCapturing("DetectDocumentBoundaries_Default");
     }
@@ -589,63 +607,13 @@ function clearOverlay(cameraEnhancer) {
     if (!Dynamsoft) return;
 
     try {
-        let drawingLayers = cameraEnhancer.getDrawingLayers();
+        let drawingLayers = cameraEnhancer.cameraView.getAllDrawingLayers();
         if (drawingLayers.length > 0) {
             drawingLayers[0].clearDrawingItems();
         }
         else {
-            cameraEnhancer.createDrawingLayer();
+            cameraEnhancer.cameraView.createDrawingLayer();
         }
-    }
-    catch (ex) {
-        console.error(ex);
-    }
-}
-
-function drawLine(cameraEnhancer, x1, y1, x2, y2) {
-    if (!Dynamsoft) return;
-
-    try {
-        let drawingLayers = cameraEnhancer.getDrawingLayers();
-        let drawingLayer;
-        let drawingItems = new Array(
-            new Dynamsoft.DCE.DrawingItem.DT_Line({
-                x: x1,
-                y: y1
-            }, {
-                x: x2,
-                y: y2
-            }, 1)
-        )
-        if (drawingLayers.length > 0) {
-            drawingLayer = drawingLayers[0];
-        }
-        else {
-            drawingLayer = cameraEnhancer.createDrawingLayer();
-        }
-        drawingLayer.addDrawingItems(drawingItems);
-    }
-    catch (ex) {
-        console.error(ex);
-    }
-}
-
-function drawText(cameraEnhancer, text, x, y) {
-    if (!Dynamsoft) return;
-
-    try {
-        let drawingLayers = cameraEnhancer.getDrawingLayers();
-        let drawingLayer;
-        let drawingItems = new Array(
-            new Dynamsoft.DCE.DrawingItem.DT_Text(text, x, y, 1),
-        )
-        if (drawingLayers.length > 0) {
-            drawingLayer = drawingLayers[0];
-        }
-        else {
-            drawingLayer = cameraEnhancer.createDrawingLayer();
-        }
-        drawingLayer.addDrawingItems(drawingItems);
     }
     catch (ex) {
         console.error(ex);
@@ -663,6 +631,7 @@ async function openCamera(cameraEnhancer, cameraInfo) {
         cameraEnhancer.on("played", function () {
             resolution = cameraEnhancer.getResolution();
         });
+        cameraEnhancer.setPixelFormat(10);
         await cameraEnhancer.open();
     }
     catch (ex) {
@@ -757,6 +726,8 @@ async function showCameraResult(result) {
     scan_result.innerHTML = "";
     let txts = [];
 
+    // clearOverlay(cameraEnhancer);
+
     let type;
     if (selectedMode == "barcode") {
         type = Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE;
@@ -793,6 +764,9 @@ async function showCameraResult(result) {
                         scan_result.innerHTML += "Recognition Failed\n";
                     }
 
+                }
+                else if (selectedMode == "document") {
+                    // console.log(item);
                 }
             }
             else if (items[i].type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_ORIGINAL_IMAGE) {
