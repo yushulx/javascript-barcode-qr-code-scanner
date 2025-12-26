@@ -318,8 +318,8 @@ async function activate() {
         await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD2_VISA");
         await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD3_PASSPORT");
         await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD3_VISA");
-        // await Dynamsoft.CVR.CaptureVisionRouter.appendModelBuffer("MRZCharRecognition");
-        // await Dynamsoft.CVR.CaptureVisionRouter.appendModelBuffer("MRZTextLineRecognition");
+        await Dynamsoft.CVR.CaptureVisionRouter.appendDLModelBuffer("MRZCharRecognition");
+        await Dynamsoft.CVR.CaptureVisionRouter.appendDLModelBuffer("MRZTextLineRecognition");
 
         cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
 
