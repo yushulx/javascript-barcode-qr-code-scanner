@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome Built-in AI Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Chrome Built-in AI Assistant</h1>
+            <p class="subtitle">Powered by Gemini Nano - Fast, Private, On-Device AI</p>
+            <div id="statusIndicator" class="status-indicator">
+                <span class="status-dot"></span>
+                <span id="statusText">Checking AI availability...</span>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="prompt">Prompt</button>
+            <button class="tab-btn" data-tab="summarize">Summarize</button>
+            <button class="tab-btn" data-tab="proofread">Proofread</button>
+            <button class="tab-btn" data-tab="rewrite">Rewrite</button>
+        </nav>
+
+        <main class="tab-content">
+            <section id="prompt" class="tab-pane active">
+                <h2>AI Prompt</h2>
+                <div class="input-group">
+                    <textarea id="promptInput" rows="8" placeholder="Enter your prompt or question here..."></textarea>
+                </div>
+                <button id="promptBtn" class="btn btn-primary" disabled>Generate Response</button>
+                <div id="promptOutput" class="output-area">
+                    <p class="placeholder">AI response will appear here...</p>
+                </div>
+            </section>
+
+            <section id="summarize" class="tab-pane">
+                <h2>Text Summarization</h2>
+                <div class="input-group">
+                    <textarea id="summarizeInput" rows="8" placeholder="Enter text to summarize..."></textarea>
+                </div>
+                <div class="options-group">
+                    <label for="summaryType">Summary Type:</label>
+                    <select id="summaryType">
+                        <option value="key-points">Key Points</option>
+                        <option value="tldr">TL;DR</option>
+                        <option value="headline">Headline</option>
+                    </select>
+                    <label for="summaryFormat">Format:</label>
+                    <select id="summaryFormat">
+                        <option value="markdown">Markdown</option>
+                        <option value="plain-text">Plain Text</option>
+                    </select>
+                </div>
+                <button id="summarizeBtn" class="btn btn-primary" disabled>Summarize</button>
+                <div id="summarizeOutput" class="output-area">
+                    <p class="placeholder">Summary will appear here...</p>
+                </div>
+            </section>
+
+            <section id="proofread" class="tab-pane">
+                <h2>Proofreading</h2>
+                <div class="input-group">
+                    <textarea id="proofreadInput" rows="8" placeholder="Enter text to proofread for grammar and spelling errors..."></textarea>
+                </div>
+                <button id="proofreadBtn" class="btn btn-primary" disabled>Proofread</button>
+                <div id="proofreadOutput" class="output-area">
+                    <p class="placeholder">Corrected text will appear here...</p>
+                </div>
+            </section>
+
+            <section id="rewrite" class="tab-pane">
+                <h2>Text Rewriting</h2>
+                <div class="input-group">
+                    <textarea id="rewriteInput" rows="8" placeholder="Enter text to rewrite..."></textarea>
+                </div>
+                <div class="options-group">
+                    <label for="rewriteTone">Tone:</label>
+                    <select id="rewriteTone">
+                        <option value="neutral">Neutral</option>
+                        <option value="formal">Formal</option>
+                        <option value="casual">Casual</option>
+                        <option value="professional">Professional</option>
+                        <option value="friendly">Friendly</option>
+                    </select>
+                    <label for="rewriteLength">Length:</label>
+                    <select id="rewriteLength">
+                        <option value="same">Same Length</option>
+                        <option value="shorter">Shorter</option>
+                        <option value="longer">Longer</option>
+                    </select>
+                </div>
+                <button id="rewriteBtn" class="btn btn-primary" disabled>Rewrite</button>
+                <div id="rewriteOutput" class="output-area">
+                    <p class="placeholder">Rewritten text will appear here...</p>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>Requires Chrome 138+ with Built-in AI enabled</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
