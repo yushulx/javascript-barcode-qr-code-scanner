@@ -2,6 +2,9 @@
 
 A purpose-built web application for automatic document detection, cropping, and barcode extraction. Designed for high-volume document processing workflows.
 
+## Online Demo
+https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_barcode/
+
 ## Features
 
 - **Auto-Scan Mode**: Automatically detects when a document is stable and captures it hands-free.
