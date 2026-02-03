@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Auto Document Scanner</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.2.5000/dist/dcv.bundle.min.js"></script>
+</head>
+
+<body>
+    <!-- Initialization Overlay -->
+    <div id="init-overlay" class="overlay">
+        <div class="init-content">
+            <div class="spinner"></div>
+            <h2>Initializing Scanner</h2>
+            <p id="init-status">Loading modules...</p>
+        </div>
+    </div>
+
+    <!-- Main Camera View -->
+    <div id="camera-screen" class="screen">
+        <div id="camera-container">
+            <div id="camera-view"></div>
+            <!-- Status Indicator -->
+            <div id="status-bar">
+                <div id="status-indicator" class="status-searching">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Looking for document...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Bar -->
+        <div id="control-bar">
+            <div class="control-left">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="auto-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label">Auto</span>
+            </div>
+
+            <button id="capture-btn" class="capture-button" aria-label="Capture">
+                <div class="capture-inner"></div>
+            </button>
+
+            <div class="control-right">
+                <select id="camera-select" class="camera-dropdown">
+                    <option>Select Camera</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="result-screen" class="screen hidden">
+        <div class="result-header">
+            <h2>Scan Result</h2>
+        </div>
+
+        <div class="result-content">
+            <div class="result-section">
+                <h3>📄 Cropped Document</h3>
+                <div class="image-wrapper">
+                    <img id="cropped-image" src="" alt="Cropped Document">
+                </div>
+            </div>
+
+            <div class="result-section">
+                <h3>📊 Barcode Data</h3>
+                <div id="barcode-results" class="barcode-list">
+                    <p class="no-barcode">No barcodes detected</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-actions">
+            <button id="retake-btn" class="action-btn secondary">
+                <span>↩️</span> Retake
+            </button>
+            <button id="scan-next-btn" class="action-btn primary">
+                <span>📷</span> Scan Next
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Message -->
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
