@@ -25,7 +25,7 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_barcode/
    - Captures the frame
    - Crops/straightens the document
    - Reads any barcodes
-4. View results and tap "Scan Next" to continue
+4. View results and tap "Save & Next" to continue
 
 ### Manual Mode
 1. Toggle off "Auto" in the control bar
