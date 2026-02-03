@@ -10,8 +10,28 @@
 </head>
 
 <body>
+    <!-- License Activation Screen -->
+    <div id="license-screen" class="screen">
+        <div class="license-container">
+            <div class="license-header">
+                <h1>📱 Auto Document Scanner</h1>
+                <p class="subtitle">Scan, crop documents and extract barcodes automatically</p>
+            </div>
+            <div class="license-card">
+                <h2>🔑 Activate SDK</h2>
+                <p class="info-text">
+                    Get a License key from <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform" target="_blank">here</a>
+                </p>
+                <div class="input-group">
+                    <input type="text" id="license-input" placeholder="Enter your license key or use default">
+                </div>
+                <button id="activate-btn" class="activate-btn">🚀 Start Scanner</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Initialization Overlay -->
-    <div id="init-overlay" class="overlay">
+    <div id="init-overlay" class="overlay hidden">
         <div class="init-content">
             <div class="spinner"></div>
             <h2>Initializing Scanner</h2>
@@ -20,7 +40,7 @@
     </div>
 
     <!-- Main Camera View -->
-    <div id="camera-screen" class="screen">
+    <div id="camera-screen" class="screen hidden">
         <div id="camera-container">
             <div id="camera-view"></div>
             <!-- Status Indicator -->
@@ -29,17 +49,31 @@
                     <span class="status-dot"></span>
                     <span id="status-text">Looking for document...</span>
                 </div>
+                <!-- History Button -->
+                <button id="history-btn" class="history-button" title="View History">
+                    <span>📋</span>
+                    <span id="history-count" class="history-count">0</span>
+                </button>
             </div>
         </div>
 
         <!-- Control Bar -->
         <div id="control-bar">
             <div class="control-left">
-                <label class="toggle-switch">
-                    <input type="checkbox" id="auto-toggle" checked>
-                    <span class="toggle-slider"></span>
-                </label>
-                <span class="toggle-label">Auto</span>
+                <div class="control-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="auto-toggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Auto</span>
+                </div>
+                <div class="control-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="color-toggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Color</span>
+                </div>
             </div>
 
             <button id="capture-btn" class="capture-button" aria-label="Capture">
@@ -81,8 +115,21 @@
                 <span>↩️</span> Retake
             </button>
             <button id="scan-next-btn" class="action-btn primary">
-                <span>📷</span> Scan Next
+                <span>💾</span> Save & Next
             </button>
+        </div>
+    </div>
+
+    <!-- History Screen -->
+    <div id="history-screen" class="screen hidden">
+        <div class="result-header">
+            <button id="history-back-btn" class="back-button">← Back</button>
+            <h2>Scan History</h2>
+            <button id="clear-history-btn" class="clear-button">🗑️ Clear</button>
+        </div>
+
+        <div id="history-content" class="history-content">
+            <p class="no-history">No scans yet. Start scanning to build history.</p>
         </div>
     </div>
 

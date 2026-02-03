@@ -2,24 +2,35 @@
  * Auto Document Scanner
  * Automatically detects, crops documents and reads barcodes.
  * Supports both Auto-Scan and Manual capture modes.
+ * Features: License activation, Color mode toggle, Scan history
  */
 
 // ============================================================
 // DOM Elements
 // ============================================================
+const licenseScreen = document.getElementById('license-screen');
+const licenseInput = document.getElementById('license-input');
+const activateBtn = document.getElementById('activate-btn');
 const initOverlay = document.getElementById('init-overlay');
 const initStatus = document.getElementById('init-status');
 const cameraScreen = document.getElementById('camera-screen');
 const resultScreen = document.getElementById('result-screen');
+const historyScreen = document.getElementById('history-screen');
 const statusIndicator = document.getElementById('status-indicator');
 const statusText = document.getElementById('status-text');
 const autoToggle = document.getElementById('auto-toggle');
+const colorToggle = document.getElementById('color-toggle');
 const captureBtn = document.getElementById('capture-btn');
 const cameraSelect = document.getElementById('camera-select');
 const croppedImage = document.getElementById('cropped-image');
 const barcodeResults = document.getElementById('barcode-results');
 const retakeBtn = document.getElementById('retake-btn');
 const scanNextBtn = document.getElementById('scan-next-btn');
+const historyBtn = document.getElementById('history-btn');
+const historyCount = document.getElementById('history-count');
+const historyBackBtn = document.getElementById('history-back-btn');
+const clearHistoryBtn = document.getElementById('clear-history-btn');
+const historyContent = document.getElementById('history-content');
 const toast = document.getElementById('toast');
 
 // ============================================================
@@ -36,6 +47,7 @@ let cameras = [];
 let isSDKReady = false;
 let isScanning = false;
 let isCaptureInProgress = false;
+let isColorMode = true;
 
 // Stability tracking for auto-capture
 const STABILITY_THRESHOLD = 12;     // Frames required to be stable
@@ -45,16 +57,29 @@ let lastQuadPoints = null;
 let latestOriginalImage = null;
 let latestDetectedQuad = null;
 
-// License key (get a free trial from Dynamsoft)
-const LICENSE_KEY = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+// Scan history
+let scanHistory = [];
+let currentScanResult = null;
+
+// Default license key (get a free trial from Dynamsoft)
+const DEFAULT_LICENSE_KEY = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
 
 // ============================================================
-// Initialization
+// License Activation
 // ============================================================
-async function init() {
+activateBtn.addEventListener('click', async () => {
+    const licenseKey = licenseInput.value.trim() || DEFAULT_LICENSE_KEY;
+    await activateAndInit(licenseKey);
+});
+
+async function activateAndInit(licenseKey) {
+    // Hide license screen, show init overlay
+    licenseScreen.classList.add('hidden');
+    initOverlay.classList.remove('hidden');
+
     try {
         updateInitStatus('Activating license...');
-        await Dynamsoft.License.LicenseManager.initLicense(LICENSE_KEY, true);
+        await Dynamsoft.License.LicenseManager.initLicense(licenseKey, true);
 
         updateInitStatus('Loading modules...');
         await Dynamsoft.Core.CoreModule.loadWasm(["DBR", "DDN"]);
@@ -64,7 +89,7 @@ async function init() {
 
         updateInitStatus('Setting up scanner...');
         cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
-
+        await cvr.initSettings("./DBR_and_DDN_detect_PresetTemplates.json");
         // Set up result receiver
         cvr.addResultReceiver({
             onCapturedResultReceived: handleCapturedResult
@@ -73,12 +98,24 @@ async function init() {
         isSDKReady = true;
         hideInitOverlay();
 
+        // Show camera screen
+        cameraScreen.classList.remove('hidden');
+
+        // Load history from localStorage
+        loadHistory();
+
         // Start scanning automatically
         await startScanning();
 
     } catch (error) {
         console.error('Initialization failed:', error);
         updateInitStatus(`Error: ${error.message || 'Failed to initialize'}`);
+        // Show retry option
+        setTimeout(() => {
+            initOverlay.classList.add('hidden');
+            licenseScreen.classList.remove('hidden');
+            showToast('License activation failed. Please try again.');
+        }, 2000);
     }
 }
 
@@ -116,8 +153,19 @@ async function initCamera() {
 
     if (cameras.length > 0) {
         await cameraEnhancer.selectCamera(cameras[0]);
-        cameraEnhancer.setPixelFormat(10); // Color format
+        // Set color pixel format for color output
+        applyColorMode();
         await cameraEnhancer.open();
+    }
+}
+
+function applyColorMode() {
+    if (isColorMode) {
+        // Pixel format 10 = color format
+        cameraEnhancer.setPixelFormat(10);
+    } else {
+        // Default/grayscale
+        cameraEnhancer.setPixelFormat(2);
     }
 }
 
@@ -137,10 +185,30 @@ async function switchCamera(index) {
         if (wasScanning) await stopScanning();
 
         await cameraEnhancer.selectCamera(cameras[index]);
+        applyColorMode();
 
         if (wasScanning) await startScanning();
     }
 }
+
+// ============================================================
+// Color Mode Toggle
+// ============================================================
+colorToggle.addEventListener('change', async () => {
+    isColorMode = colorToggle.checked;
+    const mode = isColorMode ? 'Color' : 'Grayscale';
+    showToast(`${mode} mode`);
+
+    // Reapply color mode
+    if (cameraEnhancer) {
+        const wasScanning = isScanning;
+        if (wasScanning) await stopScanning();
+
+        applyColorMode();
+
+        if (wasScanning) await startScanning();
+    }
+});
 
 // ============================================================
 // Scanning Control
@@ -300,6 +368,13 @@ async function performCapture() {
         // Step 2: Read barcodes from the cropped image
         const barcodes = await readBarcodes(croppedCanvas);
 
+        // Store current result for potential saving
+        currentScanResult = {
+            imageDataUrl: croppedCanvas.toDataURL('image/png'),
+            barcodes: barcodes,
+            timestamp: new Date().toISOString()
+        };
+
         // Step 3: Show results
         displayResults(croppedCanvas, barcodes);
 
@@ -318,9 +393,6 @@ async function normalizeDocument(source, points) {
         let settings = await cvr.getSimplifiedSettings("NormalizeDocument_Default");
         settings.roi.points = points;
         settings.roiMeasuredInPercentage = 0;
-        // Set colour mode to output a color image (default is grayscale)
-        // ICM_COLOUR = 0, ICM_GRAYSCALE = 1, ICM_BINARY = 2
-        // settings.documentSettings.colourMode = Dynamsoft.DDN.EnumImageColourMode.ICM_COLOUR;
         await cvr.updateSettings("NormalizeDocument_Default", settings);
 
         const result = await cvr.capture(source, "NormalizeDocument_Default");
@@ -388,6 +460,117 @@ function escapeHtml(text) {
 }
 
 // ============================================================
+// History Management
+// ============================================================
+function saveToHistory() {
+    if (!currentScanResult) return;
+
+    scanHistory.unshift(currentScanResult);
+    
+    // Limit history to 50 items to avoid localStorage overflow
+    if (scanHistory.length > 50) {
+        scanHistory = scanHistory.slice(0, 50);
+    }
+
+    // Persist to localStorage
+    try {
+        localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+    } catch (e) {
+        console.warn('Failed to save history to localStorage:', e);
+    }
+
+    updateHistoryCount();
+    currentScanResult = null;
+}
+
+function loadHistory() {
+    try {
+        const stored = localStorage.getItem('scanHistory');
+        if (stored) {
+            scanHistory = JSON.parse(stored);
+        }
+    } catch (e) {
+        console.warn('Failed to load history from localStorage:', e);
+        scanHistory = [];
+    }
+    updateHistoryCount();
+}
+
+function updateHistoryCount() {
+    historyCount.textContent = scanHistory.length;
+}
+
+function renderHistory() {
+    if (scanHistory.length === 0) {
+        historyContent.innerHTML = '<p class="no-history">No scans yet. Start scanning to build history.</p>';
+        return;
+    }
+
+    historyContent.innerHTML = scanHistory.map((item, index) => {
+        const date = new Date(item.timestamp);
+        const timeStr = date.toLocaleString();
+        const barcodeCount = item.barcodes.length;
+
+        return `
+            <div class="history-item" data-index="${index}">
+                <div class="history-item-header" onclick="toggleHistoryItem(${index})">
+                    <span class="history-item-time">${timeStr}</span>
+                    <span class="history-item-count">${barcodeCount} barcode${barcodeCount !== 1 ? 's' : ''}</span>
+                </div>
+                <div class="history-item-body">
+                    <img src="${item.imageDataUrl}" alt="Scan ${index + 1}" class="history-thumb">
+                    ${item.barcodes.length > 0 ? item.barcodes.map(bc => `
+                        <div class="history-barcode">
+                            <div class="history-barcode-format">${bc.format}</div>
+                            <div class="history-barcode-value">${escapeHtml(bc.text)}</div>
+                        </div>
+                    `).join('') : '<p class="no-barcode">No barcodes</p>'}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleHistoryItem(index) {
+    const items = historyContent.querySelectorAll('.history-item');
+    items.forEach((item, i) => {
+        if (i === index) {
+            item.classList.toggle('expanded');
+        }
+    });
+}
+
+// Make toggleHistoryItem available globally for onclick
+window.toggleHistoryItem = toggleHistoryItem;
+
+function clearHistory() {
+    if (confirm('Are you sure you want to clear all scan history?')) {
+        scanHistory = [];
+        try {
+            localStorage.removeItem('scanHistory');
+        } catch (e) {
+            console.warn('Failed to clear history from localStorage:', e);
+        }
+        updateHistoryCount();
+        renderHistory();
+        showToast('History cleared');
+    }
+}
+
+function showHistoryScreen() {
+    renderHistory();
+    cameraScreen.classList.add('hidden');
+    resultScreen.classList.add('hidden');
+    historyScreen.classList.remove('hidden');
+}
+
+function hideHistoryScreen() {
+    historyScreen.classList.add('hidden');
+    cameraScreen.classList.remove('hidden');
+    startScanning();
+}
+
+// ============================================================
 // UI Helpers
 // ============================================================
 function updateStatus(state, message) {
@@ -404,11 +587,17 @@ function showToast(message, duration = 3000) {
     }, duration);
 }
 
-async function returnToCamera() {
+async function returnToCamera(saveResult = false) {
+    if (saveResult && currentScanResult) {
+        saveToHistory();
+        showToast('Scan saved to history');
+    }
+
     resultScreen.classList.add('hidden');
     cameraScreen.classList.remove('hidden');
 
     resetStabilityTracking();
+    currentScanResult = null;
     await startScanning();
 }
 
@@ -430,15 +619,44 @@ cameraSelect.addEventListener('change', async (e) => {
     await switchCamera(parseInt(e.target.value, 10));
 });
 
-retakeBtn.addEventListener('click', returnToCamera);
-scanNextBtn.addEventListener('click', returnToCamera);
+// Retake: discard current result and rescan
+retakeBtn.addEventListener('click', () => {
+    currentScanResult = null;
+    returnToCamera(false);
+});
+
+// Save & Next: save result to history and continue scanning
+scanNextBtn.addEventListener('click', () => {
+    returnToCamera(true);
+});
+
+// History button
+historyBtn.addEventListener('click', async () => {
+    await stopScanning();
+    showHistoryScreen();
+});
+
+// History back button
+historyBackBtn.addEventListener('click', () => {
+    hideHistoryScreen();
+});
+
+// Clear history button
+clearHistoryBtn.addEventListener('click', clearHistory);
 
 autoToggle.addEventListener('change', () => {
     const mode = autoToggle.checked ? 'Auto' : 'Manual';
     showToast(`${mode} capture mode`);
 });
 
+// Allow Enter key to activate
+licenseInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        activateBtn.click();
+    }
+});
+
 // ============================================================
-// Start Application
+// Start Application - Wait for user to activate
 // ============================================================
-document.addEventListener('DOMContentLoaded', init);
+// App starts on license screen, user clicks "Start Scanner" to begin
