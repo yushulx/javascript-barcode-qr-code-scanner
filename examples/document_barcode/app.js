@@ -33,6 +33,16 @@ const clearHistoryBtn = document.getElementById('clear-history-btn');
 const historyContent = document.getElementById('history-content');
 const toast = document.getElementById('toast');
 
+// Settings elements
+const settingsBtn = document.getElementById('settings-btn');
+const settingsOverlay = document.getElementById('settings-overlay');
+const closeSettingsBtn = document.getElementById('close-settings-btn');
+const saveSettingsBtn = document.getElementById('save-settings-btn');
+const stabilityInput = document.getElementById('stability-threshold');
+const stabilityValue = document.getElementById('stability-threshold-value');
+const movementInput = document.getElementById('movement-tolerance');
+const movementValue = document.getElementById('movement-tolerance-value');
+
 // ============================================================
 // SDK Components
 // ============================================================
@@ -50,8 +60,8 @@ let isCaptureInProgress = false;
 let isColorMode = true;
 
 // Stability tracking for auto-capture
-const STABILITY_THRESHOLD = 12;     // Frames required to be stable
-const MOVEMENT_TOLERANCE = 15;      // Pixel movement tolerance
+let stabilityThreshold = 12;     // Frames required to be stable
+let movementTolerance = 15;      // Pixel movement tolerance
 let stabilityCounter = 0;
 let lastQuadPoints = null;
 let latestOriginalImage = null;
@@ -71,6 +81,9 @@ activateBtn.addEventListener('click', async () => {
     const licenseKey = licenseInput.value.trim() || DEFAULT_LICENSE_KEY;
     await activateAndInit(licenseKey);
 });
+
+// Initialize Settings
+initSettings();
 
 async function activateAndInit(licenseKey) {
     // Hide license screen, show init overlay
@@ -101,8 +114,8 @@ async function activateAndInit(licenseKey) {
         // Show camera screen
         cameraScreen.classList.remove('hidden');
 
-        // Load history from localStorage
-        loadHistory();
+        // Load history from IndexedDB
+        await loadHistory();
 
         // Start scanning automatically
         await startScanning();
@@ -277,7 +290,7 @@ async function handleCapturedResult(result) {
     }
 
     // Auto-capture logic
-    if (autoToggle.checked && stabilityCounter >= STABILITY_THRESHOLD && !isCaptureInProgress) {
+    if (autoToggle.checked && stabilityCounter >= stabilityThreshold && !isCaptureInProgress) {
         await performCapture();
     }
 }
@@ -294,9 +307,9 @@ function checkStability(currentPoints) {
 
     if (isStable) {
         stabilityCounter++;
-        const progress = Math.min(stabilityCounter / STABILITY_THRESHOLD * 100, 100);
+        const progress = Math.min(stabilityCounter / stabilityThreshold * 100, 100);
 
-        if (stabilityCounter >= STABILITY_THRESHOLD) {
+        if (stabilityCounter >= stabilityThreshold) {
             updateStatus('stable', 'Ready to capture!');
         } else {
             updateStatus('searching', `Hold steady... ${Math.round(progress)}%`);
@@ -317,7 +330,7 @@ function isQuadStable(current, previous) {
     for (let i = 0; i < 4; i++) {
         const dx = Math.abs(current[i].x - previous[i].x);
         const dy = Math.abs(current[i].y - previous[i].y);
-        if (dx > MOVEMENT_TOLERANCE || dy > MOVEMENT_TOLERANCE) {
+        if (dx > movementTolerance || dy > movementTolerance) {
             return false;
         }
     }
@@ -465,37 +478,91 @@ function escapeHtml(text) {
 }
 
 // ============================================================
-// History Management
+// History Management (IndexedDB)
 // ============================================================
-function saveToHistory() {
-    if (!currentScanResult) return;
+const DB_NAME = 'DocumentScannerDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'scanHistory';
 
-    scanHistory.unshift(currentScanResult);
-    
-    // Limit history to 50 items to avoid localStorage overflow
-    if (scanHistory.length > 50) {
-        scanHistory = scanHistory.slice(0, 50);
-    }
-
-    // Persist to localStorage
-    try {
-        localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
-    } catch (e) {
-        console.warn('Failed to save history to localStorage:', e);
-    }
-
-    updateHistoryCount();
-    currentScanResult = null;
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = (event) => reject('Database error: ' + event.target.error);
+        request.onsuccess = (event) => resolve(event.target.result);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'timestamp' });
+            }
+        };
+    });
 }
 
-function loadHistory() {
+async function saveScanToDB(scanResult) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.add(scanResult);
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject('Save error: ' + event.target.error);
+    });
+}
+
+async function getAllScansFromDB() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = (event) => resolve(event.target.result);
+        request.onerror = (event) => reject('Load error: ' + event.target.error);
+    });
+}
+
+async function clearScansFromDB() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.clear();
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject('Clear error: ' + event.target.error);
+    });
+}
+
+async function saveToHistory() {
+    if (!currentScanResult) return;
+
     try {
-        const stored = localStorage.getItem('scanHistory');
-        if (stored) {
-            scanHistory = JSON.parse(stored);
+        await saveScanToDB(currentScanResult);
+        scanHistory.unshift(currentScanResult);
+        
+        // Keep in-memory history limited for performance
+        if (scanHistory.length > 50) {
+            scanHistory = scanHistory.slice(0, 50);
+        }
+        
+        updateHistoryCount();
+        currentScanResult = null;
+    } catch (e) {
+        console.warn('Failed to save history to DB:', e);
+        showToast('Failed to save history');
+    }
+}
+
+async function loadHistory() {
+    try {
+        const scans = await getAllScansFromDB();
+        // Sort descending by timestamp
+        scanHistory = scans.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        // Limit display count if needed, but keeping all for now or slicing
+        if (scanHistory.length > 50) {
+            scanHistory = scanHistory.slice(0, 50);
         }
     } catch (e) {
-        console.warn('Failed to load history from localStorage:', e);
+        console.warn('Failed to load history from DB:', e);
         scanHistory = [];
     }
     updateHistoryCount();
@@ -514,7 +581,7 @@ function renderHistory() {
     historyContent.innerHTML = scanHistory.map((item, index) => {
         const date = new Date(item.timestamp);
         const timeStr = date.toLocaleString();
-        const barcodeCount = item.barcodes.length;
+        const barcodeCount = typeof item.barcodes === 'object' ? item.barcodes.length : 0;
 
         return `
             <div class="history-item" data-index="${index}">
@@ -548,17 +615,18 @@ function toggleHistoryItem(index) {
 // Make toggleHistoryItem available globally for onclick
 window.toggleHistoryItem = toggleHistoryItem;
 
-function clearHistory() {
+async function clearHistory() {
     if (confirm('Are you sure you want to clear all scan history?')) {
-        scanHistory = [];
         try {
-            localStorage.removeItem('scanHistory');
+            await clearScansFromDB();
+            scanHistory = [];
+            updateHistoryCount();
+            renderHistory();
+            showToast('History cleared');
         } catch (e) {
-            console.warn('Failed to clear history from localStorage:', e);
+            console.warn('Failed to clear history:', e);
+            showToast('Failed to clear history');
         }
-        updateHistoryCount();
-        renderHistory();
-        showToast('History cleared');
     }
 }
 
@@ -594,7 +662,7 @@ function showToast(message, duration = 3000) {
 
 async function returnToCamera(saveResult = false) {
     if (saveResult && currentScanResult) {
-        saveToHistory();
+        await saveToHistory();
         showToast('Scan saved to history');
     }
 
@@ -665,3 +733,47 @@ licenseInput.addEventListener('keypress', (e) => {
 // Start Application - Wait for user to activate
 // ============================================================
 // App starts on license screen, user clicks "Start Scanner" to begin
+
+// ============================================================
+// Settings Management
+// ============================================================
+function initSettings() {
+    // Open settings
+    settingsBtn.addEventListener('click', () => {
+        // Sync inputs with current values
+        stabilityInput.value = stabilityThreshold;
+        stabilityValue.textContent = stabilityThreshold;
+        
+        movementInput.value = movementTolerance;
+        movementValue.textContent = movementTolerance;
+        
+        settingsOverlay.classList.remove('hidden');
+    });
+
+    // Close settings
+    const closeSettings = () => {
+        settingsOverlay.classList.add('hidden');
+    };
+    
+    closeSettingsBtn.addEventListener('click', closeSettings);
+    // saveSettingsBtn is the same as close/confirm for now in this UI
+    if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', closeSettings);
+
+    // Close on click outside
+    settingsOverlay.addEventListener('click', (e) => {
+        if (e.target === settingsOverlay) {
+            closeSettings();
+        }
+    });
+
+    // Real-time updates
+    stabilityInput.addEventListener('input', (e) => {
+        stabilityThreshold = parseInt(e.target.value);
+        stabilityValue.textContent = stabilityThreshold;
+    });
+
+    movementInput.addEventListener('input', (e) => {
+        movementTolerance = parseInt(e.target.value);
+        movementValue.textContent = movementTolerance;
+    });
+}

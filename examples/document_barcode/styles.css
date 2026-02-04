@@ -152,6 +152,9 @@ html, body {
     padding: 1rem;
     background: linear-gradient(to bottom, rgba(50, 50, 52, 0.8), transparent);
     z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
 }
 
 #status-indicator {
@@ -164,6 +167,32 @@ html, body {
     backdrop-filter: blur(8px);
     font-size: 0.85rem;
     font-weight: 500;
+}
+
+.top-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.icon-button {
+    background: rgba(50, 50, 52, 0.7);
+    backdrop-filter: blur(8px);
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    color: var(--white);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: background 0.2s;
+    width: 40px;
+    height: 36px;
+}
+
+.icon-button:hover {
+    background: rgba(50, 50, 52, 0.9);
 }
 
 .status-dot {
@@ -585,9 +614,6 @@ html, body {
 
 /* History Button */
 .history-button {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
     background: rgba(50, 50, 52, 0.7);
     backdrop-filter: blur(8px);
     border: none;
@@ -600,6 +626,7 @@ html, body {
     gap: 0.5rem;
     font-size: 0.9rem;
     transition: background 0.2s;
+    height: 36px;
 }
 
 .history-button:hover {
@@ -612,6 +639,99 @@ html, body {
     border-radius: 1rem;
     font-size: 0.75rem;
     font-weight: 600;
+}
+
+/* Settings Modal */
+.settings-modal {
+    background: var(--dynamsoft-gray);
+    width: 90%;
+    max-width: 500px;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    color: var(--white);
+}
+
+.settings-header {
+    background: var(--dynamsoft-gray-dark);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.settings-header h2 {
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: var(--white);
+}
+
+.settings-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.setting-item label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.setting-item .tooltip {
+    font-weight: 400;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.range-input-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.range-input-group input[type="range"] {
+    flex: 1;
+    cursor: pointer;
+}
+
+.range-input-group span {
+    background: var(--bg-dark);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    min-width: 40px;
+    text-align: center;
+    font-family: monospace;
+}
+
+.settings-footer {
+    padding: 1rem 1.5rem;
+    background: var(--bg-dark);
+    border-top: 1px solid var(--border-color);
+    text-align: right;
 }
 
 /* History Screen */

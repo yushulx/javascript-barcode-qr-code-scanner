@@ -39,6 +39,41 @@
         </div>
     </div>
 
+    <!-- Settings Overlay -->
+    <div id="settings-overlay" class="overlay hidden">
+        <div class="settings-modal">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <button id="close-settings-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="settings-body">
+                <div class="setting-item">
+                    <label for="stability-threshold">
+                        Stability Threshold (Frames)
+                        <span class="tooltip">Number of stable frames required before capture. Higher = more stable but slower.</span>
+                    </label>
+                    <div class="range-input-group">
+                        <input type="range" id="stability-threshold" min="1" max="60" value="12">
+                        <span id="stability-threshold-value">12</span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label for="movement-tolerance">
+                        Movement Tolerance (Pixels)
+                        <span class="tooltip">Maximum allowed pixel movement between frames. Lower = stricter stability.</span>
+                    </label>
+                    <div class="range-input-group">
+                        <input type="range" id="movement-tolerance" min="1" max="50" value="15">
+                        <span id="movement-tolerance-value">15</span>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-footer">
+                <button id="save-settings-btn" class="action-btn primary">Save & Apply</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Camera View -->
     <div id="camera-screen" class="screen hidden">
         <div id="camera-container">
@@ -49,11 +84,16 @@
                     <span class="status-dot"></span>
                     <span id="status-text">Looking for document...</span>
                 </div>
-                <!-- History Button -->
-                <button id="history-btn" class="history-button" title="View History">
-                    <span>📋</span>
-                    <span id="history-count" class="history-count">0</span>
-                </button>
+                <div class="top-actions">
+                    <button id="settings-btn" class="icon-button" title="Settings">
+                        <span>⚙️</span>
+                    </button>
+                    <!-- History Button -->
+                    <button id="history-btn" class="history-button" title="View History">
+                        <span>📋</span>
+                        <span id="history-count" class="history-count">0</span>
+                    </button>
+                </div>
             </div>
         </div>
 
