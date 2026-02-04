@@ -222,10 +222,10 @@ async function startScanning() {
         isCaptureInProgress = false;
 
         // Configure for document detection with original image output
-        await cvr.resetSettings();
-        let settings = await cvr.getSimplifiedSettings("DetectDocumentBoundaries_Default");
+        // await cvr.resetSettings();
+        // let settings = await cvr.getSimplifiedSettings("DetectDocumentBoundaries_Default");
         // settings.outputOriginalImage = true;
-        await cvr.updateSettings("DetectDocumentBoundaries_Default", settings);
+        // await cvr.updateSettings("DetectDocumentBoundaries_Default", settings);
 
         // Set camera enhancer as input
         cvr.setInput(cameraEnhancer);
@@ -415,7 +415,7 @@ async function normalizeDocument(source, points) {
 
 async function readBarcodes(source) {
     try {
-        await cvr.resetSettings();
+        // await cvr.resetSettings();
         const result = await cvr.capture(source, "ReadBarcodes_Default");
 
         const barcodes = [];

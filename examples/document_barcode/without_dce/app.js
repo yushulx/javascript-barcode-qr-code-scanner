@@ -103,7 +103,7 @@ async function activateAndInit(licenseKey) {
         updateInitStatus('Setting up scanner...');
         cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
         await cvr.initSettings("./DBR_and_DDN_detect_PresetTemplates.json");
-        
+
         isSDKReady = true;
         hideInitOverlay();
 
@@ -595,7 +595,7 @@ async function normalizeDocument(source, points, useGrayscale = false) {
 
 async function readBarcodes(source) {
     try {
-        await cvr.resetSettings();
+        // await cvr.resetSettings();
         const result = await cvr.capture(source, "ReadBarcodes_Default");
 
         const barcodes = [];
