@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Auto Document Scanner</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.2.5000/dist/dcv.bundle.min.js"></script>
+</head>
+
+<body>
+    <!-- License Activation Screen -->
+    <div id="license-screen" class="screen">
+        <div class="license-container">
+            <div class="license-header">
+                <h1>📱 Auto Document Scanner</h1>
+                <p class="subtitle">Scan, crop documents and extract barcodes automatically</p>
+            </div>
+            <div class="license-card">
+                <h2>🔑 Activate SDK</h2>
+                <p class="info-text">
+                    Get a License key from <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform" target="_blank">here</a>
+                </p>
+                <div class="input-group">
+                    <input type="text" id="license-input" placeholder="Enter your license key or use default">
+                </div>
+                <button id="activate-btn" class="activate-btn">🚀 Start Scanner</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Initialization Overlay -->
+    <div id="init-overlay" class="overlay hidden">
+        <div class="init-content">
+            <div class="spinner"></div>
+            <h2>Initializing Scanner</h2>
+            <p id="init-status">Loading modules...</p>
+        </div>
+    </div>
+
+    <!-- Main Camera View -->
+    <div id="camera-screen" class="screen hidden">
+        <div id="camera-container">
+            <div id="camera-view">
+                <video id="camera-video" autoplay playsinline muted></video>
+                <canvas id="camera-overlay"></canvas>
+            </div>
+            <!-- Status Indicator -->
+            <div id="status-bar">
+                <div id="status-indicator" class="status-searching">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Looking for document...</span>
+                </div>
+                <!-- History Button -->
+                <button id="history-btn" class="history-button" title="View History">
+                    <span>📋</span>
+                    <span id="history-count" class="history-count">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Control Bar -->
+        <div id="control-bar">
+            <div class="control-left">
+                <div class="control-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="auto-toggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Auto</span>
+                </div>
+                <div class="control-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="color-toggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Color</span>
+                </div>
+            </div>
+
+            <button id="capture-btn" class="capture-button" aria-label="Capture">
+                <div class="capture-inner"></div>
+            </button>
+
+            <div class="control-right">
+                <select id="camera-select" class="camera-dropdown">
+                    <option>Select Camera</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="result-screen" class="screen hidden">
+        <div class="result-header">
+            <h2>Scan Result</h2>
+        </div>
+
+        <div class="result-content">
+            <div class="result-section">
+                <h3>📄 Cropped Document</h3>
+                <div class="image-wrapper">
+                    <img id="cropped-image" src="" alt="Cropped Document">
+                </div>
+            </div>
+
+            <div class="result-section">
+                <h3>📊 Barcode Data</h3>
+                <div id="barcode-results" class="barcode-list">
+                    <p class="no-barcode">No barcodes detected</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-actions">
+            <button id="retake-btn" class="action-btn secondary">
+                <span>↩️</span> Retake
+            </button>
+            <button id="scan-next-btn" class="action-btn primary">
+                <span>💾</span> Save & Next
+            </button>
+        </div>
+    </div>
+
+    <!-- History Screen -->
+    <div id="history-screen" class="screen hidden">
+        <div class="result-header">
+            <button id="history-back-btn" class="back-button">← Back</button>
+            <h2>Scan History</h2>
+            <button id="clear-history-btn" class="clear-button">🗑️ Clear</button>
+        </div>
+
+        <div id="history-content" class="history-content">
+            <p class="no-history">No scans yet. Start scanning to build history.</p>
+        </div>
+    </div>
+
+    <!-- Toast Message -->
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
