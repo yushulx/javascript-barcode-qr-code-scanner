@@ -51,3 +51,6 @@ Built with **Dynamsoft Capture Vision Bundle v3.2.5000**:
 
 The included trial license key is for evaluation purposes. A **30-day free trial** is available at:  
 https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform
+
+## Blog
+[Building an Auto-Scan Document Processing Solution: Automatic Image Cropping and Barcode Extraction](https://www.dynamsoft.com/codepool/auto-scan-document-barcode-processing-solution.html)
