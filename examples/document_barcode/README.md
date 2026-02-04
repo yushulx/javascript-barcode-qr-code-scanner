@@ -8,6 +8,8 @@ https://github.com/user-attachments/assets/54aa1d95-3f7b-43dc-a688-f05099ba3962
 ## Online Demo
 https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_barcode/
 
+https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_barcode/without_dce/
+
 ## Features
 
 - **Auto-Scan Mode**: Automatically detects when a document is stable and captures it hands-free.
