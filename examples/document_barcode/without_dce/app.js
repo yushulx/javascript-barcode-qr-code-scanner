@@ -102,7 +102,8 @@ async function activateAndInit(licenseKey) {
 
         updateInitStatus('Setting up scanner...');
         cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
-
+        await cvr.initSettings("./DBR_and_DDN_detect_PresetTemplates.json");
+        
         isSDKReady = true;
         hideInitOverlay();
 
