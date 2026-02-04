@@ -365,6 +365,11 @@ async function performCapture() {
             showToast('Using full image (no document detected)');
         }
 
+        // Ensure we have a canvas object (normalize source image if needed)
+        if (typeof croppedCanvas.toDataURL !== 'function' && typeof croppedCanvas.toCanvas === 'function') {
+            croppedCanvas = croppedCanvas.toCanvas();
+        }
+
         // Step 2: Read barcodes from the cropped image
         const barcodes = await readBarcodes(croppedCanvas);
 
