@@ -1,0 +1,32 @@
+{
+  "name": "vision-scanner-electron",
+  "version": "1.0.0",
+  "description": "Barcode, MRZ, and Document Scanner – Electron desktop app powered by Dynamsoft Capture Vision",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "keywords": ["barcode", "mrz", "document-scanner", "electron", "dynamsoft"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.dynamsoft.visionscanner",
+    "productName": "Vision Scanner",
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
