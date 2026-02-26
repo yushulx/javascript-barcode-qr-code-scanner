@@ -52,3 +52,5 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `npm run build` | Build optimised production bundle → `dist/` |
 | `npm run preview` | Serve the production build locally |
 
+## Blog
+[How to Build a Barcode, MRZ & Document Scanner Web App with React and JavaScript](https://www.dynamsoft.com/codepool/react-barcode-mrz-document-scanner.html)
