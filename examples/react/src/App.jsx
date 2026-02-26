@@ -161,10 +161,6 @@ export default function App() {
         const { width, height } = imgRef.current;
         overlayCanvas.width = width;
         overlayCanvas.height = height;
-        if (targetCanvasRef.current) {
-          targetCanvasRef.current.width = width;
-          targetCanvasRef.current.height = height;
-        }
 
         setShowImageContainer(true);
 
@@ -252,7 +248,9 @@ export default function App() {
           output += item.text + '\n\n';
           output += JSON.stringify(extractMrzInfo(parsed), null, 2);
         } else if (mode === 'document') {
-          openEditor(imgEl.src);
+          // Pass the source image dimensions so the editor canvas can be
+          // sized correctly — the modal is not yet in the DOM at this point.
+          openEditor(imgEl.src, imgEl.naturalWidth || imgEl.width, imgEl.naturalHeight || imgEl.height);
         }
       }
 
@@ -391,11 +389,8 @@ export default function App() {
           isCapturedRef.current = false;
           await stopScanning();
           const cvs = item.imageData.toCanvas();
-          if (targetCanvasRef.current) {
-            targetCanvasRef.current.width = resolutionRef.current?.width || cvs.width;
-            targetCanvasRef.current.height = resolutionRef.current?.height || cvs.height;
-          }
-          openEditor(cvs.toDataURL());
+          // Pass canvas dimensions so the editor canvas sizes correctly.
+          openEditor(cvs.toDataURL(), cvs.width, cvs.height);
         }
       }
     }
@@ -465,22 +460,38 @@ export default function App() {
   );
 
   // ── Document editor ───────────────────────────────────────────────────────────
-  const openEditor = useCallback((imageDataUrl) => {
+  // editorAbortRef lets us cancel the previous set of canvas listeners when
+  // the editor is re-opened (e.g. scan → close → scan again).
+  const editorAbortRef = useRef(null);
+
+  const openEditor = useCallback((imageDataUrl, imgWidth, imgHeight) => {
+    // Cancel any previous listener set
+    if (editorAbortRef.current) editorAbortRef.current.abort();
+    editorAbortRef.current = new AbortController();
+    const { signal } = editorAbortRef.current;
+
     setEditorImageSrc(imageDataUrl);
     setShowRectifyView(false);
     setShowSaveButton(false);
     setShowEditor(true);
 
-    // Attach drag listeners to target canvas after it renders
+    // The modal renders after the state update; wait for the next paint.
     setTimeout(() => {
       const canvas = targetCanvasRef.current;
-      if (!canvas) return;
+      if (!canvas || signal.aborted) return;
+
+      // ── Size the canvas to exactly match the source image ──────────────
+      // This is critical: without it the canvas defaults to 300×150 and
+      // all detected quad points appear in the wrong positions.
+      canvas.width  = imgWidth;
+      canvas.height = imgHeight;
+
       const ctx = canvas.getContext('2d');
       if (globalPointsRef.current) drawQuad(ctx, canvas, globalPointsRef.current);
 
       const onDown = (e) => updatePoint(e, ctx, canvas);
-      canvas.addEventListener('mousedown', onDown);
-      canvas.addEventListener('touchstart', onDown);
+      canvas.addEventListener('mousedown',  onDown, { signal });
+      canvas.addEventListener('touchstart', onDown, { signal });
     }, 100);
   }, []);
 
