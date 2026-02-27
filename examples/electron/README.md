@@ -131,3 +131,5 @@ ipcMain.handle('save-file', async (event, dataUrl) => {
 });
 ```
 
+## Blog
+[How to Build a Desktop Barcode, MRZ & Document Scanner with Electron and JavaScript](https://www.dynamsoft.com/codepool/electron-barcode-mrz-document-scanner.html)
