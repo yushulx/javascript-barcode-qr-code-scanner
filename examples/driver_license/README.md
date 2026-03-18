@@ -140,7 +140,8 @@ We recommend following this progression:
 - **Foundational Example**: [Try it here](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/driver_license/foundational/)
 - **Ready-to-Use Component**: Built samples in `ready_to_use/samples/`
 
-
+## Blog
+[How to Build a JavaScript Driver's License Scanner: PDF417 & AAMVA Barcode Parsing](https://www.dynamsoft.com/codepool/javascript-driver-license-pdf417-scanner-web.html)
 
 
 
