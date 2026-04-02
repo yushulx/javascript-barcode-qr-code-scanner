@@ -58,3 +58,6 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/multi-document-ca
 
 - [Dynamsoft Capture Vision Bundle v3.2.5000](https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.2.5000/)
 - [jsPDF v2.5.1](https://cdn.jsdelivr.net/npm/jspdf@2.5.1/)
+
+## Blog
+[How to Build a JavaScript Multi-Page Document Scanner Web App with Auto-Capture and PDF Export](https://www.dynamsoft.com/codepool/build-multi-page-document-scanner-web-app.html)
