@@ -2,7 +2,7 @@
 
 A production-ready **React + Vite** web application for scanning barcodes, QR codes, MRZ (Machine-readable Zones on passports and ID cards), and detecting document boundaries — all powered by the [Dynamsoft Capture Vision SDK](https://www.dynamsoft.com/capture-vision/docs/core/introduction/) running entirely in the browser via WebAssembly.
 
-![React barcode, MRZ, and document scanner](https://www.dynamsoft.com/codepool/img/2026/02/react-barcode-mrz-document-scanner.png)
+https://github.com/user-attachments/assets/74c0f43b-32cb-4439-8503-69d0e7f4fdb6
 
 ## Features
 
@@ -52,3 +52,5 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `npm run build` | Build optimised production bundle → `dist/` |
 | `npm run preview` | Serve the production build locally |
 
+## Blog
+[How to Build a Barcode, MRZ & Document Scanner Web App with React and JavaScript](https://www.dynamsoft.com/codepool/react-barcode-mrz-document-scanner.html)

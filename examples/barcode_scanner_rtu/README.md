@@ -28,3 +28,6 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_scanner_r
     - Image files (**PNG**, **JPEG**)
     - **PDF** documents
 - Displays barcode results
+
+## Blog
+[How to Build a Web Barcode Scanner App with HTML5 and JavaScript](https://www.dynamsoft.com/codepool/web-html5-app-javascript-barcode-scanner.html)

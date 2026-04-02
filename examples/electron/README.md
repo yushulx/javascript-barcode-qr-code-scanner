@@ -2,6 +2,7 @@
 
 A cross-platform **Electron** desktop application for scanning barcodes, QR codes, MRZ (Machine-readable Zones on passports and ID cards), and detecting document boundaries — powered by the [Dynamsoft Capture Vision SDK](https://www.dynamsoft.com/capture-vision/docs/core/introduction/) running client-side in Chromium via WebAssembly.
 
+https://github.com/user-attachments/assets/7db2cf1e-b9b6-423c-bd56-68ca9bd7dbd3
 
 ## Features
 
@@ -130,3 +131,5 @@ ipcMain.handle('save-file', async (event, dataUrl) => {
 });
 ```
 
+## Blog
+[How to Build a Desktop Barcode, MRZ & Document Scanner with Electron and JavaScript](https://www.dynamsoft.com/codepool/electron-barcode-mrz-document-scanner.html)
