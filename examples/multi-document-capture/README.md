@@ -4,6 +4,9 @@ A browser-based document scanning application powered by the **Dynamsoft Capture
 
 https://github.com/user-attachments/assets/5a9a9a9d-df9e-4422-886a-eb52105e4b9b
 
+## Online Demo
+https://yushulx.me/javascript-barcode-qr-code-scanner/examples/multi-document-capture/
+
 ## Features
 
 - **License Activation**: Enter your Dynamsoft license key on the start screen (or use the built-in trial key).
