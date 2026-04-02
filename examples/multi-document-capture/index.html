@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamsoft Document Scanner</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.2.5000/dist/dcv.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div id="license-screen" class="screen">
+        <div class="license-wrap">
+            <h1>Dynamsoft Document Scanner</h1>
+            <p class="license-subtitle">Enter your license key to start scanning documents.</p>
+            <label class="license-label" for="license-input">License Key</label>
+            <input id="license-input" class="license-input" type="text" placeholder="Paste license key (leave empty to use default)">
+            <button id="activate-btn" class="license-btn">Start Scanner</button>
+        </div>
+    </div>
+
+    <div id="init-overlay" class="overlay hidden">
+        <div class="init-content">
+            <div class="spinner"></div>
+            <h2>Initializing Scanner</h2>
+            <p id="init-status">Loading modules...</p>
+        </div>
+    </div>
+
+    <div id="settings-overlay" class="overlay hidden">
+        <div class="settings-modal">
+            <div class="settings-header">
+                <h2>Stabilization Settings</h2>
+                <button id="close-settings-btn" class="close-btn" aria-label="Close">&times;</button>
+            </div>
+            <div class="settings-body">
+                <div class="setting-item">
+                    <label for="auto-toggle">Auto Capture</label>
+                    <div class="switch-row">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="auto-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label">Capture when quad is stable</span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label for="iou-threshold">IoU Threshold <span id="iou-threshold-value">0.85</span></label>
+                    <input type="range" id="iou-threshold" min="0.50" max="1.00" step="0.01" value="0.85">
+                </div>
+                <div class="setting-item">
+                    <label for="area-threshold">Area Delta Threshold <span id="area-threshold-value">0.15</span></label>
+                    <input type="range" id="area-threshold" min="0.01" max="0.50" step="0.01" value="0.15">
+                </div>
+                <div class="setting-item">
+                    <label for="stable-frame-count">Stable Frame Count <span id="stable-frame-count-value">3</span></label>
+                    <input type="range" id="stable-frame-count" min="1" max="10" step="1" value="3">
+                </div>
+            </div>
+            <div class="settings-footer">
+                <button id="save-settings-btn" class="action-btn primary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="save-menu" class="save-menu hidden">
+        <button id="save-pdf-btn" class="save-menu-item">Export as PDF</button>
+        <button id="save-images-btn" class="save-menu-item">Export as Images</button>
+    </div>
+
+    <div id="sort-overlay" class="overlay hidden">
+        <div class="sort-modal">
+            <div class="sort-header">
+                <h2>Reorder Pages</h2>
+                <button id="sort-done-btn" class="sort-done-btn">Done</button>
+            </div>
+            <p class="sort-hint">Drag to reorder pages</p>
+            <div id="sort-list" class="sort-list"></div>
+        </div>
+    </div>
+
+    <div id="edit-screen" class="screen hidden">
+        <div class="edit-header"><span>Edit Quad</span></div>
+        <div id="edit-container" class="edit-container">
+            <canvas id="edit-canvas"></canvas>
+        </div>
+        <div class="edit-footer">
+            <button id="edit-cancel-btn" class="edit-footer-btn">Cancel</button>
+            <button id="edit-apply-btn" class="edit-footer-btn primary">Apply</button>
+        </div>
+    </div>
+
+    <div id="scanner-screen" class="screen hidden">
+        <div id="camera-container">
+            <div id="camera-view">
+                <video id="camera-video" autoplay playsinline muted></video>
+                <canvas id="camera-overlay"></canvas>
+            </div>
+
+            <button id="settings-btn" class="icon-button top-right" aria-label="Settings">⚙</button>
+            <div id="auto-indicator" class="auto-indicator hidden">Document auto-captured</div>
+
+            <div id="thumbnail-bar" class="thumbnail-bar hidden"></div>
+        </div>
+
+        <div id="bottom-controls" class="bottom-controls">
+            <button id="gallery-btn" class="ghost-icon" aria-label="Open Gallery">🖼</button>
+            <button id="capture-btn" class="capture-button" aria-label="Capture">
+                <span class="capture-inner"></span>
+            </button>
+            <button id="next-btn" class="ghost-icon disabled" aria-label="Next">➜</button>
+        </div>
+    </div>
+
+    <div id="result-screen" class="screen hidden">
+        <div class="top-action-bar">
+            <button id="continue-btn" class="icon-text-btn">Continue</button>
+            <button id="retake-btn" class="icon-text-btn">Retake</button>
+            <button id="edit-btn" class="icon-text-btn disabled">Edit</button>
+            <button id="rotate-btn" class="icon-text-btn">Rotate</button>
+            <button id="sort-btn" class="icon-text-btn">Sort</button>
+            <button id="save-btn" class="icon-text-btn">Save</button>
+        </div>
+
+        <div id="page-indicator" class="page-indicator">1 / 1</div>
+
+        <div class="result-view">
+            <button id="prev-page-btn" class="pager-btn">‹</button>
+            <canvas id="result-canvas"></canvas>
+            <button id="next-page-btn" class="pager-btn">›</button>
+        </div>
+
+        <div class="filter-bar">
+            <button id="filter-color" class="filter-btn active">Color</button>
+            <button id="filter-grayscale" class="filter-btn">Grayscale</button>
+            <button id="filter-binary" class="filter-btn">Binary</button>
+        </div>
+    </div>
+
+    <input id="gallery-input" type="file" accept="image/*" hidden>
+    <div id="toast" class="toast"></div>
+    <script src="app.js"></script>
+</body>
+</html>
