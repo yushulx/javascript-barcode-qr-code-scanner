@@ -2,6 +2,8 @@
 
 A browser-based document scanning application powered by the **Dynamsoft Capture Vision JS SDK**. No backend required — runs entirely in the browser.
 
+https://github.com/user-attachments/assets/5a9a9a9d-df9e-4422-886a-eb52105e4b9b
+
 ## Features
 
 - **License Activation**: Enter your Dynamsoft license key on the start screen (or use the built-in trial key).
