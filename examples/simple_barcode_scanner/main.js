@@ -17,6 +17,15 @@ let isSDKReady = false;
 let img = new Image();
 let stream;
 
+// SDK activation tracking
+let sdkActivated = {
+    zxing: false,
+    dynamsoft: false,
+    strich: false,
+    scanbot: false,
+    scandit: false
+};
+
 // Strich.io state
 let strichInitialized = false;
 
@@ -26,7 +35,7 @@ let scanbotInitialized = false;
 
 // Scandit state
 let scanditContext = null;
-let scanditBarcodeCapture = null;
+let scanditBarcodeBatch = null;
 let scanditInitialized = false;
 
 // File scanning state
@@ -39,6 +48,16 @@ let cameraScanning = false;
 let cameraAnimationFrame = null;
 let cameraScanResults = [];
 
+// Multi-image state
+let imageFiles = [];
+let currentImageIndex = 0;
+let imageNavigator = document.getElementById('image_navigator');
+let navigatorCounter = document.getElementById('navigator_counter');
+
+// Mode state
+let currentMode = 'default'; // 'default' or 'benchmark'
+let benchmarkRunning = false;
+
 overlayCanvas.addEventListener('dragover', function (event) {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
@@ -47,8 +66,7 @@ overlayCanvas.addEventListener('dragover', function (event) {
 overlayCanvas.addEventListener('drop', function (event) {
     event.preventDefault();
     if (event.dataTransfer.files.length > 0) {
-        let file = event.dataTransfer.files[0];
-        handleFile(file);
+        handleFiles(Array.from(event.dataTransfer.files));
     }
 }, false);
 
@@ -69,6 +87,31 @@ async function selectChanged() {
     }
 }
 
+function handleFiles(files) {
+    if (!files || files.length === 0) return;
+
+    // Separate images from videos
+    const images = files.filter(f => f.type.startsWith('image/'));
+    const videos = files.filter(f => f.type.startsWith('video/'));
+
+    if (images.length > 0) {
+        // Load all images into the navigator
+        stopFileScanning();
+        detectionResult.value = '';
+        fileScanResults = [];
+        videoFileWrapper.style.display = 'none';
+
+        imageFiles = images;
+        currentImageIndex = 0;
+        loadImageAtIndex(0);
+    } else if (videos.length > 0) {
+        // Only handle first video
+        handleFile(videos[0]);
+    } else {
+        alert('Unsupported file type. Please upload image or video files.');
+    }
+}
+
 function handleFile(file) {
     if (!file) return;
 
@@ -77,18 +120,49 @@ function handleFile(file) {
     fileScanResults = [];
     imagePreviewContainer.style.display = 'none';
     videoFileWrapper.style.display = 'none';
+    imageNavigator.style.display = 'none';
+    imageFiles = [];
 
     if (file.type.startsWith('image/')) {
-        let reader = new FileReader();
-        reader.onload = function (e) {
-            loadImage2Canvas(e.target.result);
-        };
-        reader.readAsDataURL(file);
+        imageFiles = [file];
+        currentImageIndex = 0;
+        loadImageAtIndex(0);
     } else if (file.type.startsWith('video/')) {
         loadVideoFile(file);
     } else {
         alert('Unsupported file type. Please upload an image or video file.');
     }
+}
+
+function loadImageAtIndex(index) {
+    const file = imageFiles[index];
+    if (!file) return;
+    let reader = new FileReader();
+    reader.onload = function (e) {
+        loadImage2Canvas(e.target.result);
+    };
+    reader.readAsDataURL(file);
+
+    // Update navigator
+    if (imageFiles.length > 1) {
+        imageNavigator.style.display = 'block';
+        navigatorCounter.textContent = `${index + 1} / ${imageFiles.length}`;
+        const prevBtn = imageNavigator.querySelector('.btn-nav:first-child');
+        const nextBtn = imageNavigator.querySelector('.btn-nav:last-child');
+        prevBtn.disabled = index === 0;
+        nextBtn.disabled = index === imageFiles.length - 1;
+    } else {
+        imageNavigator.style.display = 'none';
+    }
+}
+
+function navigateImage(delta) {
+    const newIndex = currentImageIndex + delta;
+    if (newIndex < 0 || newIndex >= imageFiles.length) return;
+    currentImageIndex = newIndex;
+    detectionResult.value = '';
+    fileScanResults = [];
+    loadImageAtIndex(currentImageIndex);
 }
 
 function loadImage2Canvas(base64Image) {
@@ -123,7 +197,7 @@ function loadImage2Canvas(base64Image) {
                 await scanImageWithScandit(img, context);
             } else {
                 const blob = await fetch(base64Image).then(res => res.blob());
-                let result = await ZXingWASM.readBarcodesFromImageFile(blob);
+                let result = await ZXingWASM.readBarcodes(blob);
                 showFileResultZXing(context, result);
             }
         }
@@ -250,7 +324,7 @@ function showFileResult(context, result) {
             context.stroke();
         }
         if (txts.length > 0) {
-            detectionResult.value += txts.join('\n') + '\n\n';
+            detectionResult.value += `Total: ${txts.length} barcode(s)\n` + txts.join('\n') + '\n\n';
         } else {
             detectionResult.value += 'Recognition Failed\n';
         }
@@ -281,7 +355,7 @@ function showFileResultZXing(context, results) {
                 context.stroke();
             }
         }
-        detectionResult.value += txts.join('\n') + '\n\n';
+        detectionResult.value += `Total: ${txts.length} barcode(s)\n` + txts.join('\n') + '\n\n';
     } else {
         detectionResult.value += 'Nothing found\n';
     }
@@ -301,30 +375,27 @@ document.addEventListener('paste', (event) => {
 
 function sdkChanged() {
     let sdkSelector = document.getElementById('sdk_selector');
-    let dynamsoftLicense = document.getElementById('dynamsoft_license');
-    let strichLicense = document.getElementById('strich_license');
-    let scanbotLicense = document.getElementById('scanbot_license');
-    let scanditLicense = document.getElementById('scandit_license');
-
-    dynamsoftLicense.style.display = 'none';
-    strichLicense.style.display = 'none';
-    scanbotLicense.style.display = 'none';
-    scanditLicense.style.display = 'none';
-
     currentSDK = sdkSelector.value;
-    isSDKReady = false;
 
-    if (currentSDK === 'dynamsoft') {
-        dynamsoftLicense.style.display = 'block';
-    } else if (currentSDK === 'strich') {
-        strichLicense.style.display = 'block';
-    } else if (currentSDK === 'scanbot') {
-        scanbotLicense.style.display = 'block';
-    } else if (currentSDK === 'scandit') {
-        scanditLicense.style.display = 'block';
-    } else {
-        initZXing();
+    // Clear scan results when switching SDKs
+    detectionResult.value = '';
+    scanResult.value = '';
+
+    // If already activated, just switch to it
+    if (sdkActivated[currentSDK]) {
+        isSDKReady = true;
+        return;
     }
+
+    // ZXing is free, auto-activate
+    if (currentSDK === 'zxing') {
+        initZXing();
+        return;
+    }
+
+    // Not activated — prompt user to open settings
+    isSDKReady = false;
+    openSettings();
 }
 
 async function initZXing() {
@@ -334,6 +405,7 @@ async function initZXing() {
         }
         isSDKReady = true;
         currentSDK = 'zxing';
+        sdkActivated.zxing = true;
         console.log('ZXing SDK ready');
     } catch (ex) {
         console.error(ex);
@@ -342,85 +414,113 @@ async function initZXing() {
 }
 
 async function activateDynamsoft() {
+    if (sdkActivated.dynamsoft) return;
     let divElement = document.getElementById('dynamsoft_license_key');
     let licenseKey = divElement.value == '' ? divElement.placeholder : divElement.value;
+
+    let btn = document.getElementById('dynamsoft_activate_btn');
+    btn.disabled = true;
+    btn.textContent = 'Activating...';
 
     try {
         await Dynamsoft.License.LicenseManager.initLicense(licenseKey, true);
         await Dynamsoft.Core.CoreModule.loadWasm(['DBR']);
         cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
 
-        isSDKReady = true;
-        currentSDK = 'dynamsoft';
+        sdkActivated.dynamsoft = true;
+        saveLicenseKey('dynamsoft', licenseKey);
+        updateSDKBadge('dynamsoft');
+        if (currentSDK === 'dynamsoft') {
+            isSDKReady = true;
+        }
         console.log('Dynamsoft SDK activated');
+        btn.textContent = 'Activated';
     }
     catch (ex) {
         console.error(ex);
         alert('Failed to activate Dynamsoft SDK.');
+        btn.disabled = false;
+        btn.textContent = 'Activate';
     }
 }
 
 async function activateStrich() {
+    if (sdkActivated.strich) return;
     let licenseKey = document.getElementById('strich_license_key').value.trim();
     if (!licenseKey) {
         alert('Please enter a Strich.io license key.');
         return;
     }
 
+    let btn = document.getElementById('strich_activate_btn');
+    btn.disabled = true;
+    btn.textContent = 'Activating...';
+
     try {
         await strich.StrichSDK.initialize(licenseKey);
         strichInitialized = true;
-        isSDKReady = true;
-        currentSDK = 'strich';
+        sdkActivated.strich = true;
+        saveLicenseKey('strich', licenseKey);
+        updateSDKBadge('strich');
+        if (currentSDK === 'strich') {
+            isSDKReady = true;
+        }
         console.log('Strich.io SDK initialized');
+        btn.textContent = 'Activated';
     } catch (ex) {
         console.error(ex);
         alert('Failed to initialize Strich.io SDK: ' + (ex.message || ex));
+        btn.disabled = false;
+        btn.textContent = 'Activate';
     }
 }
+
+const STRICH_SYMBOLOGIES = ['ean13', 'ean8', 'code128', 'code39', 'qr', 'upca', 'upce', 'itf', 'codabar', 'datamatrix', 'pdf417', 'aztec'];
 
 async function scanImageWithStrich(imageElement, context) {
     if (!strichInitialized) {
         throw new Error('Strich SDK not initialized');
     }
 
-    const reader = new strich.BarcodeReader({
-        selector: null,
-        engine: {
-            symbologies: ['ean13', 'ean8', 'code128', 'code39', 'qr', 'upca', 'upce', 'itf', 'codabar', 'datamatrix', 'pdf417', 'aztec'],
-            duplicateInterval: 0
-        }
+    const detections = await strich.ImageScanner.scan(imageElement, {
+        engine: { symbologies: STRICH_SYMBOLOGIES }
     });
-
-    await reader.initialize();
-    const detections = await reader.detectFromImage(imageElement);
-    await reader.destroy();
 
     if (detections && detections.length > 0) {
         let txts = [];
         for (const detection of detections) {
-            txts.push(detection.text);
+            txts.push(detection.data);
 
-            if (detection.corners) {
+            if (detection.quadrilateral && detection.quadrilateral.points) {
+                const pts = detection.quadrilateral.points;
                 context.strokeStyle = '#ff0000';
                 context.lineWidth = 2;
                 context.beginPath();
-                context.moveTo(detection.corners[0].x, detection.corners[0].y);
-                context.lineTo(detection.corners[1].x, detection.corners[1].y);
-                context.lineTo(detection.corners[2].x, detection.corners[2].y);
-                context.lineTo(detection.corners[3].x, detection.corners[3].y);
+                context.moveTo(pts[0].x, pts[0].y);
+                context.lineTo(pts[1].x, pts[1].y);
+                context.lineTo(pts[2].x, pts[2].y);
+                context.lineTo(pts[3].x, pts[3].y);
                 context.closePath();
                 context.stroke();
             }
         }
-        detectionResult.value = txts.join('\n') + '\n\n';
+        detectionResult.value = `Total: ${txts.length} barcode(s)\n` + txts.join('\n') + '\n\n';
     } else {
         detectionResult.value = 'Nothing found\n';
     }
 }
 
 async function activateScanbot() {
+    if (sdkActivated.scanbot) return;
     let licenseKey = document.getElementById('scanbot_license_key').value.trim();
+    // Save the raw key (with literal \n) before converting
+    let rawKey = licenseKey;
+    // Convert literal \n sequences to actual newlines (common in Scanbot license keys)
+    licenseKey = licenseKey.replace(/\\n/g, '\n');
+
+    let btn = document.getElementById('scanbot_activate_btn');
+    btn.disabled = true;
+    btn.textContent = 'Activating...';
 
     try {
         scanbotSDK = await ScanbotSDK.initialize({
@@ -428,12 +528,19 @@ async function activateScanbot() {
             enginePath: 'https://cdn.jsdelivr.net/npm/scanbot-web-sdk@8/bundle/bin/complete/'
         });
         scanbotInitialized = true;
-        isSDKReady = true;
-        currentSDK = 'scanbot';
+        sdkActivated.scanbot = true;
+        saveLicenseKey('scanbot', rawKey);
+        updateSDKBadge('scanbot');
+        if (currentSDK === 'scanbot') {
+            isSDKReady = true;
+        }
         console.log('Scanbot SDK initialized');
+        btn.textContent = 'Activated';
     } catch (ex) {
         console.error(ex);
         alert('Failed to initialize Scanbot SDK: ' + (ex.message || ex));
+        btn.disabled = false;
+        btn.textContent = 'Activate';
     }
 }
 
@@ -469,18 +576,23 @@ async function scanImageWithScanbot(imageElement, context) {
                 context.stroke();
             }
         }
-        detectionResult.value = txts.join('\n') + '\n\n';
+        detectionResult.value = `Total: ${txts.length} barcode(s)\n` + txts.join('\n') + '\n\n';
     } else {
         detectionResult.value = 'Nothing found\n';
     }
 }
 
 async function activateScandit() {
+    if (sdkActivated.scandit) return;
     let licenseKey = document.getElementById('scandit_license_key').value.trim();
     if (!licenseKey) {
         alert('Please enter a Scandit license key.');
         return;
     }
+
+    let btn = document.getElementById('scandit_activate_btn');
+    btn.disabled = true;
+    btn.textContent = 'Activating...';
 
     try {
         const { DataCaptureContext } = ScanditCore;
@@ -491,24 +603,31 @@ async function activateScandit() {
             moduleLoaders: [barcodeCaptureLoader()]
         });
 
-        const { BarcodeCapture, BarcodeCaptureSettings, Symbology } = ScanditBarcode;
-        const settings = new BarcodeCaptureSettings();
+        const { BarcodeBatch, BarcodeBatchSettings, Symbology } = ScanditBarcode;
+        const settings = new BarcodeBatchSettings();
         settings.enableSymbologies([
             Symbology.Code128, Symbology.Code39, Symbology.QR,
             Symbology.EAN8, Symbology.UPCE, Symbology.EAN13UPCA,
             Symbology.InterleavedTwoOfFive, Symbology.Codabar, Symbology.DataMatrix,
             Symbology.PDF417, Symbology.Aztec
         ]);
-        scanditBarcodeCapture = await BarcodeCapture.forContext(scanditContext, settings);
-        await scanditBarcodeCapture.setEnabled(false);
+        scanditBarcodeBatch = await BarcodeBatch.forContext(scanditContext, settings);
+        await scanditBarcodeBatch.setEnabled(false);
 
         scanditInitialized = true;
-        isSDKReady = true;
-        currentSDK = 'scandit';
+        sdkActivated.scandit = true;
+        saveLicenseKey('scandit', licenseKey);
+        updateSDKBadge('scandit');
+        if (currentSDK === 'scandit') {
+            isSDKReady = true;
+        }
         console.log('Scandit SDK initialized');
+        btn.textContent = 'Activated';
     } catch (ex) {
         console.error(ex);
         alert('Failed to initialize Scandit SDK: ' + (ex.message || ex));
+        btn.disabled = false;
+        btn.textContent = 'Activate';
     }
 }
 
@@ -518,62 +637,95 @@ async function scanImageWithScandit(imageElement, context) {
     }
 
     const { ImageFrameSource, FrameSourceState } = ScanditCore;
+    const { SymbologyDescription } = ScanditBarcode;
 
-    let capturedBarcode = null;
+    let capturedBarcodes = [];
     const listener = {
-        didScan: async (barcodeCaptureMode, session) => {
-            capturedBarcode = session.newlyRecognizedBarcode;
-            await scanditBarcodeCapture.setEnabled(false);
+        didUpdateSession: async (barcodeBatch, session) => {
+            const trackedBarcodes = session.addedTrackedBarcodes;
+            if (trackedBarcodes) {
+                for (const tracked of trackedBarcodes) {
+                    capturedBarcodes.push(tracked);
+                }
+            }
         }
     };
-    scanditBarcodeCapture.addListener(listener);
+    scanditBarcodeBatch.addListener(listener);
 
     const imageFrameSource = await ImageFrameSource.fromImage(imageElement);
     await scanditContext.setFrameSource(imageFrameSource);
-    await scanditBarcodeCapture.setEnabled(true);
+    await scanditBarcodeBatch.setEnabled(true);
     await imageFrameSource.switchToDesiredState(FrameSourceState.On);
 
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    scanditBarcodeCapture.removeListener(listener);
-    await scanditBarcodeCapture.setEnabled(false);
+    scanditBarcodeBatch.removeListener(listener);
+    await scanditBarcodeBatch.setEnabled(false);
 
-    if (capturedBarcode) {
-        let txts = [capturedBarcode.data];
-        detectionResult.value = txts.join('\n') + '\n\n';
+    if (capturedBarcodes.length > 0) {
+        let txts = [];
+        for (const tracked of capturedBarcodes) {
+            const barcode = tracked.barcode;
+            let type = barcode.symbology ? new SymbologyDescription(barcode.symbology).readableName : 'Unknown';
+            txts.push(`[${type}] ${barcode.data}`);
 
-        if (capturedBarcode.location && capturedBarcode.location.quadrilateral) {
-            const quad = capturedBarcode.location.quadrilateral;
-            context.strokeStyle = '#ff0000';
-            context.lineWidth = 2;
-            context.beginPath();
-            context.moveTo(quad.topLeft.x, quad.topLeft.y);
-            context.lineTo(quad.topRight.x, quad.topRight.y);
-            context.lineTo(quad.bottomRight.x, quad.bottomRight.y);
-            context.lineTo(quad.bottomLeft.x, quad.bottomLeft.y);
-            context.closePath();
-            context.stroke();
+            const quad = tracked.location;
+            if (quad) {
+                context.strokeStyle = '#ff0000';
+                context.lineWidth = 2;
+                context.beginPath();
+                context.moveTo(quad.topLeft.x, quad.topLeft.y);
+                context.lineTo(quad.topRight.x, quad.topRight.y);
+                context.lineTo(quad.bottomRight.x, quad.bottomRight.y);
+                context.lineTo(quad.bottomLeft.x, quad.bottomLeft.y);
+                context.closePath();
+                context.stroke();
+            }
         }
+        detectionResult.value = `Total: ${txts.length} barcode(s)\n` + txts.join('\n') + '\n\n';
     } else {
         detectionResult.value = 'Nothing found\n';
     }
 }
 
+// ========== License Key Caching ==========
+function saveLicenseKey(sdk, key) {
+    try { localStorage.setItem('barcodeScanner_' + sdk + '_license', key); } catch (e) {}
+}
+
+function loadLicenseKey(sdk) {
+    try { return localStorage.getItem('barcodeScanner_' + sdk + '_license') || ''; } catch (e) { return ''; }
+}
+
+function restoreLicenseKeys() {
+    ['dynamsoft', 'strich', 'scanbot', 'scandit'].forEach(sdk => {
+        let saved = loadLicenseKey(sdk);
+        if (saved) {
+            let input = document.getElementById(sdk + '_license_key');
+            if (input) input.value = saved;
+        }
+    });
+}
+
+async function autoActivateSavedSDKs() {
+    // Only restore license keys to input fields; do NOT auto-activate.
+    // User must click Activate button manually.
+}
+
 window.addEventListener('DOMContentLoaded', function () {
+    restoreLicenseKeys();
     initZXing();
+    autoActivateSavedSDKs();
 });
 
 document.getElementById('pick_file').addEventListener('change', function () {
-    let currentFile = this.files[0];
-    if (currentFile == null) {
-        return;
-    }
-    handleFile(currentFile);
+    if (this.files.length === 0) return;
+    handleFiles(Array.from(this.files));
 });
 
 async function scanVideoFrameZXing(tempCtx, tempCanvas, ctx) {
     let imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-    let result = await ZXingWASM.readBarcodesFromImageData(imageData);
+    let result = await ZXingWASM.readBarcodes(imageData);
 
     if (result && result.length > 0) {
         for (let barcode of result) {
@@ -628,33 +780,27 @@ async function scanVideoFrameDynamsoft(canvas, ctx) {
 async function scanVideoFrameStrich(canvas, ctx) {
     if (!strichInitialized) return;
 
-    const reader = new strich.BarcodeReader({
-        selector: null,
-        engine: {
-            symbologies: ['ean13', 'ean8', 'code128', 'code39', 'qr', 'upca', 'upce', 'itf', 'codabar', 'datamatrix', 'pdf417', 'aztec'],
-            duplicateInterval: 2000
-        }
+    const dataUrl = canvas.toDataURL('image/png');
+    const detections = await strich.ImageScanner.scan(dataUrl, {
+        engine: { symbologies: STRICH_SYMBOLOGIES }
     });
-
-    await reader.initialize();
-    const detections = await reader.detectFromCanvas(canvas);
-    await reader.destroy();
 
     if (detections && detections.length > 0) {
         for (const detection of detections) {
-            let type = detection.symbology || 'Unknown';
-            let key = `[${type}] ${detection.text}`;
+            let type = detection.typeName || 'Unknown';
+            let key = `[${type}] ${detection.data}`;
             if (!fileScanResults.includes(key)) {
                 fileScanResults.push(key);
 
-                if (detection.corners) {
+                if (detection.quadrilateral && detection.quadrilateral.points) {
+                    const pts = detection.quadrilateral.points;
                     ctx.strokeStyle = '#00ff00';
                     ctx.lineWidth = 3;
                     ctx.beginPath();
-                    ctx.moveTo(detection.corners[0].x, detection.corners[0].y);
-                    ctx.lineTo(detection.corners[1].x, detection.corners[1].y);
-                    ctx.lineTo(detection.corners[2].x, detection.corners[2].y);
-                    ctx.lineTo(detection.corners[3].x, detection.corners[3].y);
+                    ctx.moveTo(pts[0].x, pts[0].y);
+                    ctx.lineTo(pts[1].x, pts[1].y);
+                    ctx.lineTo(pts[2].x, pts[2].y);
+                    ctx.lineTo(pts[3].x, pts[3].y);
                     ctx.closePath();
                     ctx.stroke();
                 }
@@ -700,33 +846,36 @@ async function scanVideoFrameScandit(canvas, ctx) {
     const { ImageFrameSource, FrameSourceState } = ScanditCore;
 
     const listener = {
-        didScan: async (barcodeCaptureMode, session) => {
-            const barcode = session.newlyRecognizedBarcode;
-            if (barcode) {
+        didUpdateSession: async (barcodeBatch, session) => {
+            const trackedBarcodes = session.addedTrackedBarcodes;
+            if (trackedBarcodes) {
                 let { SymbologyDescription } = ScanditBarcode;
-                let type = barcode.symbology ? new SymbologyDescription(barcode.symbology).readableName : 'Unknown';
-                let key = `[${type}] ${barcode.data}`;
-                if (!fileScanResults.includes(key)) {
-                    fileScanResults.push(key);
+                for (const tracked of trackedBarcodes) {
+                    const barcode = tracked.barcode;
+                    let type = barcode.symbology ? new SymbologyDescription(barcode.symbology).readableName : 'Unknown';
+                    let key = `[${type}] ${barcode.data}`;
+                    if (!fileScanResults.includes(key)) {
+                        fileScanResults.push(key);
 
-                    if (barcode.location && barcode.location.quadrilateral) {
-                        const quad = barcode.location.quadrilateral;
-                        ctx.strokeStyle = '#00ff00';
-                        ctx.lineWidth = 3;
-                        ctx.beginPath();
-                        ctx.moveTo(quad.topLeft.x, quad.topLeft.y);
-                        ctx.lineTo(quad.topRight.x, quad.topRight.y);
-                        ctx.lineTo(quad.bottomRight.x, quad.bottomRight.y);
-                        ctx.lineTo(quad.bottomLeft.x, quad.bottomLeft.y);
-                        ctx.closePath();
-                        ctx.stroke();
+                        const quad = tracked.location;
+                        if (quad) {
+                            ctx.strokeStyle = '#00ff00';
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.moveTo(quad.topLeft.x, quad.topLeft.y);
+                            ctx.lineTo(quad.topRight.x, quad.topRight.y);
+                            ctx.lineTo(quad.bottomRight.x, quad.bottomRight.y);
+                            ctx.lineTo(quad.bottomLeft.x, quad.bottomLeft.y);
+                            ctx.closePath();
+                            ctx.stroke();
+                        }
                     }
                 }
                 detectionResult.value = fileScanResults.join('\n') + '\n\n';
             }
         }
     };
-    scanditBarcodeCapture.addListener(listener);
+    scanditBarcodeBatch.addListener(listener);
 
     const dataUrl = canvas.toDataURL('image/png');
     const tempImg = new Image();
@@ -735,13 +884,13 @@ async function scanVideoFrameScandit(canvas, ctx) {
 
     const imageFrameSource = await ImageFrameSource.fromImage(tempImg);
     await scanditContext.setFrameSource(imageFrameSource);
-    await scanditBarcodeCapture.setEnabled(true);
+    await scanditBarcodeBatch.setEnabled(true);
     await imageFrameSource.switchToDesiredState(FrameSourceState.On);
 
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    scanditBarcodeCapture.removeListener(listener);
-    await scanditBarcodeCapture.setEnabled(false);
+    scanditBarcodeBatch.removeListener(listener);
+    await scanditBarcodeBatch.setEnabled(false);
 }
 
 async function initCamera() {
@@ -816,10 +965,8 @@ function startCameraScanning() {
             }
 
             try {
-                ctx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
-
                 if (currentSDK === 'dynamsoft') {
-                    let result = await cvr.capture(canvas, 'ReadBarcodes_Default');
+                    let result = await cvr.capture(canvas.toDataURL('image/jpeg'), 'ReadBarcodes_Default');
                     if (cameraScanning) {
                         showCameraResult(result);
                     }
@@ -830,7 +977,7 @@ function startCameraScanning() {
                 } else if (currentSDK === 'scandit') {
                     await scanCameraFrameScandit(canvas, frameCtx);
                 } else {
-                    let result = await ZXingWASM.readBarcodesFromImageData(frameCtx.getImageData(0, 0, canvas.width, canvas.height));
+                    let result = await ZXingWASM.readBarcodes(frameCtx.getImageData(0, 0, canvas.width, canvas.height));
                     if (cameraScanning) {
                         showCameraResultZXing(result);
                     }
@@ -875,17 +1022,10 @@ function stopCamera() {
 async function scanCameraFrameStrich(canvas, canvasCtx) {
     if (!strichInitialized) return;
 
-    const reader = new strich.BarcodeReader({
-        selector: null,
-        engine: {
-            symbologies: ['ean13', 'ean8', 'code128', 'code39', 'qr', 'upca', 'upce', 'itf', 'codabar', 'datamatrix', 'pdf417', 'aztec'],
-            duplicateInterval: 2000
-        }
+    const dataUrl = canvas.toDataURL('image/png');
+    const detections = await strich.ImageScanner.scan(dataUrl, {
+        engine: { symbologies: STRICH_SYMBOLOGIES }
     });
-
-    await reader.initialize();
-    const detections = await reader.detectFromCanvas(canvas);
-    await reader.destroy();
 
     if (detections && detections.length > 0 && cameraScanning) {
         showCameraResultStrich(detections);
@@ -897,21 +1037,22 @@ function showCameraResultStrich(detections) {
     let ctx = cameraOverlay.getContext('2d');
 
     for (const detection of detections) {
-        let type = detection.symbology || 'Unknown';
-        let key = `[${type}] ${detection.text}`;
+        let type = detection.typeName || 'Unknown';
+        let key = `[${type}] ${detection.data}`;
         if (!cameraScanResults.includes(key)) {
             cameraScanResults.push(key);
         }
-        txts.push(detection.text);
+        txts.push(detection.data);
 
-        if (detection.corners) {
+        if (detection.quadrilateral && detection.quadrilateral.points) {
+            const pts = detection.quadrilateral.points;
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.moveTo(detection.corners[0].x, detection.corners[0].y);
-            ctx.lineTo(detection.corners[1].x, detection.corners[1].y);
-            ctx.lineTo(detection.corners[2].x, detection.corners[2].y);
-            ctx.lineTo(detection.corners[3].x, detection.corners[3].y);
+            ctx.moveTo(pts[0].x, pts[0].y);
+            ctx.lineTo(pts[1].x, pts[1].y);
+            ctx.lineTo(pts[2].x, pts[2].y);
+            ctx.lineTo(pts[3].x, pts[3].y);
             ctx.closePath();
             ctx.stroke();
         }
@@ -930,12 +1071,16 @@ async function scanCameraFrameScanbot(canvas, canvasCtx) {
 
     if (result && result.barcodes && result.barcodes.length > 0 && cameraScanning) {
         showCameraResultScanbot(result.barcodes);
+    } else if (cameraScanning) {
+        let ctx = cameraOverlay.getContext('2d');
+        ctx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
     }
 }
 
 function showCameraResultScanbot(barcodes) {
     let txts = [];
     let ctx = cameraOverlay.getContext('2d');
+    ctx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
 
     for (const barcode of barcodes) {
         let type = barcode.format || 'Unknown';
@@ -972,35 +1117,39 @@ async function scanCameraFrameScandit(canvas, canvasCtx) {
     ctx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
 
     const listener = {
-        didScan: async (barcodeCaptureMode, session) => {
-            const barcode = session.newlyRecognizedBarcode;
-            if (barcode && cameraScanning) {
+        didUpdateSession: async (barcodeBatch, session) => {
+            const trackedBarcodes = session.addedTrackedBarcodes;
+            if (trackedBarcodes && cameraScanning) {
                 let { SymbologyDescription } = ScanditBarcode;
-                let type = barcode.symbology ? new SymbologyDescription(barcode.symbology).readableName : 'Unknown';
-                let key = `[${type}] ${barcode.data}`;
-                if (!cameraScanResults.includes(key)) {
-                    cameraScanResults.push(key);
-                }
-
                 ctx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
-                if (barcode.location && barcode.location.quadrilateral) {
-                    const quad = barcode.location.quadrilateral;
-                    ctx.strokeStyle = '#00ff00';
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    ctx.moveTo(quad.topLeft.x, quad.topLeft.y);
-                    ctx.lineTo(quad.topRight.x, quad.topRight.y);
-                    ctx.lineTo(quad.bottomRight.x, quad.bottomRight.y);
-                    ctx.lineTo(quad.bottomLeft.x, quad.bottomLeft.y);
-                    ctx.closePath();
-                    ctx.stroke();
+
+                for (const tracked of trackedBarcodes) {
+                    const barcode = tracked.barcode;
+                    let type = barcode.symbology ? new SymbologyDescription(barcode.symbology).readableName : 'Unknown';
+                    let key = `[${type}] ${barcode.data}`;
+                    if (!cameraScanResults.includes(key)) {
+                        cameraScanResults.push(key);
+                    }
+
+                    const quad = tracked.location;
+                    if (quad) {
+                        ctx.strokeStyle = '#00ff00';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(quad.topLeft.x, quad.topLeft.y);
+                        ctx.lineTo(quad.topRight.x, quad.topRight.y);
+                        ctx.lineTo(quad.bottomRight.x, quad.bottomRight.y);
+                        ctx.lineTo(quad.bottomLeft.x, quad.bottomLeft.y);
+                        ctx.closePath();
+                        ctx.stroke();
+                    }
                 }
 
                 scanResult.value = cameraScanResults.join('\n') + '\n\n';
             }
         }
     };
-    scanditBarcodeCapture.addListener(listener);
+    scanditBarcodeBatch.addListener(listener);
 
     const dataUrl = canvas.toDataURL('image/png');
     const tempImg = new Image();
@@ -1009,13 +1158,13 @@ async function scanCameraFrameScandit(canvas, canvasCtx) {
 
     const imageFrameSource = await ImageFrameSource.fromImage(tempImg);
     await scanditContext.setFrameSource(imageFrameSource);
-    await scanditBarcodeCapture.setEnabled(true);
+    await scanditBarcodeBatch.setEnabled(true);
     await imageFrameSource.switchToDesiredState(FrameSourceState.On);
 
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    scanditBarcodeCapture.removeListener(listener);
-    await scanditBarcodeCapture.setEnabled(false);
+    scanditBarcodeBatch.removeListener(listener);
+    await scanditBarcodeBatch.setEnabled(false);
 }
 
 function showCameraResult(result) {
@@ -1023,6 +1172,7 @@ function showCameraResult(result) {
     let items = result.items;
 
     let ctx = cameraOverlay.getContext('2d');
+    ctx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
 
     if (items.length > 0) {
         for (var i = 0; i < items.length; ++i) {
@@ -1058,6 +1208,7 @@ function showCameraResultZXing(results) {
     let txts = [];
 
     let ctx = cameraOverlay.getContext('2d');
+    ctx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
 
     if (results && results.length > 0) {
         for (let result of results) {
@@ -1082,4 +1233,407 @@ function showCameraResultZXing(results) {
         }
         scanResult.value = cameraScanResults.join('\n') + '\n\n';
     }
+}
+
+// ========== Settings Modal ==========
+function openSettings() {
+    document.getElementById('settings_modal').style.display = 'flex';
+    updateAllBadges();
+}
+
+function closeSettings() {
+    document.getElementById('settings_modal').style.display = 'none';
+
+    // If user activated the currently selected SDK while settings was open, enable it
+    if (sdkActivated[currentSDK]) {
+        isSDKReady = true;
+    }
+}
+
+function updateSDKBadge(sdkName) {
+    let badge = document.getElementById(sdkName + '_status');
+    if (!badge) return;
+    if (sdkActivated[sdkName]) {
+        badge.className = 'sdk-badge badge-active';
+        badge.textContent = 'Activated';
+    } else {
+        badge.className = 'sdk-badge badge-inactive';
+        badge.textContent = 'Not Activated';
+    }
+    updateBenchmarkCheckboxes();
+}
+
+function updateAllBadges() {
+    ['dynamsoft', 'strich', 'scanbot', 'scandit'].forEach(updateSDKBadge);
+}
+
+function updateBenchmarkCheckboxes() {
+    let checkboxes = document.querySelectorAll('#benchmark_sdk_checkboxes .checkbox-label');
+    checkboxes.forEach(label => {
+        let cb = label.querySelector('input');
+        let sdk = cb.value;
+        if (sdk === 'zxing') {
+            // ZXing is always available
+            label.classList.remove('cb-disabled');
+            cb.disabled = false;
+        } else if (sdkActivated[sdk]) {
+            label.classList.remove('cb-disabled');
+            cb.disabled = false;
+        } else {
+            label.classList.add('cb-disabled');
+            cb.disabled = true;
+            cb.checked = false;
+        }
+    });
+}
+
+// Close modal on overlay click
+document.addEventListener('click', function(e) {
+    if (e.target.id === 'settings_modal') {
+        closeSettings();
+    }
+});
+
+// ========== Mode Toggle ==========
+function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('mode_default').classList.toggle('toggle-active', mode === 'default');
+    document.getElementById('mode_benchmark').classList.toggle('toggle-active', mode === 'benchmark');
+
+    let defaultResultSection = document.getElementById('default_result_section');
+    let benchmarkSection = document.getElementById('benchmark_section');
+    let sdkSelectorGroup = document.getElementById('sdk_selector_group');
+
+    if (mode === 'benchmark') {
+        defaultResultSection.style.display = 'none';
+        benchmarkSection.style.display = 'block';
+        sdkSelectorGroup.style.display = 'none';
+        updateBenchmarkCheckboxes();
+    } else {
+        defaultResultSection.style.display = 'block';
+        benchmarkSection.style.display = 'none';
+        sdkSelectorGroup.style.display = 'block';
+    }
+}
+
+// ========== Benchmark ==========
+function getSelectedBenchmarkSDKs() {
+    let checkboxes = document.querySelectorAll('#benchmark_sdk_checkboxes input:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+async function runBenchmark() {
+    if (benchmarkRunning) return;
+
+    // Need at least one image loaded
+    if (!imageFiles || imageFiles.length === 0) {
+        if (!img.src || !img.complete || img.naturalWidth === 0) {
+            alert('Please load one or more images first.');
+            return;
+        }
+    }
+
+    let sdks = getSelectedBenchmarkSDKs();
+    if (sdks.length === 0) {
+        alert('Please select at least one SDK to benchmark.');
+        return;
+    }
+
+    // Check all selected SDKs are activated
+    for (let sdk of sdks) {
+        if (!sdkActivated[sdk]) {
+            alert(`${sdk} is not activated. Please activate it in Settings first.`);
+            return;
+        }
+    }
+
+    benchmarkRunning = true;
+    let progressDiv = document.getElementById('benchmark_progress');
+    let progressBar = document.getElementById('benchmark_progress_bar');
+    let progressText = document.getElementById('benchmark_progress_text');
+    let resultsContainer = document.getElementById('benchmark_results_container');
+
+    progressDiv.style.display = 'block';
+    progressBar.style.width = '0%';
+    resultsContainer.innerHTML = '';
+
+    const sdkLabels = {zxing:'ZXing', dynamsoft:'Dynamsoft', strich:'Strich.io', scanbot:'Scanbot', scandit:'Scandit'};
+
+    // Build list of images to benchmark
+    let imagesToBenchmark = [];
+    if (imageFiles && imageFiles.length > 0) {
+        for (let i = 0; i < imageFiles.length; i++) {
+            imagesToBenchmark.push({ file: imageFiles[i], name: imageFiles[i].name, index: i });
+        }
+    } else {
+        // Single image from img element (e.g. pasted or drag-dropped)
+        imagesToBenchmark.push({ file: null, name: 'Current Image', index: 0 });
+    }
+
+    let totalSteps = imagesToBenchmark.length * sdks.length;
+    let stepsDone = 0;
+
+    // Results: array of { imageName, imageIndex, sdkResults: [ { sdk, sdkLabel, barcodes, time, error } ] }
+    let allResults = [];
+
+    for (let imgInfo of imagesToBenchmark) {
+        // Load image into a temp Image element
+        let testImg;
+        if (imgInfo.file) {
+            testImg = await loadImageFromFile(imgInfo.file);
+        } else {
+            testImg = img; // Use global img
+        }
+
+        let imageResult = { imageName: imgInfo.name, imageIndex: imgInfo.index, sdkResults: [] };
+
+        for (let sdk of sdks) {
+            stepsDone++;
+            let sdkLabel = sdkLabels[sdk];
+            progressText.textContent = `Image ${imgInfo.index + 1}/${imagesToBenchmark.length}: ${sdkLabel}... (${stepsDone}/${totalSteps})`;
+            progressBar.style.width = ((stepsDone / totalSteps) * 100) + '%';
+
+            let result = await benchmarkSingleSDK(sdk, testImg);
+            imageResult.sdkResults.push({ sdk, sdkLabel, ...result });
+        }
+
+        allResults.push(imageResult);
+    }
+
+    progressBar.style.width = '100%';
+    progressText.textContent = 'Done!';
+
+    renderBenchmarkResults(allResults, sdks.map(s => sdkLabels[s]));
+    benchmarkRunning = false;
+
+    setTimeout(() => { progressDiv.style.display = 'none'; }, 1500);
+}
+
+function loadImageFromFile(file) {
+    return new Promise((resolve, reject) => {
+        let reader = new FileReader();
+        reader.onload = function (e) {
+            let tempImg = new Image();
+            tempImg.onload = () => resolve(tempImg);
+            tempImg.onerror = () => reject(new Error('Failed to load image: ' + file.name));
+            tempImg.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('Failed to read file: ' + file.name));
+        reader.readAsDataURL(file);
+    });
+}
+
+async function benchmarkSingleSDK(sdk, testImg) {
+    let barcodes = []; // Array of { type, text }
+    let startTime = performance.now();
+
+    try {
+        if (sdk === 'zxing') {
+            const blob = await fetch(testImg.src).then(res => res.blob());
+            let result = await ZXingWASM.readBarcodes(blob);
+            if (result && result.length > 0) {
+                for (let r of result) {
+                    barcodes.push({ type: r.format || 'Unknown', text: r.text });
+                }
+            }
+        } else if (sdk === 'dynamsoft') {
+            await cvr.resetSettings();
+            let result = await cvr.capture(testImg.src, 'ReadBarcodes_Default');
+            if (result.items && result.items.length > 0) {
+                for (let item of result.items) {
+                    if (item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE) {
+                        barcodes.push({ type: item.formatString || 'Unknown', text: item.text });
+                    }
+                }
+            }
+        } else if (sdk === 'strich') {
+            const detections = await strich.ImageScanner.scan(testImg, {
+                engine: { symbologies: STRICH_SYMBOLOGIES }
+            });
+            if (detections && detections.length > 0) {
+                for (const d of detections) {
+                    barcodes.push({ type: d.typeName || 'Unknown', text: d.data });
+                }
+            }
+        } else if (sdk === 'scanbot') {
+            const canvas = document.createElement('canvas');
+            canvas.width = testImg.naturalWidth || testImg.width;
+            canvas.height = testImg.naturalHeight || testImg.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(testImg, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg');
+            const result = await scanbotSDK.detectBarcodes(dataUrl);
+            if (result && result.barcodes && result.barcodes.length > 0) {
+                for (const b of result.barcodes) {
+                    barcodes.push({ type: b.format || 'Unknown', text: b.text });
+                }
+            }
+        } else if (sdk === 'scandit') {
+            const { ImageFrameSource, FrameSourceState } = ScanditCore;
+            let capturedBarcodes = [];
+            const listener = {
+                didUpdateSession: async (barcodeBatch, session) => {
+                    const trackedBarcodes = session.addedTrackedBarcodes;
+                    if (trackedBarcodes) {
+                        for (const tracked of trackedBarcodes) {
+                            capturedBarcodes.push(tracked.barcode);
+                        }
+                    }
+                }
+            };
+            scanditBarcodeBatch.addListener(listener);
+            const imageFrameSource = await ImageFrameSource.fromImage(testImg);
+            await scanditContext.setFrameSource(imageFrameSource);
+            await scanditBarcodeBatch.setEnabled(true);
+            await imageFrameSource.switchToDesiredState(FrameSourceState.On);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            scanditBarcodeBatch.removeListener(listener);
+            await scanditBarcodeBatch.setEnabled(false);
+            if (capturedBarcodes.length > 0) {
+                let { SymbologyDescription } = ScanditBarcode;
+                for (const barcode of capturedBarcodes) {
+                    let type = barcode.symbology ? new SymbologyDescription(barcode.symbology).readableName : 'Unknown';
+                    barcodes.push({ type, text: barcode.data });
+                }
+            }
+        }
+    } catch (ex) {
+        console.error(`Benchmark error for ${sdk}:`, ex);
+        return { barcodes: [], time: performance.now() - startTime, error: ex.message };
+    }
+
+    return { barcodes, time: performance.now() - startTime };
+}
+
+function renderBenchmarkResults(allResults, sdkLabels) {
+    let container = document.getElementById('benchmark_results_container');
+
+    if (allResults.length === 0) {
+        container.innerHTML = '<div class="benchmark-no-result">No results to display.</div>';
+        return;
+    }
+
+    let html = '';
+    let isMultiImage = allResults.length > 1;
+
+    // Aggregate stats per SDK
+    let aggregateMap = {}; // sdkLabel -> { totalBarcodes, totalTime, errors, allBarcodes[] }
+    for (let sdkLabel of sdkLabels) {
+        aggregateMap[sdkLabel] = { totalBarcodes: 0, totalTime: 0, errors: 0, allBarcodes: [] };
+    }
+
+    // Per-image tables
+    for (let imgResult of allResults) {
+        let results = imgResult.sdkResults;
+        let maxCount = Math.max(...results.map(r => r.barcodes.length));
+
+        if (isMultiImage) {
+            html += `<h4 class="benchmark-image-title">${escapeHtml(imgResult.imageName)}</h4>`;
+        }
+
+        html += '<div class="benchmark-table-wrap"><table class="benchmark-table">';
+        html += '<thead><tr><th>SDK</th><th>Barcodes Found</th><th>Time</th><th>Details</th></tr></thead>';
+        html += '<tbody>';
+
+        for (let r of results) {
+            let count = r.barcodes.length;
+            let isBest = count === maxCount && count > 0;
+            let countClass = isBest ? 'count-col best-count' : 'count-col';
+
+            let detailHtml = '';
+            if (r.error) {
+                detailHtml = `<em style="color:#ef4444;">Error: ${escapeHtml(r.error)}</em>`;
+            } else if (count > 0) {
+                detailHtml = '<ul class="barcodes-list">';
+                for (let b of r.barcodes) {
+                    detailHtml += `<li>[${escapeHtml(b.type)}] ${escapeHtml(b.text)}</li>`;
+                }
+                detailHtml += '</ul>';
+            } else {
+                detailHtml = '<em>Nothing found</em>';
+            }
+
+            html += `<tr>
+                <td class="sdk-col">${escapeHtml(r.sdkLabel)}</td>
+                <td class="${countClass}">${count}</td>
+                <td class="time-col">${r.time.toFixed(0)} ms</td>
+                <td>${detailHtml}</td>
+            </tr>`;
+
+            // Aggregate
+            let agg = aggregateMap[r.sdkLabel];
+            agg.totalBarcodes += count;
+            agg.totalTime += r.time;
+            if (r.error) agg.errors++;
+            for (let b of r.barcodes) {
+                agg.allBarcodes.push(b.text);
+            }
+        }
+
+        html += '</tbody></table></div>';
+    }
+
+    // Aggregate summary
+    let allBarcodeTexts = new Set();
+    for (let sdkLabel of sdkLabels) {
+        aggregateMap[sdkLabel].allBarcodes.forEach(t => allBarcodeTexts.add(t));
+    }
+    let uniqueTotal = allBarcodeTexts.size;
+
+    let summaryEntries = sdkLabels.map(sdkLabel => ({
+        sdk: sdkLabel,
+        totalBarcodes: aggregateMap[sdkLabel].totalBarcodes,
+        totalTime: aggregateMap[sdkLabel].totalTime,
+        errors: aggregateMap[sdkLabel].errors,
+        uniqueBarcodes: new Set(aggregateMap[sdkLabel].allBarcodes).size
+    }));
+
+    let most = summaryEntries.reduce((a, b) => a.totalBarcodes > b.totalBarcodes ? a : b);
+    let fastest = summaryEntries.reduce((a, b) => a.totalTime < b.totalTime ? a : b);
+    let mostUnique = summaryEntries.reduce((a, b) => a.uniqueBarcodes > b.uniqueBarcodes ? a : b);
+
+    html += '<div class="benchmark-summary">';
+    if (isMultiImage) {
+        html += `<h4>Aggregate Summary (${allResults.length} images)</h4>`;
+
+        // Aggregate table
+        html += '<div class="benchmark-table-wrap"><table class="benchmark-table">';
+        html += '<thead><tr><th>SDK</th><th>Total Barcodes</th><th>Unique Barcodes</th><th>Total Time</th><th>Avg Time/Image</th></tr></thead>';
+        html += '<tbody>';
+
+        let maxTotal = Math.max(...summaryEntries.map(e => e.totalBarcodes));
+        let maxUnique = Math.max(...summaryEntries.map(e => e.uniqueBarcodes));
+
+        for (let entry of summaryEntries) {
+            let totalClass = (entry.totalBarcodes === maxTotal && maxTotal > 0) ? 'count-col best-count' : 'count-col';
+            let uniqueClass = (entry.uniqueBarcodes === maxUnique && maxUnique > 0) ? 'count-col best-count' : 'count-col';
+            let avgTime = entry.totalTime / allResults.length;
+            html += `<tr>
+                <td class="sdk-col">${escapeHtml(entry.sdk)}</td>
+                <td class="${totalClass}">${entry.totalBarcodes}</td>
+                <td class="${uniqueClass}">${entry.uniqueBarcodes}</td>
+                <td class="time-col">${entry.totalTime.toFixed(0)} ms</td>
+                <td class="time-col">${avgTime.toFixed(0)} ms</td>
+            </tr>`;
+        }
+
+        html += '</tbody></table></div>';
+    }
+
+    html += '<ul>';
+    html += `<li><strong>${uniqueTotal}</strong> unique barcode(s) found across all SDKs${isMultiImage ? ' and images' : ''}</li>`;
+    html += `<li>Most barcodes: <strong>${escapeHtml(most.sdk)}</strong> (${most.totalBarcodes})</li>`;
+    if (isMultiImage) {
+        html += `<li>Most unique barcodes: <strong>${escapeHtml(mostUnique.sdk)}</strong> (${mostUnique.uniqueBarcodes})</li>`;
+    }
+    html += `<li>Fastest: <strong>${escapeHtml(fastest.sdk)}</strong> (${fastest.totalTime.toFixed(0)} ms total)</li>`;
+    html += '</ul></div>';
+
+    container.innerHTML = html;
+}
+
+function escapeHtml(str) {
+    let div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }

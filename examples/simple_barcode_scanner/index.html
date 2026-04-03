@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css">
-    <script src="dist/dcv/dcv.bundle.js"></script>
-    <script src="dist/zxing-wasm/iife/full/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.2.4000/dist/dbr.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3.0.2/dist/iife/full/index.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@pixelverse/strichjs-sdk@latest/dist/strich-noesm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/scanbot-web-sdk@8/bundle/ScanbotSDK.min.js"></script>
     <script type="importmap">
@@ -22,9 +22,9 @@
     <script async src="https://ga.jspm.io/npm:es-module-shims@2.6.2/dist/es-module-shims.js"></script>
     <script type="module">
         import { DataCaptureContext, ImageFrameSource, FrameSourceState } from '@scandit/web-datacapture-core';
-        import { barcodeCaptureLoader, BarcodeCapture, BarcodeCaptureSettings, Symbology, SymbologyDescription } from '@scandit/web-datacapture-barcode';
+        import { barcodeCaptureLoader, BarcodeBatch, BarcodeBatchSettings, Symbology, SymbologyDescription } from '@scandit/web-datacapture-barcode';
         window.ScanditCore = { DataCaptureContext, ImageFrameSource, FrameSourceState };
-        window.ScanditBarcode = { barcodeCaptureLoader, BarcodeCapture, BarcodeCaptureSettings, Symbology, SymbologyDescription };
+        window.ScanditBarcode = { barcodeCaptureLoader, BarcodeBatch, BarcodeBatchSettings, Symbology, SymbologyDescription };
     </script>
     <script src="utils.js"></script>
     <title>Barcode Scanner</title>
@@ -41,77 +41,111 @@
         <p id="loading-text">Loading...</p>
     </div>
 
-    <!-- License Configuration -->
+    <!-- Settings Modal -->
+    <div id="settings_modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>SDK Settings</h2>
+                <button class="modal-close" onclick="closeSettings()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Dynamsoft License -->
+                <div class="settings-sdk-section">
+                    <div class="settings-sdk-header">
+                        <strong>Dynamsoft</strong>
+                        <span id="dynamsoft_status" class="sdk-badge badge-inactive">Not Activated</span>
+                    </div>
+                    <span class="hint">Get your license <a
+                            href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                            target="_blank" class="link">here</a></span>
+                    <div class="input-group">
+                        <input type="text" id="dynamsoft_license_key" class="form-input"
+                            value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=="
+                            placeholder="Enter your Dynamsoft license key">
+                        <button onclick="activateDynamsoft()" class="btn btn-primary" id="dynamsoft_activate_btn">Activate</button>
+                    </div>
+                </div>
+
+                <!-- Strich.io License -->
+                <div class="settings-sdk-section">
+                    <div class="settings-sdk-header">
+                        <strong>Strich.io</strong>
+                        <span id="strich_status" class="sdk-badge badge-inactive">Not Activated</span>
+                    </div>
+                    <span class="hint">Get your license from <a
+                            href="https://portal.strich.io"
+                            target="_blank" class="link">Strich Portal</a></span>
+                    <div class="input-group">
+                        <input type="text" id="strich_license_key" class="form-input"
+                            placeholder="Enter your Strich.io license key">
+                        <button onclick="activateStrich()" class="btn btn-primary" id="strich_activate_btn">Activate</button>
+                    </div>
+                </div>
+
+                <!-- Scanbot License -->
+                <div class="settings-sdk-section">
+                    <div class="settings-sdk-header">
+                        <strong>Scanbot</strong>
+                        <span id="scanbot_status" class="sdk-badge badge-inactive">Not Activated</span>
+                    </div>
+                    <span class="hint">Get your license from <a
+                            href="https://scanbot.io/trial/"
+                            target="_blank" class="link">Scanbot Portal</a></span>
+                    <div class="input-group">
+                        <input type="text" id="scanbot_license_key" class="form-input"
+                            placeholder="Enter your Scanbot license key">
+                        <button onclick="activateScanbot()" class="btn btn-primary" id="scanbot_activate_btn">Activate</button>
+                    </div>
+                </div>
+
+                <!-- Scandit License -->
+                <div class="settings-sdk-section">
+                    <div class="settings-sdk-header">
+                        <strong>Scandit</strong>
+                        <span id="scandit_status" class="sdk-badge badge-inactive">Not Activated</span>
+                    </div>
+                    <span class="hint">Get your license from <a
+                            href="https://www.scandit.com/trial/"
+                            target="_blank" class="link">Scandit Portal</a></span>
+                    <div class="input-group">
+                        <input type="text" id="scandit_license_key" class="form-input"
+                            placeholder="Enter your Scandit license key">
+                        <button onclick="activateScandit()" class="btn btn-primary" id="scandit_activate_btn">Activate</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Controls -->
     <div class="container">
-        <div class="mode-selector">
-            <label class="label-text"><strong>Barcode SDK</strong></label>
-            <select onchange="sdkChanged()" id="sdk_selector" class="form-select">
-                <option value="zxing">ZXing (Free)</option>
-                <option value="dynamsoft">Dynamsoft</option>
-                <option value="strich">Strich.io</option>
-                <option value="scanbot">Scanbot</option>
-                <option value="scandit">Scandit</option>
-            </select>
-        </div>
-
-        <!-- Dynamsoft License -->
-        <div class="license-section" id="dynamsoft_license" style="display: none;">
-            <label for="dynamsoft_license_key" class="label-text">
-                <strong>Dynamsoft License Key</strong>
-                <span class="hint">Get your license <a
-                        href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
-                        target="_blank" class="link">here</a></span>
-            </label>
-            <div class="input-group">
-                <input type="text" id="dynamsoft_license_key" class="form-input"
-                    value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=="
-                    placeholder="Enter your Dynamsoft license key">
-                <button onclick="activateDynamsoft()" class="btn btn-primary">Activate</button>
+        <div class="top-controls">
+            <div class="mode-selector" id="sdk_selector_group">
+                <label class="label-text"><strong>Barcode SDK</strong></label>
+                <select onchange="sdkChanged()" id="sdk_selector" class="form-select">
+                    <option value="zxing">ZXing (Free)</option>
+                    <option value="dynamsoft">Dynamsoft</option>
+                    <option value="strich">Strich.io</option>
+                    <option value="scanbot">Scanbot</option>
+                    <option value="scandit">Scandit</option>
+                </select>
             </div>
-        </div>
 
-        <!-- Strich.io License -->
-        <div class="license-section" id="strich_license" style="display: none;">
-            <label for="strich_license_key" class="label-text">
-                <strong>Strich.io License Key</strong>
-                <span class="hint">Get your license from <a
-                        href="https://portal.strich.io"
-                        target="_blank" class="link">Strich Portal</a></span>
-            </label>
-            <div class="input-group">
-                <input type="text" id="strich_license_key" class="form-input"
-                    placeholder="Enter your Strich.io license key">
-                <button onclick="activateStrich()" class="btn btn-primary">Activate</button>
-            </div>
-        </div>
-
-        <!-- Scanbot License -->
-        <div class="license-section" id="scanbot_license" style="display: none;">
-            <label for="scanbot_license_key" class="label-text">
-                <strong>Scanbot License Key</strong>
-                <span class="hint">Get your license from <a
-                        href="https://scanbot.io/trial/"
-                        target="_blank" class="link">Scanbot Portal</a></span>
-            </label>
-            <div class="input-group">
-                <input type="text" id="scanbot_license_key" class="form-input"
-                    placeholder="Enter your Scanbot license key">
-                <button onclick="activateScanbot()" class="btn btn-primary">Activate</button>
-            </div>
-        </div>
-
-        <!-- Scandit License -->
-        <div class="license-section" id="scandit_license" style="display: none;">
-            <label for="scandit_license_key" class="label-text">
-                <strong>Scandit License Key</strong>
-                <span class="hint">Get your license from <a
-                        href="https://www.scandit.com/trial/"
-                        target="_blank" class="link">Scandit Portal</a></span>
-            </label>
-            <div class="input-group">
-                <input type="text" id="scandit_license_key" class="form-input"
-                    placeholder="Enter your Scandit license key">
-                <button onclick="activateScandit()" class="btn btn-primary">Activate</button>
+            <div class="top-controls-right">
+                <div class="mode-toggle">
+                    <label class="label-text"><strong>Mode</strong></label>
+                    <div class="toggle-group">
+                        <button id="mode_default" class="toggle-btn toggle-active" onclick="setMode('default')">Default</button>
+                        <button id="mode_benchmark" class="toggle-btn" onclick="setMode('benchmark')">Benchmark</button>
+                    </div>
+                </div>
+                <button class="btn btn-icon" onclick="openSettings()" title="SDK Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -134,10 +168,10 @@
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
-                <span>Click to upload or drag & drop a file</span>
-                <span class="hint">Supports: JPG, PNG, GIF, MP4, WebM, MOV</span>
+                <span>Click to upload or drag & drop files</span>
+                <span class="hint">Supports: JPG, PNG, GIF (multiple images), MP4, WebM, MOV</span>
             </label>
-            <input type="file" id="pick_file" accept="image/*,video/*" class="file-input" />
+            <input type="file" id="pick_file" accept="image/*,video/*" multiple class="file-input" />
         </div>
 
         <!-- Image preview -->
@@ -148,15 +182,59 @@
             </div>
         </div>
 
+        <!-- Image navigator -->
+        <div id="image_navigator" style="display: none;">
+            <div class="navigator-bar">
+                <button class="btn btn-nav" onclick="navigateImage(-1)" aria-label="Previous image">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    Prev
+                </button>
+                <span id="navigator_counter" class="navigator-counter">1 / 1</span>
+                <button class="btn btn-nav" onclick="navigateImage(1)" aria-label="Next image">
+                    Next
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
+        </div>
+
         <!-- Video preview -->
         <div class="video-wrapper" id="video_file_wrapper" style="display: none;">
             <video id="video_file_player" controls playsinline muted></video>
             <canvas id="video_overlay" class="video-overlay"></canvas>
         </div>
 
-        <div class="result-section">
+        <!-- Default mode results -->
+        <div class="result-section" id="default_result_section">
             <label class="label-text"><strong>Detection Results</strong></label>
             <textarea id="detection_result" placeholder="Results will appear here..." readonly></textarea>
+        </div>
+
+        <!-- Benchmark mode results -->
+        <div id="benchmark_section" style="display: none;">
+            <div class="benchmark-header">
+                <label class="label-text"><strong>Benchmark Results</strong></label>
+                <p class="hint" style="margin:2px 0 8px;">Upload multiple images to benchmark across the entire set</p>
+                <div class="benchmark-controls">
+                    <label class="benchmark-sdk-select-label">
+                        <span>SDKs to compare:</span>
+                    </label>
+                    <div id="benchmark_sdk_checkboxes" class="benchmark-checkboxes">
+                        <label class="checkbox-label"><input type="checkbox" value="zxing" checked> ZXing</label>
+                        <label class="checkbox-label"><input type="checkbox" value="dynamsoft"> Dynamsoft</label>
+                        <label class="checkbox-label"><input type="checkbox" value="strich"> Strich.io</label>
+                        <label class="checkbox-label"><input type="checkbox" value="scanbot"> Scanbot</label>
+                        <label class="checkbox-label"><input type="checkbox" value="scandit"> Scandit</label>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="runBenchmark()">Run Benchmark</button>
+                </div>
+            </div>
+            <div id="benchmark_progress" style="display: none;">
+                <div class="progress-bar-container">
+                    <div id="benchmark_progress_bar" class="progress-bar"></div>
+                </div>
+                <p id="benchmark_progress_text" class="progress-text">Running...</p>
+            </div>
+            <div id="benchmark_results_container"></div>
         </div>
     </div>
 

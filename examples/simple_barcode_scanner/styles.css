@@ -385,3 +385,424 @@ button,
 #video_container {
     display: none;
 }
+
+/* Image Navigator */
+#image_navigator {
+    margin-top: 12px;
+    margin-bottom: 4px;
+}
+
+.navigator-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    background: var(--bg-color);
+    border: 2px solid var(--border-color);
+    border-radius: 40px;
+    padding: 4px;
+    width: fit-content;
+    margin: 0 auto;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 20px;
+    background-color: transparent;
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 32px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.18s, color 0.18s, opacity 0.18s;
+    line-height: 1;
+}
+
+.btn-nav:hover:not(:disabled) {
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+}
+
+.btn-nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.navigator-counter {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-color);
+    min-width: 60px;
+    text-align: center;
+    user-select: none;
+    padding: 0 4px;
+}
+
+/* ========== Settings Modal ========== */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-content {
+    background: var(--container-bg);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    max-width: 640px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--text-color);
+}
+
+.modal-body {
+    padding: 16px 24px 24px;
+}
+
+.settings-sdk-section {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.settings-sdk-section:last-child {
+    border-bottom: none;
+}
+
+.settings-sdk-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.sdk-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.badge-inactive {
+    background: #f3f4f6;
+    color: #9ca3af;
+}
+
+.badge-active {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+/* ========== Top Controls ========== */
+.top-controls {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.top-controls-right {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    border-radius: 10px;
+    background: var(--bg-color);
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: var(--primary-light);
+}
+
+/* ========== Mode Toggle ========== */
+.mode-toggle {
+    display: flex;
+    flex-direction: column;
+}
+
+.toggle-group {
+    display: inline-flex;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.toggle-btn {
+    padding: 10px 20px;
+    border: none;
+    background: var(--bg-color);
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 0;
+}
+
+.toggle-btn:first-child {
+    border-right: 1px solid var(--border-color);
+}
+
+.toggle-active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.toggle-btn:hover:not(.toggle-active) {
+    background: var(--primary-light);
+    color: var(--primary-color);
+}
+
+/* ========== Benchmark ========== */
+.benchmark-header {
+    margin-bottom: 16px;
+}
+
+.benchmark-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.benchmark-sdk-select-label span {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.benchmark-checkboxes {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-color);
+}
+
+.checkbox-label input[type="checkbox"] {
+    accent-color: var(--primary-color);
+    width: 16px;
+    height: 16px;
+}
+
+.checkbox-label.cb-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.btn-sm {
+    padding: 8px 18px;
+    font-size: 0.9rem;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--primary-color);
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+.progress-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* Benchmark Table */
+.benchmark-table-wrap {
+    overflow-x: auto;
+    margin-top: 12px;
+}
+
+.benchmark-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.benchmark-table th,
+.benchmark-table td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.benchmark-table th {
+    background: var(--bg-color);
+    font-weight: 700;
+    color: var(--text-color);
+    position: sticky;
+    top: 0;
+    white-space: nowrap;
+}
+
+.benchmark-table td {
+    vertical-align: top;
+}
+
+.benchmark-table tr:last-child td {
+    border-bottom: none;
+}
+
+.benchmark-table .sdk-col {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.benchmark-table .count-col {
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.benchmark-table .best-count {
+    color: var(--success-color);
+}
+
+.benchmark-table .time-col {
+    text-align: right;
+    white-space: nowrap;
+    color: var(--text-secondary);
+}
+
+.benchmark-table .barcodes-list {
+    font-family: "Monaco", "Menlo", "Consolas", monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.benchmark-table .barcodes-list li {
+    padding: 1px 0;
+}
+
+.benchmark-summary {
+    margin-top: 16px;
+    padding: 14px 18px;
+    background: var(--bg-color);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.benchmark-summary h4 {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+}
+
+.benchmark-summary ul {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
+
+.benchmark-no-result {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 24px;
+    font-style: italic;
+}
+
+.benchmark-image-title {
+    margin: 20px 0 6px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    padding-bottom: 4px;
+    border-bottom: 2px solid var(--primary-light);
+}
+
+.benchmark-image-title:first-child {
+    margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+    .top-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .top-controls-right {
+        justify-content: space-between;
+    }
+
+    .benchmark-controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
