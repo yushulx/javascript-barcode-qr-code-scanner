@@ -166,7 +166,8 @@ button,
     color: var(--text-secondary);
 }
 
-.file-upload-label:hover {
+.file-upload-label:hover,
+.file-upload-label.drag-over {
     border-color: var(--primary-color);
     background-color: var(--primary-light);
     color: var(--primary-color);

@@ -70,6 +70,42 @@ overlayCanvas.addEventListener('drop', function (event) {
     }
 }, false);
 
+// Prevent browser from opening dragged files anywhere on the page
+document.addEventListener('dragover', function (event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+}, false);
+
+document.addEventListener('drop', function (event) {
+    event.preventDefault();
+}, false);
+
+// Drop zone: the file upload label area
+const fileUploadLabel = document.querySelector('.file-upload-label');
+if (fileUploadLabel) {
+    fileUploadLabel.addEventListener('dragover', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = 'copy';
+        fileUploadLabel.classList.add('drag-over');
+    }, false);
+
+    fileUploadLabel.addEventListener('dragleave', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        fileUploadLabel.classList.remove('drag-over');
+    }, false);
+
+    fileUploadLabel.addEventListener('drop', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        fileUploadLabel.classList.remove('drag-over');
+        if (event.dataTransfer.files.length > 0) {
+            handleFiles(Array.from(event.dataTransfer.files));
+        }
+    }, false);
+}
+
 async function selectChanged() {
     stopCameraScanning();
 
