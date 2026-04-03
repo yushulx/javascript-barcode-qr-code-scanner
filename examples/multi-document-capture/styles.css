@@ -72,6 +72,15 @@ body {
     margin-bottom: 16px;
 }
 
+.license-subtitle a {
+    color: #7eb8d4;
+    text-decoration: underline;
+}
+
+.license-subtitle a:hover {
+    color: #a8d4e8;
+}
+
 .license-label {
     display: block;
     font-size: 13px;
