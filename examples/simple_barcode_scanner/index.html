@@ -7,6 +7,25 @@
     <link rel="stylesheet" href="styles.css">
     <script src="dist/dcv/dcv.bundle.js"></script>
     <script src="dist/zxing-wasm/iife/full/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@pixelverse/strichjs-sdk@latest/dist/strich-noesm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/scanbot-web-sdk@8/bundle/ScanbotSDK.min.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "@scandit/web-datacapture-core": "https://cdn.jsdelivr.net/npm/@scandit/web-datacapture-core@8/build/js/index.js",
+            "@scandit/web-datacapture-barcode": "https://cdn.jsdelivr.net/npm/@scandit/web-datacapture-barcode@8/build/js/index.js",
+            "@scandit/web-datacapture-barcode/": "https://cdn.jsdelivr.net/npm/@scandit/web-datacapture-barcode@8/",
+            "@scandit/web-datacapture-core/": "https://cdn.jsdelivr.net/npm/@scandit/web-datacapture-core@8/"
+        }
+    }
+    </script>
+    <script async src="https://ga.jspm.io/npm:es-module-shims@2.6.2/dist/es-module-shims.js"></script>
+    <script type="module">
+        import { DataCaptureContext, ImageFrameSource, FrameSourceState } from '@scandit/web-datacapture-core';
+        import { barcodeCaptureLoader, BarcodeCapture, BarcodeCaptureSettings, Symbology, SymbologyDescription } from '@scandit/web-datacapture-barcode';
+        window.ScanditCore = { DataCaptureContext, ImageFrameSource, FrameSourceState };
+        window.ScanditBarcode = { barcodeCaptureLoader, BarcodeCapture, BarcodeCaptureSettings, Symbology, SymbologyDescription };
+    </script>
     <script src="utils.js"></script>
     <title>Barcode Scanner</title>
 </head>
@@ -14,12 +33,12 @@
 <body>
     <div class="header">
         <h1>📷 Barcode Scanner</h1>
-        <p class="subtitle">Scan barcodes from your camera or upload an image</p>
+        <p class="subtitle">Scan barcodes from your camera, images, or video files</p>
     </div>
 
     <div id="loading-indicator" class="loading-indicator">
         <div class="spinner"></div>
-        <p>Loading...</p>
+        <p id="loading-text">Loading...</p>
     </div>
 
     <!-- License Configuration -->
@@ -29,34 +48,83 @@
             <select onchange="sdkChanged()" id="sdk_selector" class="form-select">
                 <option value="zxing">ZXing (Free)</option>
                 <option value="dynamsoft">Dynamsoft</option>
+                <option value="strich">Strich.io</option>
+                <option value="scanbot">Scanbot</option>
+                <option value="scandit">Scandit</option>
             </select>
         </div>
 
-        <div class="license-section" id="license_section" style="display: none;">
-            <label for="license_key" class="label-text">
-                <strong>License Key</strong>
+        <!-- Dynamsoft License -->
+        <div class="license-section" id="dynamsoft_license" style="display: none;">
+            <label for="dynamsoft_license_key" class="label-text">
+                <strong>Dynamsoft License Key</strong>
                 <span class="hint">Get your license <a
                         href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
                         target="_blank" class="link">here</a></span>
             </label>
             <div class="input-group">
-                <input type="text" id="license_key" class="form-input"
+                <input type="text" id="dynamsoft_license_key" class="form-input"
                     value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=="
-                    placeholder="Enter your license key">
+                    placeholder="Enter your Dynamsoft license key">
                 <button onclick="activateDynamsoft()" class="btn btn-primary">Activate</button>
+            </div>
+        </div>
+
+        <!-- Strich.io License -->
+        <div class="license-section" id="strich_license" style="display: none;">
+            <label for="strich_license_key" class="label-text">
+                <strong>Strich.io License Key</strong>
+                <span class="hint">Get your license from <a
+                        href="https://portal.strich.io"
+                        target="_blank" class="link">Strich Portal</a></span>
+            </label>
+            <div class="input-group">
+                <input type="text" id="strich_license_key" class="form-input"
+                    placeholder="Enter your Strich.io license key">
+                <button onclick="activateStrich()" class="btn btn-primary">Activate</button>
+            </div>
+        </div>
+
+        <!-- Scanbot License -->
+        <div class="license-section" id="scanbot_license" style="display: none;">
+            <label for="scanbot_license_key" class="label-text">
+                <strong>Scanbot License Key</strong>
+                <span class="hint">Get your license from <a
+                        href="https://scanbot.io/trial/"
+                        target="_blank" class="link">Scanbot Portal</a></span>
+            </label>
+            <div class="input-group">
+                <input type="text" id="scanbot_license_key" class="form-input"
+                    placeholder="Enter your Scanbot license key">
+                <button onclick="activateScanbot()" class="btn btn-primary">Activate</button>
+            </div>
+        </div>
+
+        <!-- Scandit License -->
+        <div class="license-section" id="scandit_license" style="display: none;">
+            <label for="scandit_license_key" class="label-text">
+                <strong>Scandit License Key</strong>
+                <span class="hint">Get your license from <a
+                        href="https://www.scandit.com/trial/"
+                        target="_blank" class="link">Scandit Portal</a></span>
+            </label>
+            <div class="input-group">
+                <input type="text" id="scandit_license_key" class="form-input"
+                    placeholder="Enter your Scandit license key">
+                <button onclick="activateScandit()" class="btn btn-primary">Activate</button>
             </div>
         </div>
 
         <div class="mode-selector" id="scan_mode_selector">
             <label class="label-text"><strong>Scan Mode</strong></label>
             <select onchange="selectChanged()" id="dropdown" class="form-select">
-                <option value="file">📁 Upload Image</option>
+                <option value="file">📁 File (Image / Video)</option>
                 <option value="camera">📹 Live Camera</option>
             </select>
         </div>
     </div>
 
-    <!-- Image File -->
+    <!-- File (Image or Video) -->
     <div class="container" id="file_container">
         <div class="file-upload-section">
             <label for="pick_file" class="file-upload-label">
@@ -66,17 +134,24 @@
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
-                <span>Click to upload or drag & drop an image</span>
-                <span class="hint">Supports: JPG, PNG, GIF</span>
+                <span>Click to upload or drag & drop a file</span>
+                <span class="hint">Supports: JPG, PNG, GIF, MP4, WebM, MOV</span>
             </label>
-            <input type="file" id="pick_file" accept="image/*" class="file-input" />
+            <input type="file" id="pick_file" accept="image/*,video/*" class="file-input" />
         </div>
 
-        <div class="imageview-container">
+        <!-- Image preview -->
+        <div class="imageview-container" id="image_preview_container" style="display: none;">
             <div class="imageview">
                 <img id="image_file" src="default.png" alt="Preview" />
                 <canvas id="overlay_canvas" class="overlay"></canvas>
             </div>
+        </div>
+
+        <!-- Video preview -->
+        <div class="video-wrapper" id="video_file_wrapper" style="display: none;">
+            <video id="video_file_player" controls playsinline muted></video>
+            <canvas id="video_overlay" class="video-overlay"></canvas>
         </div>
 
         <div class="result-section">
@@ -86,18 +161,15 @@
     </div>
 
     <!-- Camera Stream -->
-    <div class="container" id="camera_container">
+    <div class="container" id="camera_container" style="display: none;">
         <div class="controls">
             <div class="control-group">
                 <label class="label-text"><strong>Select Camera</strong></label>
                 <select onchange="cameraChanged()" id="camera_source" class="form-select"></select>
             </div>
-            <button onclick="scan()" id="scan_button" class="btn btn-primary btn-large">
-                <span id="scan_icon">▶</span> <span id="scan_text">Start Scanning</span>
-            </button>
         </div>
         <div id="videoview" class="video-wrapper">
-            <video id="camera_view" autoplay playsinline></video>
+            <video id="camera_view" autoplay playsinline muted></video>
             <canvas id="camera_overlay"></canvas>
         </div>
 
@@ -106,8 +178,6 @@
             <textarea id="scan_result" placeholder="Scan results will appear here..." readonly></textarea>
         </div>
     </div>
-
-
 
     <script src="main.js"></script>
 </body>
