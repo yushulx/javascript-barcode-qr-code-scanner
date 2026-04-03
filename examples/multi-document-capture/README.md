@@ -2,6 +2,11 @@
 
 A browser-based document scanning application powered by the **Dynamsoft Capture Vision JS SDK**. No backend required — runs entirely in the browser.
 
+https://github.com/user-attachments/assets/5a9a9a9d-df9e-4422-886a-eb52105e4b9b
+
+## Online Demo
+https://yushulx.me/javascript-barcode-qr-code-scanner/examples/multi-document-capture/
+
 ## Features
 
 - **License Activation**: Enter your Dynamsoft license key on the start screen (or use the built-in trial key).
@@ -53,3 +58,6 @@ A browser-based document scanning application powered by the **Dynamsoft Capture
 
 - [Dynamsoft Capture Vision Bundle v3.2.5000](https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.2.5000/)
 - [jsPDF v2.5.1](https://cdn.jsdelivr.net/npm/jspdf@2.5.1/)
+
+## Blog
+[How to Build a JavaScript Multi-Page Document Scanner Web App with Auto-Capture and PDF Export](https://www.dynamsoft.com/codepool/build-multi-page-document-scanner-web-app.html)
