@@ -57,6 +57,7 @@ let navigatorCounter = document.getElementById('navigator_counter');
 // Mode state
 let currentMode = 'default'; // 'default' or 'benchmark'
 let benchmarkRunning = false;
+let lastBenchmarkData = null;
 
 overlayCanvas.addEventListener('dragover', function (event) {
     event.preventDefault();
@@ -1442,6 +1443,11 @@ async function runBenchmark() {
     renderBenchmarkResults(allResults, sdks.map(s => sdkLabels[s]));
     benchmarkRunning = false;
 
+    // Show export button now that results exist
+    document.getElementById('benchmark_export_btn').style.display = 'inline-flex';
+    // Store for export
+    lastBenchmarkData = { allResults, sdkLabels: sdks.map(s => sdkLabels[s]) };
+
     setTimeout(() => { progressDiv.style.display = 'none'; }, 1500);
 }
 
@@ -1549,27 +1555,92 @@ function renderBenchmarkResults(allResults, sdkLabels) {
         return;
     }
 
-    let html = '';
+    container.innerHTML = buildBenchmarkHtml(allResults, sdkLabels);
+}
+
+function buildBenchmarkHtml(allResults, sdkLabels) {
     let isMultiImage = allResults.length > 1;
 
-    // Aggregate stats per SDK
-    let aggregateMap = {}; // sdkLabel -> { totalBarcodes, totalTime, errors, allBarcodes[] }
+    // First pass: compute all aggregate data
+    let aggregateMap = {};
     for (let sdkLabel of sdkLabels) {
         aggregateMap[sdkLabel] = { totalBarcodes: 0, totalTime: 0, errors: 0, allBarcodes: [] };
     }
+    for (let imgResult of allResults) {
+        for (let r of imgResult.sdkResults) {
+            let agg = aggregateMap[r.sdkLabel];
+            agg.totalBarcodes += r.barcodes.length;
+            agg.totalTime += r.time;
+            if (r.error) agg.errors++;
+            for (let b of r.barcodes) agg.allBarcodes.push(b.text);
+        }
+    }
 
-    // Per-image tables
+    let allBarcodeTexts = new Set();
+    for (let sdkLabel of sdkLabels) {
+        aggregateMap[sdkLabel].allBarcodes.forEach(t => allBarcodeTexts.add(t));
+    }
+    let uniqueTotal = allBarcodeTexts.size;
+
+    let summaryEntries = sdkLabels.map(sdkLabel => ({
+        sdk: sdkLabel,
+        totalBarcodes: aggregateMap[sdkLabel].totalBarcodes,
+        totalTime: aggregateMap[sdkLabel].totalTime,
+        errors: aggregateMap[sdkLabel].errors,
+        uniqueBarcodes: new Set(aggregateMap[sdkLabel].allBarcodes).size
+    }));
+
+    let most = summaryEntries.reduce((a, b) => a.totalBarcodes > b.totalBarcodes ? a : b);
+    let fastest = summaryEntries.reduce((a, b) => a.totalTime < b.totalTime ? a : b);
+    let mostUnique = summaryEntries.reduce((a, b) => a.uniqueBarcodes > b.uniqueBarcodes ? a : b);
+
+    // Build summary HTML first
+    let summaryHtml = '<div class="benchmark-summary">';
+    if (isMultiImage) {
+        summaryHtml += `<h4>Aggregate Summary (${allResults.length} images)</h4>`;
+        summaryHtml += '<div class="benchmark-table-wrap"><table class="benchmark-table">';
+        summaryHtml += '<thead><tr><th>SDK</th><th>Total Barcodes</th><th>Unique Barcodes</th><th>Total Time</th><th>Avg Time/Image</th></tr></thead>';
+        summaryHtml += '<tbody>';
+
+        let maxTotal = Math.max(...summaryEntries.map(e => e.totalBarcodes));
+        let maxUnique = Math.max(...summaryEntries.map(e => e.uniqueBarcodes));
+
+        for (let entry of summaryEntries) {
+            let totalClass = (entry.totalBarcodes === maxTotal && maxTotal > 0) ? 'count-col best-count' : 'count-col';
+            let uniqueClass = (entry.uniqueBarcodes === maxUnique && maxUnique > 0) ? 'count-col best-count' : 'count-col';
+            let avgTime = entry.totalTime / allResults.length;
+            summaryHtml += `<tr>
+                <td class="sdk-col">${escapeHtml(entry.sdk)}</td>
+                <td class="${totalClass}">${entry.totalBarcodes}</td>
+                <td class="${uniqueClass}">${entry.uniqueBarcodes}</td>
+                <td class="time-col">${entry.totalTime.toFixed(0)} ms</td>
+                <td class="time-col">${avgTime.toFixed(0)} ms</td>
+            </tr>`;
+        }
+        summaryHtml += '</tbody></table></div>';
+    }
+    summaryHtml += '<ul>';
+    summaryHtml += `<li><strong>${uniqueTotal}</strong> unique barcode(s) found across all SDKs${isMultiImage ? ' and images' : ''}</li>`;
+    summaryHtml += `<li>Most barcodes: <strong>${escapeHtml(most.sdk)}</strong> (${most.totalBarcodes})</li>`;
+    if (isMultiImage) {
+        summaryHtml += `<li>Most unique barcodes: <strong>${escapeHtml(mostUnique.sdk)}</strong> (${mostUnique.uniqueBarcodes})</li>`;
+    }
+    summaryHtml += `<li>Fastest: <strong>${escapeHtml(fastest.sdk)}</strong> (${fastest.totalTime.toFixed(0)} ms total)</li>`;
+    summaryHtml += '</ul></div>';
+
+    // Build per-image tables
+    let tablesHtml = '';
     for (let imgResult of allResults) {
         let results = imgResult.sdkResults;
         let maxCount = Math.max(...results.map(r => r.barcodes.length));
 
         if (isMultiImage) {
-            html += `<h4 class="benchmark-image-title">${escapeHtml(imgResult.imageName)}</h4>`;
+            tablesHtml += `<h4 class="benchmark-image-title">${escapeHtml(imgResult.imageName)}</h4>`;
         }
 
-        html += '<div class="benchmark-table-wrap"><table class="benchmark-table">';
-        html += '<thead><tr><th>SDK</th><th>Barcodes Found</th><th>Time</th><th>Details</th></tr></thead>';
-        html += '<tbody>';
+        tablesHtml += '<div class="benchmark-table-wrap"><table class="benchmark-table">';
+        tablesHtml += '<thead><tr><th>SDK</th><th>Barcodes Found</th><th>Time</th><th>Details</th></tr></thead>';
+        tablesHtml += '<tbody>';
 
         for (let r of results) {
             let count = r.barcodes.length;
@@ -1589,87 +1660,82 @@ function renderBenchmarkResults(allResults, sdkLabels) {
                 detailHtml = '<em>Nothing found</em>';
             }
 
-            html += `<tr>
+            tablesHtml += `<tr>
                 <td class="sdk-col">${escapeHtml(r.sdkLabel)}</td>
                 <td class="${countClass}">${count}</td>
                 <td class="time-col">${r.time.toFixed(0)} ms</td>
                 <td>${detailHtml}</td>
             </tr>`;
-
-            // Aggregate
-            let agg = aggregateMap[r.sdkLabel];
-            agg.totalBarcodes += count;
-            agg.totalTime += r.time;
-            if (r.error) agg.errors++;
-            for (let b of r.barcodes) {
-                agg.allBarcodes.push(b.text);
-            }
         }
 
-        html += '</tbody></table></div>';
+        tablesHtml += '</tbody></table></div>';
     }
 
-    // Aggregate summary
-    let allBarcodeTexts = new Set();
-    for (let sdkLabel of sdkLabels) {
-        aggregateMap[sdkLabel].allBarcodes.forEach(t => allBarcodeTexts.add(t));
-    }
-    let uniqueTotal = allBarcodeTexts.size;
-
-    let summaryEntries = sdkLabels.map(sdkLabel => ({
-        sdk: sdkLabel,
-        totalBarcodes: aggregateMap[sdkLabel].totalBarcodes,
-        totalTime: aggregateMap[sdkLabel].totalTime,
-        errors: aggregateMap[sdkLabel].errors,
-        uniqueBarcodes: new Set(aggregateMap[sdkLabel].allBarcodes).size
-    }));
-
-    let most = summaryEntries.reduce((a, b) => a.totalBarcodes > b.totalBarcodes ? a : b);
-    let fastest = summaryEntries.reduce((a, b) => a.totalTime < b.totalTime ? a : b);
-    let mostUnique = summaryEntries.reduce((a, b) => a.uniqueBarcodes > b.uniqueBarcodes ? a : b);
-
-    html += '<div class="benchmark-summary">';
-    if (isMultiImage) {
-        html += `<h4>Aggregate Summary (${allResults.length} images)</h4>`;
-
-        // Aggregate table
-        html += '<div class="benchmark-table-wrap"><table class="benchmark-table">';
-        html += '<thead><tr><th>SDK</th><th>Total Barcodes</th><th>Unique Barcodes</th><th>Total Time</th><th>Avg Time/Image</th></tr></thead>';
-        html += '<tbody>';
-
-        let maxTotal = Math.max(...summaryEntries.map(e => e.totalBarcodes));
-        let maxUnique = Math.max(...summaryEntries.map(e => e.uniqueBarcodes));
-
-        for (let entry of summaryEntries) {
-            let totalClass = (entry.totalBarcodes === maxTotal && maxTotal > 0) ? 'count-col best-count' : 'count-col';
-            let uniqueClass = (entry.uniqueBarcodes === maxUnique && maxUnique > 0) ? 'count-col best-count' : 'count-col';
-            let avgTime = entry.totalTime / allResults.length;
-            html += `<tr>
-                <td class="sdk-col">${escapeHtml(entry.sdk)}</td>
-                <td class="${totalClass}">${entry.totalBarcodes}</td>
-                <td class="${uniqueClass}">${entry.uniqueBarcodes}</td>
-                <td class="time-col">${entry.totalTime.toFixed(0)} ms</td>
-                <td class="time-col">${avgTime.toFixed(0)} ms</td>
-            </tr>`;
-        }
-
-        html += '</tbody></table></div>';
-    }
-
-    html += '<ul>';
-    html += `<li><strong>${uniqueTotal}</strong> unique barcode(s) found across all SDKs${isMultiImage ? ' and images' : ''}</li>`;
-    html += `<li>Most barcodes: <strong>${escapeHtml(most.sdk)}</strong> (${most.totalBarcodes})</li>`;
-    if (isMultiImage) {
-        html += `<li>Most unique barcodes: <strong>${escapeHtml(mostUnique.sdk)}</strong> (${mostUnique.uniqueBarcodes})</li>`;
-    }
-    html += `<li>Fastest: <strong>${escapeHtml(fastest.sdk)}</strong> (${fastest.totalTime.toFixed(0)} ms total)</li>`;
-    html += '</ul></div>';
-
-    container.innerHTML = html;
+    // Summary first, then per-image detail
+    return summaryHtml + tablesHtml;
 }
 
 function escapeHtml(str) {
     let div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function exportBenchmarkResults() {
+    if (!lastBenchmarkData) return;
+    const { allResults, sdkLabels } = lastBenchmarkData;
+
+    const reportHtml = buildBenchmarkHtml(allResults, sdkLabels);
+    const timestamp = new Date().toLocaleString();
+    const imageCount = allResults.length;
+    const sdkList = sdkLabels.join(', ');
+
+    const fullPage = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Barcode Scanner Benchmark Report</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; margin: 0; padding: 24px; }
+  .report-header { background: #fff; border-radius: 12px; padding: 24px 28px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .report-header h1 { margin: 0 0 6px; font-size: 1.6rem; color: #0f172a; }
+  .report-header p { margin: 2px 0; font-size: 0.88rem; color: #64748b; }
+  .benchmark-table-wrap { overflow-x: auto; margin-bottom: 16px; }
+  .benchmark-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.07); font-size: 0.9rem; }
+  .benchmark-table th { background: #f1f5f9; color: #475569; font-weight: 600; text-align: left; padding: 10px 14px; border-bottom: 1px solid #e2e8f0; }
+  .benchmark-table td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  .benchmark-table tr:last-child td { border-bottom: none; }
+  .benchmark-table tr:hover td { background: #f8fafc; }
+  .sdk-col { font-weight: 600; white-space: nowrap; }
+  .count-col { text-align: center; font-weight: 700; font-size: 1.05em; }
+  .best-count { color: #16a34a; }
+  .time-col { white-space: nowrap; color: #64748b; }
+  .barcodes-list { margin: 0; padding-left: 16px; }
+  .barcodes-list li { margin-bottom: 2px; font-size: 0.85em; font-family: monospace; }
+  .benchmark-summary { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-top: 8px; }
+  .benchmark-summary h4 { margin: 0 0 10px; font-size: 1rem; color: #334155; }
+  .benchmark-summary ul { margin: 8px 0 0; padding-left: 20px; font-size: 0.9rem; line-height: 1.8; }
+  .benchmark-image-title { font-size: 0.95rem; font-weight: 600; color: #475569; margin: 18px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
+</style>
+</head>
+<body>
+<div class="report-header">
+  <h1>📊 Barcode Scanner Benchmark Report</h1>
+  <p><strong>Generated:</strong> ${escapeHtml(timestamp)}</p>
+  <p><strong>Images tested:</strong> ${imageCount}</p>
+  <p><strong>SDKs compared:</strong> ${escapeHtml(sdkList)}</p>
+</div>
+${reportHtml}
+</body>
+</html>`;
+
+    const blob = new Blob([fullPage], { type: 'text/html;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'benchmark_report.html';
+    a.click();
+    URL.revokeObjectURL(url);
 }
