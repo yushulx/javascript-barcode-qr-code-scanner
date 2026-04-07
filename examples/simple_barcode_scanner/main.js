@@ -1376,12 +1376,11 @@ async function runBenchmark() {
         return;
     }
 
-    // Check all selected SDKs are activated
-    for (let sdk of sdks) {
-        if (!sdkActivated[sdk]) {
-            alert(`${sdk} is not activated. Please activate it in Settings first.`);
-            return;
-        }
+    // Filter out SDKs that are selected but not activated — they won't appear in the report
+    sdks = sdks.filter(sdk => sdkActivated[sdk]);
+    if (sdks.length === 0) {
+        alert('None of the selected SDKs are activated. Please activate at least one in Settings first.');
+        return;
     }
 
     benchmarkRunning = true;
