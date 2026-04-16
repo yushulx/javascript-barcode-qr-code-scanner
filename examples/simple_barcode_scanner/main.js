@@ -59,6 +59,13 @@ let currentMode = 'default'; // 'default' or 'benchmark'
 let benchmarkRunning = false;
 let lastBenchmarkData = null;
 
+// Dynamsoft template setting
+let dynamsoftTemplate = 'ReadBarcodes_Default';
+let dynamsoftCustomTemplateContent = null; // pending JSON string to apply after CVR init
+
+// Annotation ground truth data (map: filename -> [{text, format, points}])
+let annotationData = null;
+
 overlayCanvas.addEventListener('dragover', function (event) {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
@@ -224,7 +231,7 @@ function loadImage2Canvas(base64Image) {
         try {
             if (currentSDK === 'dynamsoft') {
                 await cvr.resetSettings();
-                let result = await cvr.capture(img.src, 'ReadBarcodes_Default');
+                let result = await cvr.capture(img.src, dynamsoftTemplate);
                 showFileResult(context, result);
             } else if (currentSDK === 'strich') {
                 await scanImageWithStrich(img, context);
@@ -463,6 +470,11 @@ async function activateDynamsoft() {
         await Dynamsoft.License.LicenseManager.initLicense(licenseKey, true);
         await Dynamsoft.Core.CoreModule.loadWasm(['DBR']);
         cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+
+        // Apply any custom template that was loaded before activation
+        if (dynamsoftCustomTemplateContent) {
+            await applyDynamsoftTemplateContent(dynamsoftCustomTemplateContent);
+        }
 
         sdkActivated.dynamsoft = true;
         saveLicenseKey('dynamsoft', licenseKey);
@@ -787,7 +799,7 @@ async function scanVideoFrameZXing(tempCtx, tempCanvas, ctx) {
 
 async function scanVideoFrameDynamsoft(canvas, ctx) {
     await cvr.resetSettings();
-    let result = await cvr.capture(canvas, 'ReadBarcodes_Default');
+    let result = await cvr.capture(canvas, dynamsoftTemplate);
 
     if (result.items && result.items.length > 0) {
         for (let item of result.items) {
@@ -1003,7 +1015,7 @@ function startCameraScanning() {
 
             try {
                 if (currentSDK === 'dynamsoft') {
-                    let result = await cvr.capture(canvas.toDataURL('image/jpeg'), 'ReadBarcodes_Default');
+                    let result = await cvr.capture(canvas.toDataURL('image/jpeg'), dynamsoftTemplate);
                     if (cameraScanning) {
                         showCameraResult(result);
                     }
@@ -1423,13 +1435,19 @@ async function runBenchmark() {
 
         let imageResult = { imageName: imgInfo.name, imageIndex: imgInfo.index, sdkResults: [] };
 
+        // Look up ground truth for this image from annotation data (match by filename)
+        let groundTruth = null;
+        if (annotationData && annotationData[imgInfo.name]) {
+            groundTruth = annotationData[imgInfo.name].map(b => b.text);
+        }
+
         for (let sdk of sdks) {
             stepsDone++;
             let sdkLabel = sdkLabels[sdk];
             progressText.textContent = `Image ${imgInfo.index + 1}/${imagesToBenchmark.length}: ${sdkLabel}... (${stepsDone}/${totalSteps})`;
             progressBar.style.width = ((stepsDone / totalSteps) * 100) + '%';
 
-            let result = await benchmarkSingleSDK(sdk, testImg);
+            let result = await benchmarkSingleSDK(sdk, testImg, groundTruth);
             imageResult.sdkResults.push({ sdk, sdkLabel, ...result });
         }
 
@@ -1464,7 +1482,7 @@ function loadImageFromFile(file) {
     });
 }
 
-async function benchmarkSingleSDK(sdk, testImg) {
+async function benchmarkSingleSDK(sdk, testImg, groundTruth = null) {
     let barcodes = []; // Array of { type, text }
     let startTime = performance.now();
 
@@ -1479,7 +1497,7 @@ async function benchmarkSingleSDK(sdk, testImg) {
             }
         } else if (sdk === 'dynamsoft') {
             await cvr.resetSettings();
-            let result = await cvr.capture(testImg.src, 'ReadBarcodes_Default');
+            let result = await cvr.capture(testImg.src, dynamsoftTemplate);
             if (result.items && result.items.length > 0) {
                 for (let item of result.items) {
                     if (item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE) {
@@ -1540,10 +1558,12 @@ async function benchmarkSingleSDK(sdk, testImg) {
         }
     } catch (ex) {
         console.error(`Benchmark error for ${sdk}:`, ex);
-        return { barcodes: [], time: performance.now() - startTime, error: ex.message };
+        let gtResult = groundTruth ? computeGTResult([], groundTruth) : null;
+        return { barcodes: [], time: performance.now() - startTime, error: ex.message, gtResult };
     }
 
-    return { barcodes, time: performance.now() - startTime };
+    let gtResult = groundTruth ? computeGTResult(barcodes.map(b => b.text), groundTruth) : null;
+    return { barcodes, time: performance.now() - startTime, gtResult };
 }
 
 function renderBenchmarkResults(allResults, sdkLabels) {
@@ -1559,11 +1579,12 @@ function renderBenchmarkResults(allResults, sdkLabels) {
 
 function buildBenchmarkHtml(allResults, sdkLabels) {
     let isMultiImage = allResults.length > 1;
+    const hasAnyGT = allResults.some(r => r.sdkResults.some(s => s.gtResult !== null));
 
     // First pass: compute all aggregate data
     let aggregateMap = {};
     for (let sdkLabel of sdkLabels) {
-        aggregateMap[sdkLabel] = { totalBarcodes: 0, totalTime: 0, errors: 0, allBarcodes: [] };
+        aggregateMap[sdkLabel] = { totalBarcodes: 0, totalTime: 0, errors: 0, allBarcodes: [], totalTP: 0, totalExpected: 0, totalFP: 0 };
     }
     for (let imgResult of allResults) {
         for (let r of imgResult.sdkResults) {
@@ -1572,6 +1593,11 @@ function buildBenchmarkHtml(allResults, sdkLabels) {
             agg.totalTime += r.time;
             if (r.error) agg.errors++;
             for (let b of r.barcodes) agg.allBarcodes.push(b.text);
+            if (r.gtResult) {
+                agg.totalTP += r.gtResult.tp;
+                agg.totalExpected += r.gtResult.total;
+                agg.totalFP += r.gtResult.fp;
+            }
         }
     }
 
@@ -1581,40 +1607,76 @@ function buildBenchmarkHtml(allResults, sdkLabels) {
     }
     let uniqueTotal = allBarcodeTexts.size;
 
-    let summaryEntries = sdkLabels.map(sdkLabel => ({
-        sdk: sdkLabel,
-        totalBarcodes: aggregateMap[sdkLabel].totalBarcodes,
-        totalTime: aggregateMap[sdkLabel].totalTime,
-        errors: aggregateMap[sdkLabel].errors,
-        uniqueBarcodes: new Set(aggregateMap[sdkLabel].allBarcodes).size
-    }));
+    let summaryEntries = sdkLabels.map(sdkLabel => {
+        let agg = aggregateMap[sdkLabel];
+        let detectionRate = agg.totalExpected > 0 ? agg.totalTP / agg.totalExpected : null;
+        let precision = (agg.totalTP + agg.totalFP) > 0 ? agg.totalTP / (agg.totalTP + agg.totalFP) : null;
+        return {
+            sdk: sdkLabel,
+            totalBarcodes: agg.totalBarcodes,
+            totalTime: agg.totalTime,
+            errors: agg.errors,
+            uniqueBarcodes: new Set(agg.allBarcodes).size,
+            detectionRate,
+            precision,
+            totalTP: agg.totalTP,
+            totalExpected: agg.totalExpected
+        };
+    });
 
     let most = summaryEntries.reduce((a, b) => a.totalBarcodes > b.totalBarcodes ? a : b);
     let fastest = summaryEntries.reduce((a, b) => a.totalTime < b.totalTime ? a : b);
     let mostUnique = summaryEntries.reduce((a, b) => a.uniqueBarcodes > b.uniqueBarcodes ? a : b);
+    let bestRate = null;
+    if (hasAnyGT) {
+        let withGT = summaryEntries.filter(e => e.detectionRate !== null && e.detectionRate >= 0);
+        if (withGT.length > 0) bestRate = withGT.reduce((a, b) => a.detectionRate >= b.detectionRate ? a : b);
+    }
 
     // Build summary HTML first
     let summaryHtml = '<div class="benchmark-summary">';
     if (isMultiImage) {
         summaryHtml += `<h4>Aggregate Summary (${allResults.length} images)</h4>`;
         summaryHtml += '<div class="benchmark-table-wrap"><table class="benchmark-table">';
-        summaryHtml += '<thead><tr><th>SDK</th><th>Total Barcodes</th><th>Unique Barcodes</th><th>Total Time</th><th>Avg Time/Image</th></tr></thead>';
+        if (hasAnyGT) {
+            summaryHtml += '<thead><tr><th>SDK</th><th>Total Found</th><th>Unique Barcodes</th><th>GT Expected</th><th>GT Detected</th><th>Detection Rate</th><th>Precision</th><th>Total Time</th><th>Avg Time/Image</th></tr></thead>';
+        } else {
+            summaryHtml += '<thead><tr><th>SDK</th><th>Total Barcodes</th><th>Unique Barcodes</th><th>Total Time</th><th>Avg Time/Image</th></tr></thead>';
+        }
         summaryHtml += '<tbody>';
 
         let maxTotal = Math.max(...summaryEntries.map(e => e.totalBarcodes));
         let maxUnique = Math.max(...summaryEntries.map(e => e.uniqueBarcodes));
+        let maxRate = hasAnyGT ? Math.max(0, ...summaryEntries.filter(e => e.detectionRate !== null).map(e => e.detectionRate)) : 0;
 
         for (let entry of summaryEntries) {
             let totalClass = (entry.totalBarcodes === maxTotal && maxTotal > 0) ? 'count-col best-count' : 'count-col';
             let uniqueClass = (entry.uniqueBarcodes === maxUnique && maxUnique > 0) ? 'count-col best-count' : 'count-col';
             let avgTime = entry.totalTime / allResults.length;
-            summaryHtml += `<tr>
+            if (hasAnyGT) {
+                let rateClass = (entry.detectionRate !== null && entry.detectionRate === maxRate && maxRate > 0) ? 'count-col best-count' : 'count-col';
+                let rateHtml = entry.detectionRate !== null ? `<span class="${gtRateClass(entry.detectionRate)}">${(entry.detectionRate * 100).toFixed(1)}%</span>` : '<em>N/A</em>';
+                let precHtml = entry.precision !== null ? `<span class="${gtRateClass(entry.precision)}">${(entry.precision * 100).toFixed(1)}%</span>` : '<em>N/A</em>';
+                summaryHtml += `<tr>
+                <td class="sdk-col">${escapeHtml(entry.sdk)}</td>
+                <td class="${totalClass}">${entry.totalBarcodes}</td>
+                <td class="${uniqueClass}">${entry.uniqueBarcodes}</td>
+                <td class="count-col">${entry.totalExpected}</td>
+                <td class="count-col">${entry.totalTP}</td>
+                <td class="${rateClass}">${rateHtml}</td>
+                <td class="count-col">${precHtml}</td>
+                <td class="time-col">${entry.totalTime.toFixed(0)} ms</td>
+                <td class="time-col">${avgTime.toFixed(0)} ms</td>
+            </tr>`;
+            } else {
+                summaryHtml += `<tr>
                 <td class="sdk-col">${escapeHtml(entry.sdk)}</td>
                 <td class="${totalClass}">${entry.totalBarcodes}</td>
                 <td class="${uniqueClass}">${entry.uniqueBarcodes}</td>
                 <td class="time-col">${entry.totalTime.toFixed(0)} ms</td>
                 <td class="time-col">${avgTime.toFixed(0)} ms</td>
             </tr>`;
+            }
         }
         summaryHtml += '</tbody></table></div>';
     }
@@ -1624,6 +1686,9 @@ function buildBenchmarkHtml(allResults, sdkLabels) {
     if (isMultiImage) {
         summaryHtml += `<li>Most unique barcodes: <strong>${escapeHtml(mostUnique.sdk)}</strong> (${mostUnique.uniqueBarcodes})</li>`;
     }
+    if (hasAnyGT && bestRate && bestRate.detectionRate > 0) {
+        summaryHtml += `<li>Best detection rate: <strong>${escapeHtml(bestRate.sdk)}</strong> (${(bestRate.detectionRate * 100).toFixed(1)}%)</li>`;
+    }
     summaryHtml += `<li>Fastest: <strong>${escapeHtml(fastest.sdk)}</strong> (${fastest.totalTime.toFixed(0)} ms total)</li>`;
     summaryHtml += '</ul></div>';
 
@@ -1632,13 +1697,19 @@ function buildBenchmarkHtml(allResults, sdkLabels) {
     for (let imgResult of allResults) {
         let results = imgResult.sdkResults;
         let maxCount = Math.max(...results.map(r => r.barcodes.length));
+        const hasGT = results.some(r => r.gtResult !== null);
 
         if (isMultiImage) {
-            tablesHtml += `<h4 class="benchmark-image-title">${escapeHtml(imgResult.imageName)}</h4>`;
+            let gtTag = hasGT ? ' <span style="font-size:0.78rem; font-weight:500; color:#16a34a; background:#d1fae5; padding:1px 7px; border-radius:10px; margin-left:4px;">GT</span>' : '';
+            tablesHtml += `<h4 class="benchmark-image-title">${escapeHtml(imgResult.imageName)}${gtTag}</h4>`;
         }
 
         tablesHtml += '<div class="benchmark-table-wrap"><table class="benchmark-table">';
-        tablesHtml += '<thead><tr><th>SDK</th><th>Barcodes Found</th><th>Time</th><th>Details</th></tr></thead>';
+        if (hasGT) {
+            tablesHtml += '<thead><tr><th>SDK</th><th>Found</th><th>Expected</th><th>Detected ✓</th><th>Rate</th><th>Precision</th><th>Time</th><th>Details</th></tr></thead>';
+        } else {
+            tablesHtml += '<thead><tr><th>SDK</th><th>Barcodes Found</th><th>Time</th><th>Details</th></tr></thead>';
+        }
         tablesHtml += '<tbody>';
 
         for (let r of results) {
@@ -1659,12 +1730,30 @@ function buildBenchmarkHtml(allResults, sdkLabels) {
                 detailHtml = '<em>Nothing found</em>';
             }
 
-            tablesHtml += `<tr>
+            if (hasGT) {
+                let gt = r.gtResult;
+                let tp = gt ? gt.tp : '-';
+                let total = gt ? gt.total : '-';
+                let rateHtml = gt ? `<span class="${gtRateClass(gt.detectionRate)}">${(gt.detectionRate * 100).toFixed(1)}%</span>` : '<em>N/A</em>';
+                let precHtml = gt ? `<span class="${gtRateClass(gt.precision)}">${(gt.precision * 100).toFixed(1)}%</span>` : '<em>N/A</em>';
+                tablesHtml += `<tr>
+                <td class="sdk-col">${escapeHtml(r.sdkLabel)}</td>
+                <td class="${countClass}">${count}</td>
+                <td class="count-col">${total}</td>
+                <td class="count-col">${tp}</td>
+                <td class="rate-col">${rateHtml}</td>
+                <td class="rate-col">${precHtml}</td>
+                <td class="time-col">${r.time.toFixed(0)} ms</td>
+                <td>${detailHtml}</td>
+            </tr>`;
+            } else {
+                tablesHtml += `<tr>
                 <td class="sdk-col">${escapeHtml(r.sdkLabel)}</td>
                 <td class="${countClass}">${count}</td>
                 <td class="time-col">${r.time.toFixed(0)} ms</td>
                 <td>${detailHtml}</td>
             </tr>`;
+            }
         }
 
         tablesHtml += '</tbody></table></div>';
@@ -1711,6 +1800,10 @@ function exportBenchmarkResults() {
   .count-col { text-align: center; font-weight: 700; font-size: 1.05em; }
   .best-count { color: #16a34a; }
   .time-col { white-space: nowrap; color: #64748b; }
+  .rate-col { text-align: center; white-space: nowrap; font-weight: 600; }
+  .gt-good { color: #16a34a; }
+  .gt-ok { color: #d97706; }
+  .gt-poor { color: #dc2626; }
   .barcodes-list { margin: 0; padding-left: 16px; }
   .barcodes-list li { margin-bottom: 2px; font-size: 0.85em; font-family: monospace; }
   .benchmark-summary { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-top: 8px; }
@@ -1737,4 +1830,149 @@ ${reportHtml}
     a.download = 'benchmark_report.html';
     a.click();
     URL.revokeObjectURL(url);
+}
+
+// ========== Dynamsoft Template ==========
+async function applyDynamsoftTemplateContent(jsonContent) {
+    try {
+        await cvr.initSettings(jsonContent);
+        // Extract the first task name from CaptureVisionTemplates array
+        const parsed = JSON.parse(jsonContent);
+        const templates = parsed.CaptureVisionTemplates || parsed.CaptureVisionTemplate;
+        if (Array.isArray(templates) && templates.length > 0 && templates[0].Name) {
+            dynamsoftTemplate = templates[0].Name;
+        } else if (templates && templates.Name) {
+            dynamsoftTemplate = templates.Name;
+        }
+        console.log('Dynamsoft custom template applied, task name:', dynamsoftTemplate);
+    } catch (ex) {
+        console.error('Failed to apply Dynamsoft template:', ex);
+        throw ex;
+    }
+}
+
+function loadDynamsoftTemplate(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function (e) {
+        const content = e.target.result;
+        const statusEl = document.getElementById('dynamsoft_template_status');
+        const clearBtn = document.getElementById('dynamsoft_template_clear_btn');
+        try {
+            // Validate JSON
+            JSON.parse(content);
+            dynamsoftCustomTemplateContent = content;
+
+            if (cvr && sdkActivated.dynamsoft) {
+                // CVR already exists — apply immediately
+                await applyDynamsoftTemplateContent(content);
+                statusEl.textContent = `\u2713 ${file.name} (task: ${dynamsoftTemplate})`;
+            } else {
+                // Store for later — will be applied after activation
+                dynamsoftTemplate = 'ReadBarcodes_Default'; // reset until applied
+                statusEl.textContent = `\u23F3 ${file.name} (applied on activation)`;
+            }
+            statusEl.style.color = 'var(--success-color)';
+            clearBtn.style.display = 'inline-flex';
+        } catch (err) {
+            statusEl.textContent = `Error: ${err.message}`;
+            statusEl.style.color = '#ef4444';
+            clearBtn.style.display = 'none';
+            dynamsoftCustomTemplateContent = null;
+        }
+        input.value = '';
+    };
+    reader.readAsText(file);
+}
+
+function clearDynamsoftTemplate() {
+    dynamsoftCustomTemplateContent = null;
+    dynamsoftTemplate = 'ReadBarcodes_Default';
+    const statusEl = document.getElementById('dynamsoft_template_status');
+    if (statusEl) { statusEl.textContent = 'Using built-in default'; statusEl.style.color = ''; }
+    const clearBtn = document.getElementById('dynamsoft_template_clear_btn');
+    if (clearBtn) clearBtn.style.display = 'none';
+    // Re-init settings to default if CVR is ready
+    if (cvr && sdkActivated.dynamsoft) {
+        cvr.resetSettings().catch(() => {});
+    }
+}
+
+// ========== Annotation Ground Truth ==========
+function importAnnotations(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!data.images || !Array.isArray(data.images)) {
+                throw new Error('Invalid format. Expected an "images" array.');
+            }
+            annotationData = {};
+            for (const entry of data.images) {
+                if (entry.file && Array.isArray(entry.barcodes)) {
+                    annotationData[entry.file] = entry.barcodes;
+                }
+            }
+            const count = Object.keys(annotationData).length;
+            const totalBarcodes = Object.values(annotationData).reduce((sum, barcodes) => sum + barcodes.length, 0);
+            const statusEl = document.getElementById('annotation_status');
+            statusEl.textContent = `\u2713 ${count} images, ${totalBarcodes} barcodes loaded`;
+            statusEl.style.color = 'var(--success-color)';
+            document.getElementById('annotation_clear_btn').style.display = 'inline-flex';
+        } catch (err) {
+            annotationData = null;
+            const statusEl = document.getElementById('annotation_status');
+            statusEl.textContent = `Error: ${err.message}`;
+            statusEl.style.color = '#ef4444';
+            document.getElementById('annotation_clear_btn').style.display = 'none';
+        }
+        input.value = '';
+    };
+    reader.readAsText(file);
+}
+
+function clearAnnotations() {
+    annotationData = null;
+    const statusEl = document.getElementById('annotation_status');
+    if (statusEl) statusEl.textContent = '';
+    const clearBtn = document.getElementById('annotation_clear_btn');
+    if (clearBtn) clearBtn.style.display = 'none';
+}
+
+function matchBarcodeText(detected, expected) {
+    if (detected === expected) return true;
+    // UPC-A (12 digits) vs EAN-13 (13 digits with leading 0) equivalence
+    if (detected.length === 12 && expected.length === 13 && expected === '0' + detected) return true;
+    if (detected.length === 13 && expected.length === 12 && detected === '0' + expected) return true;
+    // Detected may include appended check digit (up to 2 extra chars)
+    if (detected.startsWith(expected) && detected.length <= expected.length + 2) return true;
+    return false;
+}
+
+function computeGTResult(detectedTexts, expectedTexts) {
+    const matchedExpectedIndices = new Set();
+    const matchedDetectedIndices = new Set();
+    for (let i = 0; i < expectedTexts.length; i++) {
+        for (let j = 0; j < detectedTexts.length; j++) {
+            if (!matchedDetectedIndices.has(j) && matchBarcodeText(detectedTexts[j], expectedTexts[i])) {
+                matchedExpectedIndices.add(i);
+                matchedDetectedIndices.add(j);
+                break;
+            }
+        }
+    }
+    const tp = matchedExpectedIndices.size;
+    const fp = detectedTexts.length - matchedDetectedIndices.size;
+    const detectionRate = expectedTexts.length > 0 ? tp / expectedTexts.length : 0;
+    const precision = (tp + fp) > 0 ? tp / (tp + fp) : (tp > 0 ? 1 : 0);
+    return { tp, fp, fn: expectedTexts.length - tp, detectionRate, precision, total: expectedTexts.length };
+}
+
+function gtRateClass(rate) {
+    if (rate >= 0.9) return 'gt-good';
+    if (rate >= 0.7) return 'gt-ok';
+    return 'gt-poor';
 }

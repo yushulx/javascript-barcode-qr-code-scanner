@@ -64,6 +64,18 @@
                             placeholder="Enter your Dynamsoft license key">
                         <button onclick="activateDynamsoft()" class="btn btn-primary" id="dynamsoft_activate_btn">Activate</button>
                     </div>
+                    <div style="margin-top: 10px;">
+                        <label class="label-text" style="margin-bottom: 4px; font-size:0.85rem;">Scan Template (JSON)</label>
+                        <div class="template-load-row">
+                            <label class="btn btn-secondary btn-sm template-load-btn" for="dynamsoft_template_input">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                Load Template File
+                            </label>
+                            <input type="file" id="dynamsoft_template_input" accept=".json" class="file-input" onchange="loadDynamsoftTemplate(this)" />
+                            <span id="dynamsoft_template_status" class="template-status">Using built-in default</span>
+                            <button id="dynamsoft_template_clear_btn" class="btn btn-sm" onclick="clearDynamsoftTemplate()" style="display:none;">&#x2715; Reset</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Strich.io License -->
@@ -230,6 +242,16 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         Export HTML
                     </button>
+                </div>
+                <!-- Annotation ground truth import -->
+                <div class="benchmark-annotation-row">
+                    <span style="font-size:0.85rem; color:var(--text-secondary); font-weight:600;">Ground Truth:</span>
+                    <label class="btn btn-secondary btn-sm annotation-import-btn" for="annotation_import_input">
+                        📄 Import annotations.json
+                    </label>
+                    <input type="file" id="annotation_import_input" accept=".json" class="file-input" onchange="importAnnotations(this)" />
+                    <span id="annotation_status" class="annotation-status"></span>
+                    <button id="annotation_clear_btn" class="btn btn-sm" onclick="clearAnnotations()" style="display:none; padding:6px 12px; font-size:0.82rem; background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;">✕ Clear</button>
                 </div>
             </div>
             <div id="benchmark_progress" style="display: none;">

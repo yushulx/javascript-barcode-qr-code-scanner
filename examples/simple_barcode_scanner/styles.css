@@ -809,6 +809,63 @@ button,
     margin-top: 8px;
 }
 
+/* Dynamsoft template file loader */
+.template-load-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.template-load-btn {
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.template-status {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Annotation ground truth import row */
+.benchmark-annotation-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.annotation-import-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.annotation-status {
+    font-size: 0.85rem;
+}
+
+/* Benchmark GT rate columns */
+.benchmark-table .rate-col {
+    text-align: center;
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.gt-good { color: #16a34a; }
+.gt-ok { color: #d97706; }
+.gt-poor { color: #dc2626; }
+
 @media (max-width: 768px) {
     .top-controls {
         flex-direction: column;
