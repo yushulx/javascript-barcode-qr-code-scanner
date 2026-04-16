@@ -230,7 +230,7 @@ function loadImage2Canvas(base64Image) {
         context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         try {
             if (currentSDK === 'dynamsoft') {
-                await cvr.resetSettings();
+                await resetOrReapplyDynamsoftSettings();
                 let result = await cvr.capture(img.src, dynamsoftTemplate);
                 showFileResult(context, result);
             } else if (currentSDK === 'strich') {
@@ -798,7 +798,7 @@ async function scanVideoFrameZXing(tempCtx, tempCanvas, ctx) {
 }
 
 async function scanVideoFrameDynamsoft(canvas, ctx) {
-    await cvr.resetSettings();
+    await resetOrReapplyDynamsoftSettings();
     let result = await cvr.capture(canvas, dynamsoftTemplate);
 
     if (result.items && result.items.length > 0) {
@@ -1496,7 +1496,7 @@ async function benchmarkSingleSDK(sdk, testImg, groundTruth = null) {
                 }
             }
         } else if (sdk === 'dynamsoft') {
-            await cvr.resetSettings();
+            await resetOrReapplyDynamsoftSettings();
             let result = await cvr.capture(testImg.src, dynamsoftTemplate);
             if (result.items && result.items.length > 0) {
                 for (let item of result.items) {
@@ -1833,6 +1833,14 @@ ${reportHtml}
 }
 
 // ========== Dynamsoft Template ==========
+async function resetOrReapplyDynamsoftSettings() {
+    if (dynamsoftCustomTemplateContent) {
+        await cvr.initSettings(dynamsoftCustomTemplateContent);
+    } else {
+        await cvr.resetSettings();
+    }
+}
+
 async function applyDynamsoftTemplateContent(jsonContent) {
     try {
         await cvr.initSettings(jsonContent);
