@@ -378,6 +378,31 @@ function openEditor(image) {
     edit();
 }
 
+function originalImageToDataURL(imageData) {
+    if (!imageData || !imageData.bytes || !imageData.width || !imageData.height) {
+        throw new Error('Invalid original image data.');
+    }
+
+    const width = imageData.width;
+    const height = imageData.height;
+    const stride = imageData.stride || width * 4;
+    const sourceBytes = new Uint8ClampedArray(imageData.bytes);
+    const copiedBytes = new Uint8ClampedArray(width * height * 4);
+
+    for (let row = 0; row < height; row++) {
+        const sourceOffset = row * stride;
+        const targetOffset = row * width * 4;
+        copiedBytes.set(sourceBytes.subarray(sourceOffset, sourceOffset + width * 4), targetOffset);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    context.putImageData(new ImageData(copiedBytes, width, height), 0, 0);
+    return canvas.toDataURL();
+}
+
 async function closeEditor() {
     documentEditor.style.display = "none";
     if (dropdown.value === 'camera') {
@@ -773,11 +798,12 @@ async function showCameraResult(result) {
             else if (items[i].type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_ORIGINAL_IMAGE) {
                 if (selectedMode == "document") {
                     if (isCaptured) {
+                        const capturedImage = originalImageToDataURL(item.imageData);
                         isCaptured = false;
                         await stopScanning();
                         targetCanvas.width = resolution.width;
                         targetCanvas.height = resolution.height;
-                        openEditor(item.imageData.toCanvas().toDataURL());
+                        openEditor(capturedImage);
                     }
                 }
             }
