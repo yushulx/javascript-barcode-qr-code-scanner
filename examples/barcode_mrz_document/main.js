@@ -798,12 +798,12 @@ async function showCameraResult(result) {
             else if (items[i].type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_ORIGINAL_IMAGE) {
                 if (selectedMode == "document") {
                     if (isCaptured) {
-                        const capturedImage = originalImageToDataURL(item.imageData);
+                        // const capturedImage = originalImageToDataURL(item.imageData);
                         isCaptured = false;
                         await stopScanning();
                         targetCanvas.width = resolution.width;
                         targetCanvas.height = resolution.height;
-                        openEditor(capturedImage);
+                        openEditor(item.toCanvas().toDataURL());
                     }
                 }
             }
