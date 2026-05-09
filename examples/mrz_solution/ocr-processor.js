@@ -18,6 +18,12 @@ class OCRProcessor {
 
     async init() {
         try {
+            // Disable SIMD and multi-threading to avoid WASM signature mismatch errors
+            ort.env.wasm.simd = false;
+            ort.env.wasm.numThreads = 1;
+            // Use proxied WASM to avoid SharedArrayBuffer requirement
+            ort.env.wasm.proxy = true;
+
             const options = {
                 executionProviders: ['webgpu', 'wasm'],
                 graphOptimizationLevel: 'all'

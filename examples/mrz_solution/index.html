@@ -7,9 +7,9 @@
     <title>AI-Powered MRZ & Passport Scanner</title>
     <link rel="stylesheet" href="style.css">
     <!-- Dynamsoft Capture Vision Bundle for MRZ -->
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.2.4000/dist/dcv.bundle.min.js"></script>
-    <!-- ONNX Runtime Web for OCR -->
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.4.2001/dist/dcv.bundle.min.js"></script>
+    <!-- ONNX Runtime Web for OCR (pinned to stable version, avoid SIMD/threaded WASM issues) -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
     <!-- face-api.js for accurate face detection (MTCNN-like) -->
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
