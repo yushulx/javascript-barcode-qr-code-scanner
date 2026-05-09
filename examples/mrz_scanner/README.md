@@ -2,6 +2,11 @@
 
 This project is a plain JavaScript web sample that extracts MRZ fields, document borders, and portrait photos from passports and ID cards. It uses Dynamsoft Capture Vision in the browser and supports image upload, clipboard paste, drag-and-drop, and one-shot camera capture.
 
+https://github.com/user-attachments/assets/12c8765e-8364-4ff4-9712-bcef35601e30
+
+## Online Demo
+https://yushulx.me/javascript-barcode-qr-code-scanner/examples/mrz_scanner/
+
 ## What It Does
 
 - Reads MRZ text from passport and ID card images.
