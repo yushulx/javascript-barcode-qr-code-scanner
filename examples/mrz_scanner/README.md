@@ -29,3 +29,6 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/mrz_scanner/
     - `Load` to scan an image file
     - `Paste` to scan an image from the clipboard
     - `Camera` to open the live preview, then `Capture` to freeze the frame and run detection once
+
+## Blog
+[How to Extract Structured Data and Photos from Passports in JavaScript with Dynamsoft Capture Vision](https://www.dynamsoft.com/codepool/extract-structured-data-photos-from-passports-javascript.html)
