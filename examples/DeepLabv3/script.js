@@ -1,5 +1,6 @@
 // Configuration
 const INPUT_SIZE = 384;
+const OPENCV_SCRIPT_URL = 'https://docs.opencv.org/4.10.0/opencv.js';
 
 // State
 let worker = null;
@@ -9,9 +10,11 @@ let isProcessing = false;
 let frameCount = 0;
 let fpsInterval = null;
 let latestResult = null;
+let latestDetectionSource = null;
 let images = []; // Array of {url, img} objects
 let currentImageIndex = -1;
 let currentImageElement = null; // Reference to the currently displayed image
+let openCvReadyPromise = null;
 
 // DOM Elements
 const statusText = document.getElementById('status-text');
@@ -23,6 +26,16 @@ const ctx = canvas.getContext('2d');
 const webcamVideo = document.getElementById('webcam-video');
 const sourceImage = document.getElementById('source-image');
 const backendSelect = document.getElementById('backend-select');
+const analysisCanvas = document.createElement('canvas');
+const analysisCtx = analysisCanvas.getContext('2d', { willReadFrequently: true });
+const boundaryCanvas = document.createElement('canvas');
+const boundaryCtx = boundaryCanvas.getContext('2d', { willReadFrequently: true });
+const snapshotCanvas = document.createElement('canvas');
+const snapshotCtx = snapshotCanvas.getContext('2d', { willReadFrequently: true });
+const MIN_BOUNDARY_GRADIENT_MEAN = 1.5;
+const MIN_BOUNDARY_GRADIENT_P90 = 4.1;
+const MIN_BOUNDARY_INSIDE_OUTSIDE_CONTRAST = 0.25;
+const MIN_MODEL_BOUNDARY_MARGIN = 0.5;
 
 // Navigator Elements
 const imageNavigator = document.querySelector('.image-navigator');
@@ -42,8 +55,18 @@ const totalEl = document.getElementById('total-time');
 const fpsEl = document.getElementById('fps-counter');
 
 // Initialization
-function init(backend = 'wasm') {
+async function init(backend = 'wasm') {
     webcamBtn.disabled = true;
+    updateStatus('Loading OpenCV...', 'loading');
+
+    try {
+        await ensureOpenCvReady();
+    } catch (error) {
+        console.error(error);
+        updateStatus(`Error: ${error.message}`, 'error');
+        return;
+    }
+
     updateStatus(`Initializing ${backend}...`, 'loading');
 
     if (worker) {
@@ -71,6 +94,44 @@ function init(backend = 'wasm') {
     worker.postMessage({ type: 'init', data: { backend } });
 }
 
+function ensureOpenCvReady() {
+    if (globalThis.cv && typeof globalThis.cv.Mat === 'function') {
+        return Promise.resolve();
+    }
+
+    if (openCvReadyPromise) {
+        return openCvReadyPromise;
+    }
+
+    openCvReadyPromise = new Promise((resolve, reject) => {
+        const existingModule = globalThis.Module || {};
+        const previousInit = existingModule.onRuntimeInitialized;
+        globalThis.Module = {
+            ...existingModule,
+            onRuntimeInitialized() {
+                if (typeof previousInit === 'function') {
+                    previousInit();
+                }
+                resolve();
+            }
+        };
+
+        const existingScript = document.querySelector('script[data-opencv-loader="true"]');
+        if (existingScript) {
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = OPENCV_SCRIPT_URL;
+        script.async = true;
+        script.dataset.opencvLoader = 'true';
+        script.onerror = () => reject(new Error('Failed to load OpenCV.js'));
+        document.head.appendChild(script);
+    });
+
+    return openCvReadyPromise;
+}
+
 // Handle Backend Change
 backendSelect.addEventListener('change', (e) => {
     init(e.target.value);
@@ -83,6 +144,126 @@ init(backendSelect.value);
 function updateStatus(text, type) {
     statusText.textContent = text;
     statusDot.className = `status-dot ${type}`;
+}
+
+function orderPoints(points) {
+    if (!points || points.length !== 4) {
+        return points;
+    }
+
+    const sums = points.map(point => point.x + point.y);
+    const diffs = points.map(point => point.y - point.x);
+
+    return [
+        points[sums.indexOf(Math.min(...sums))],
+        points[diffs.indexOf(Math.min(...diffs))],
+        points[sums.indexOf(Math.max(...sums))],
+        points[diffs.indexOf(Math.max(...diffs))]
+    ];
+}
+
+function rotatedRectToPoints(rect) {
+    const angle = rect.angle * Math.PI / 180;
+    const halfWidth = rect.size.width / 2;
+    const halfHeight = rect.size.height / 2;
+    const widthVector = {
+        x: Math.cos(angle) * halfWidth,
+        y: Math.sin(angle) * halfWidth
+    };
+    const heightVector = {
+        x: -Math.sin(angle) * halfHeight,
+        y: Math.cos(angle) * halfHeight
+    };
+
+    return [
+        {
+            x: rect.center.x - widthVector.x - heightVector.x,
+            y: rect.center.y - widthVector.y - heightVector.y
+        },
+        {
+            x: rect.center.x + widthVector.x - heightVector.x,
+            y: rect.center.y + widthVector.y - heightVector.y
+        },
+        {
+            x: rect.center.x + widthVector.x + heightVector.x,
+            y: rect.center.y + widthVector.y + heightVector.y
+        },
+        {
+            x: rect.center.x - widthVector.x + heightVector.x,
+            y: rect.center.y - widthVector.y + heightVector.y
+        }
+    ];
+}
+
+function extractBoundaryWithOpenCv(mask, originalWidth, originalHeight) {
+    const maskData = new Uint8Array(mask.length);
+    for (let i = 0; i < mask.length; i++) {
+        maskData[i] = mask[i] > 0 ? 255 : 0;
+    }
+
+    const maskMat = cv.matFromArray(INPUT_SIZE, INPUT_SIZE, cv.CV_8UC1, maskData);
+    const resizedMask = new cv.Mat();
+    const contours = new cv.MatVector();
+    const hierarchy = new cv.Mat();
+    const approx = new cv.Mat();
+
+    try {
+        cv.resize(
+            maskMat,
+            resizedMask,
+            new cv.Size(originalWidth, originalHeight),
+            0,
+            0,
+            cv.INTER_NEAREST
+        );
+        cv.findContours(resizedMask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+        if (contours.size() === 0) {
+            return null;
+        }
+
+        let largestContourIndex = 0;
+        let largestArea = -1;
+        for (let i = 0; i < contours.size(); i++) {
+            const contour = contours.get(i);
+            const area = cv.contourArea(contour);
+            contour.delete();
+            if (area > largestArea) {
+                largestArea = area;
+                largestContourIndex = i;
+            }
+        }
+
+        const largestContour = contours.get(largestContourIndex);
+        try {
+            const epsilon = 0.02 * cv.arcLength(largestContour, true);
+            cv.approxPolyDP(largestContour, approx, epsilon, true);
+
+            let corners;
+            if (approx.rows === 4) {
+                const data = approx.data32S;
+                corners = [];
+                for (let i = 0; i < 4; i++) {
+                    corners.push({
+                        x: data[i * 2],
+                        y: data[i * 2 + 1]
+                    });
+                }
+            } else {
+                corners = rotatedRectToPoints(cv.minAreaRect(largestContour));
+            }
+
+            return orderPoints(corners);
+        } finally {
+            largestContour.delete();
+        }
+    } finally {
+        approx.delete();
+        hierarchy.delete();
+        contours.delete();
+        resizedMask.delete();
+        maskMat.delete();
+    }
 }
 
 // === Pure JS Geometry Utils ===// Find convex hull using Monotone Chain algorithm
@@ -145,8 +326,284 @@ function findCorners(points) {
     return [tl, tr, br, bl];
 }
 
+function getBoundaryEvidenceMetrics(imageSource, corners) {
+    if (!imageSource || !corners || !analysisCtx || !boundaryCtx) {
+        return {
+            mean: Number.POSITIVE_INFINITY,
+            p90: Number.POSITIVE_INFINITY,
+            contrast: Number.POSITIVE_INFINITY
+        };
+    }
+
+    const width = imageSource.width || imageSource.videoWidth || imageSource.naturalWidth || INPUT_SIZE;
+    const height = imageSource.height || imageSource.videoHeight || imageSource.naturalHeight || INPUT_SIZE;
+    if (!width || !height) {
+        return {
+            mean: Number.POSITIVE_INFINITY,
+            p90: Number.POSITIVE_INFINITY,
+            contrast: Number.POSITIVE_INFINITY
+        };
+    }
+
+    const boundaryBandWidth = Math.max(5, Math.round(Math.min(width, height) * 0.015));
+    let contrastBandWidth = Math.max(15, Math.round(Math.min(width, height) * 0.05));
+    if (contrastBandWidth % 2 === 0) {
+        contrastBandWidth += 1;
+    }
+
+    analysisCanvas.width = width;
+    analysisCanvas.height = height;
+    boundaryCanvas.width = width;
+    boundaryCanvas.height = height;
+
+    analysisCtx.clearRect(0, 0, width, height);
+    analysisCtx.drawImage(imageSource, 0, 0, width, height);
+
+    const imageData = analysisCtx.getImageData(0, 0, width, height).data;
+    const grayscale = new Float32Array(width * height);
+    const gradients = new Float32Array(width * height);
+
+    for (let i = 0; i < grayscale.length; i++) {
+        const offset = i * 4;
+        grayscale[i] = (
+            imageData[offset] * 0.299 +
+            imageData[offset + 1] * 0.587 +
+            imageData[offset + 2] * 0.114
+        );
+    }
+
+    for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+            const i = y * width + x;
+            const topLeft = grayscale[i - width - 1];
+            const top = grayscale[i - width];
+            const topRight = grayscale[i - width + 1];
+            const left = grayscale[i - 1];
+            const right = grayscale[i + 1];
+            const bottomLeft = grayscale[i + width - 1];
+            const bottom = grayscale[i + width];
+            const bottomRight = grayscale[i + width + 1];
+
+            const gradX = (
+                -topLeft + topRight -
+                2 * left + 2 * right -
+                bottomLeft + bottomRight
+            );
+            const gradY = (
+                -topLeft - 2 * top - topRight +
+                bottomLeft + 2 * bottom + bottomRight
+            );
+
+            gradients[i] = Math.hypot(gradX, gradY);
+        }
+    }
+
+    boundaryCtx.clearRect(0, 0, width, height);
+    boundaryCtx.lineWidth = boundaryBandWidth;
+    boundaryCtx.strokeStyle = '#fff';
+    boundaryCtx.lineJoin = 'round';
+    boundaryCtx.lineCap = 'round';
+    boundaryCtx.beginPath();
+    boundaryCtx.moveTo(corners[0].x, corners[0].y);
+    for (let i = 1; i < corners.length; i++) {
+        boundaryCtx.lineTo(corners[i].x, corners[i].y);
+    }
+    boundaryCtx.closePath();
+    boundaryCtx.stroke();
+
+    const boundaryMask = boundaryCtx.getImageData(0, 0, width, height).data;
+    let boundaryGradientSum = 0;
+    const boundaryGradientValues = [];
+    let boundaryPixelCount = 0;
+
+    for (let i = 0; i < gradients.length; i++) {
+        if (boundaryMask[i * 4 + 3] > 0) {
+            boundaryGradientSum += gradients[i];
+            boundaryGradientValues.push(gradients[i]);
+            boundaryPixelCount++;
+        }
+    }
+
+    if (boundaryPixelCount === 0) {
+        return { mean: 0, p90: 0, contrast: 0 };
+    }
+
+    const sortedGradients = boundaryGradientValues.sort((a, b) => a - b);
+    const p90Index = Math.min(
+        sortedGradients.length - 1,
+        Math.floor(sortedGradients.length * 0.9)
+    );
+
+    const fillMask = new Uint8Array(width * height);
+    const outerMask = new Uint8Array(width * height);
+    const expandedCorners = corners.map((point, index) => {
+        const previous = corners[(index + corners.length - 1) % corners.length];
+        const next = corners[(index + 1) % corners.length];
+        const prevEdge = { x: point.x - previous.x, y: point.y - previous.y };
+        const nextEdge = { x: next.x - point.x, y: next.y - point.y };
+        const prevNormal = normalizeVector({ x: prevEdge.y, y: -prevEdge.x });
+        const nextNormal = normalizeVector({ x: nextEdge.y, y: -nextEdge.x });
+        const combinedNormal = normalizeVector({
+            x: prevNormal.x + nextNormal.x,
+            y: prevNormal.y + nextNormal.y
+        });
+        const offset = combinedNormal.x === 0 && combinedNormal.y === 0
+            ? { x: 0, y: 0 }
+            : { x: combinedNormal.x * contrastBandWidth, y: combinedNormal.y * contrastBandWidth };
+        return { x: point.x + offset.x, y: point.y + offset.y };
+    });
+
+    fillPolygon(fillMask, width, height, corners);
+    fillPolygon(outerMask, width, height, expandedCorners);
+
+    let innerSum = 0;
+    let innerCount = 0;
+    let outerSum = 0;
+    let outerCount = 0;
+    for (let i = 0; i < grayscale.length; i++) {
+        if (fillMask[i]) {
+            innerSum += grayscale[i];
+            innerCount++;
+        } else if (outerMask[i]) {
+            outerSum += grayscale[i];
+            outerCount++;
+        }
+    }
+
+    const contrast = innerCount > 0 && outerCount > 0
+        ? Math.abs((innerSum / innerCount) - (outerSum / outerCount))
+        : 0;
+
+    return {
+        mean: boundaryGradientSum / boundaryPixelCount,
+        p90: sortedGradients[p90Index],
+        contrast
+    };
+}
+
+function hasBoundaryEvidence(imageSource, corners, modelBoundaryMargin = Number.POSITIVE_INFINITY) {
+    if (modelBoundaryMargin < MIN_MODEL_BOUNDARY_MARGIN) {
+        return false;
+    }
+
+    const metrics = getBoundaryEvidenceMetrics(imageSource, corners);
+    return (
+        metrics.mean >= MIN_BOUNDARY_GRADIENT_MEAN &&
+        metrics.p90 >= MIN_BOUNDARY_GRADIENT_P90 &&
+        metrics.contrast >= MIN_BOUNDARY_INSIDE_OUTSIDE_CONTRAST
+    );
+}
+
+function normalizeVector(vector) {
+    const length = Math.hypot(vector.x, vector.y);
+    if (!length) {
+        return { x: 0, y: 0 };
+    }
+
+    return {
+        x: vector.x / length,
+        y: vector.y / length
+    };
+}
+
+function fillPolygon(mask, width, height, points) {
+    if (!points || points.length < 3) {
+        return;
+    }
+
+    const intersections = [];
+    for (let y = 0; y < height; y++) {
+        intersections.length = 0;
+        const scanY = y + 0.5;
+
+        for (let i = 0; i < points.length; i++) {
+            const a = points[i];
+            const b = points[(i + 1) % points.length];
+            if ((a.y <= scanY && b.y > scanY) || (b.y <= scanY && a.y > scanY)) {
+                const t = (scanY - a.y) / (b.y - a.y);
+                intersections.push(a.x + t * (b.x - a.x));
+            }
+        }
+
+        intersections.sort((a, b) => a - b);
+        for (let i = 0; i + 1 < intersections.length; i += 2) {
+            const start = Math.max(0, Math.ceil(intersections[i]));
+            const end = Math.min(width - 1, Math.floor(intersections[i + 1]));
+            for (let x = start; x <= end; x++) {
+                mask[y * width + x] = 1;
+            }
+        }
+    }
+}
+
+function createDetectionSnapshot(imageSource) {
+    const width = canvas.width || imageSource.videoWidth || imageSource.naturalWidth || imageSource.width;
+    const height = canvas.height || imageSource.videoHeight || imageSource.naturalHeight || imageSource.height;
+
+    snapshotCanvas.width = width;
+    snapshotCanvas.height = height;
+    snapshotCtx.clearRect(0, 0, width, height);
+    snapshotCtx.drawImage(imageSource, 0, 0, width, height);
+
+    const frameCanvas = document.createElement('canvas');
+    frameCanvas.width = width;
+    frameCanvas.height = height;
+    frameCanvas.getContext('2d').drawImage(snapshotCanvas, 0, 0);
+    return frameCanvas;
+}
+
+function computeModelBoundaryMargin(outputData, mask) {
+    const size = INPUT_SIZE * INPUT_SIZE;
+    let boundaryMarginSum = 0;
+    let boundaryCount = 0;
+
+    for (let y = 0; y < INPUT_SIZE; y++) {
+        for (let x = 0; x < INPUT_SIZE; x++) {
+            const i = y * INPUT_SIZE + x;
+            const value = mask[i];
+            let isBoundary = false;
+
+            for (let dy = -2; dy <= 2 && !isBoundary; dy++) {
+                const ny = y + dy;
+                if (ny < 0 || ny >= INPUT_SIZE) {
+                    continue;
+                }
+
+                for (let dx = -2; dx <= 2; dx++) {
+                    const nx = x + dx;
+                    if (nx < 0 || nx >= INPUT_SIZE) {
+                        continue;
+                    }
+
+                    if (mask[ny * INPUT_SIZE + nx] !== value) {
+                        isBoundary = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!isBoundary) {
+                continue;
+            }
+
+            const bgScore = outputData[i];
+            const docScore = outputData[size + i];
+            const maxScore = Math.max(bgScore, docScore);
+            const bgExp = Math.exp(bgScore - maxScore);
+            const docExp = Math.exp(docScore - maxScore);
+            const denom = bgExp + docExp;
+            const margin = Math.abs(docExp - bgExp) / denom;
+
+            boundaryMarginSum += margin;
+            boundaryCount++;
+        }
+    }
+
+    return boundaryCount > 0 ? boundaryMarginSum / boundaryCount : 0;
+}
+
 // Helper: Postprocess
-function postprocess(outputData, originalWidth, originalHeight) {
+function postprocess(outputData, originalWidth, originalHeight, imageSource) {
     const startTime = performance.now();
 
     const data = outputData;
@@ -154,11 +611,6 @@ function postprocess(outputData, originalWidth, originalHeight) {
 
     // Create mask array (0 or 1)
     const mask = new Uint8Array(size);
-    const points = [];
-
-    // Threshold and collect points
-    // We downsample points to speed up hull calculation
-    const step = 4;
     let maskPixelCount = 0;
 
     for (let y = 0; y < INPUT_SIZE; y++) {
@@ -170,24 +622,14 @@ function postprocess(outputData, originalWidth, originalHeight) {
             if (docScore > bgScore) {
                 mask[i] = 1;
                 maskPixelCount++;
-                // Collect boundary points (simple edge check)
-                if (x % step === 0 && y % step === 0) {
-                    points.push({ x, y });
-                }
             } else {
                 mask[i] = 0;
             }
         }
     }
 
-    // Check if a document is actually present
-    // Calculate mask coverage ratio
-    const coverageRatio = maskPixelCount / size;
-    const minCoverage = 0.02; // At least 2% of the image should be document
-    const maxCoverage = 0.95; // Document shouldn't cover more than 95% (likely noise)
-
-    // If coverage is outside reasonable range, no valid document detected
-    if (coverageRatio < minCoverage || coverageRatio > maxCoverage) {
+    // No document pixels found
+    if (maskPixelCount === 0) {
         return {
             mask,
             corners: null,
@@ -195,50 +637,11 @@ function postprocess(outputData, originalWidth, originalHeight) {
         };
     }
 
+    const modelBoundaryMargin = computeModelBoundaryMargin(outputData, mask);
     let corners = null;
-    if (points.length > 20) {
-        // 1. Get Convex Hull
-        const hull = convexHull(points);
-
-        // Check hull area to ensure it's a reasonable document size
-        const hullArea = Math.abs(polygonArea(hull));
-        const hullCoverageRatio = hullArea / (INPUT_SIZE * INPUT_SIZE);
-
-        // Hull should cover at least 1.5% of the image
-        if (hullCoverageRatio < 0.015) {
-            return {
-                mask,
-                corners: null,
-                time: performance.now() - startTime
-            };
-        }
-
-        // 2. Find 4 corners
-        const rawCorners = findCorners(hull);
-
-        if (rawCorners) {
-            // Validate corners - check if they form a reasonable quadrilateral
-            const quadArea = Math.abs(polygonArea(rawCorners));
-            const quadCoverageRatio = quadArea / (INPUT_SIZE * INPUT_SIZE);
-
-            // Quad should cover at least 1% of the image
-            if (quadCoverageRatio < 0.01) {
-                return {
-                    mask,
-                    corners: null,
-                    time: performance.now() - startTime
-                };
-            }
-
-            // Scale corners to original image size
-            const scaleX = originalWidth / INPUT_SIZE;
-            const scaleY = originalHeight / INPUT_SIZE;
-
-            corners = rawCorners.map(p => ({
-                x: p.x * scaleX,
-                y: p.y * scaleY
-            }));
-        }
+    const extractedCorners = extractBoundaryWithOpenCv(mask, originalWidth, originalHeight);
+    if (extractedCorners && hasBoundaryEvidence(imageSource, extractedCorners, modelBoundaryMargin)) {
+        corners = extractedCorners;
     }
 
     return {
@@ -268,7 +671,7 @@ function drawOverlay(mask, corners) {
     const showMask = document.getElementById('show-mask').checked;
     const showBoundary = document.getElementById('show-boundary').checked;
 
-    if (showMask && mask) {
+    if (showMask && mask && corners) {
         // Create ImageData from mask
         // We need to resize the 384x384 mask to canvas size
         // For speed, we draw to a small canvas then scale up
@@ -317,7 +720,7 @@ function drawOverlay(mask, corners) {
 
 function handleDetectionResult(output, timings) {
     // 3. Postprocess
-    const postResult = postprocess(output, canvas.width, canvas.height);
+    const postResult = postprocess(output, canvas.width, canvas.height, latestDetectionSource);
     postprocessEl.textContent = `${postResult.time.toFixed(1)} ms`;
 
     // Update timings
@@ -347,10 +750,11 @@ function handleDetectionResult(output, timings) {
 async function processFrame(imageSource) {
     if (isProcessing) return;
     isProcessing = true;
+    latestDetectionSource = createDetectionSnapshot(imageSource);
 
     try {
         // Create ImageBitmap to send to worker (transferable and efficient)
-        const bitmap = await createImageBitmap(imageSource);
+        const bitmap = await createImageBitmap(latestDetectionSource);
         worker.postMessage({ type: 'detect', data: { image: bitmap } }, [bitmap]);
     } catch (e) {
         console.error(e);

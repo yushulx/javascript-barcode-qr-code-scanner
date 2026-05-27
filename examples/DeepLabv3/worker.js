@@ -106,7 +106,8 @@ self.onmessage = async (e) => {
                 console.log(`Configuring WASM with ${threads} threads`);
             }
 
-            const modelPath = backend === 'wasm' ? QUANTIZED_MODEL_PATH : FP32_MODEL_PATH;
+            // Use the FP32 export on every backend so browser output matches Python quality.
+            const modelPath = FP32_MODEL_PATH;
 
             if (session) {
                 session = null;
