@@ -44,8 +44,13 @@
                     </div>
                     <button id="webcam-btn" class="btn primary" disabled>Start Webcam</button>
                     <div class="file-upload">
-                        <label for="file-input" class="btn secondary">Upload Image</label>
-                        <input type="file" id="file-input" accept="image/*">
+                        <label for="file-input" class="btn secondary">Upload Images</label>
+                        <input type="file" id="file-input" accept="image/*" multiple>
+                    </div>
+                    <div class="image-navigator" style="display: none;">
+                        <button id="prev-btn" class="btn nav-btn" disabled>&lt; Prev</button>
+                        <span id="image-counter" class="image-counter">0 / 0</span>
+                        <button id="next-btn" class="btn nav-btn" disabled>Next &gt;</button>
                     </div>
                 </div>
 
@@ -75,7 +80,17 @@
             </div>
 
             <div class="viewport-panel">
-                <div class="canvas-wrapper">
+                <div class="canvas-wrapper" id="drop-zone">
+                    <div class="drop-overlay" id="drop-overlay">
+                        <div class="drop-message">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p>Drop images here</p>
+                        </div>
+                    </div>
                     <canvas id="output-canvas"></canvas>
                     <video id="webcam-video" playsinline style="display: none;"></video>
                     <img id="source-image" style="display: none;">

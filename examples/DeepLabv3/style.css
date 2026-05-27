@@ -141,6 +141,63 @@ h3 {
     display: none;
 }
 
+/* Image Navigator */
+.image-navigator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.nav-btn {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+}
+
+.image-counter {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-color);
+    min-width: 60px;
+    text-align: center;
+}
+
+/* Drag and Drop */
+.drop-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(37, 99, 235, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.drop-overlay.active {
+    display: flex;
+}
+
+.drop-message {
+    text-align: center;
+    color: white;
+}
+
+.drop-message svg {
+    margin-bottom: 12px;
+}
+
+.drop-message p {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
 /* Metrics */
 .metric-row {
     display: flex;

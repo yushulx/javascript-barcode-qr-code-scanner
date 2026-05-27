@@ -9,6 +9,9 @@ let isProcessing = false;
 let frameCount = 0;
 let fpsInterval = null;
 let latestResult = null;
+let images = []; // Array of {url, img} objects
+let currentImageIndex = -1;
+let currentImageElement = null; // Reference to the currently displayed image
 
 // DOM Elements
 const statusText = document.getElementById('status-text');
@@ -20,6 +23,16 @@ const ctx = canvas.getContext('2d');
 const webcamVideo = document.getElementById('webcam-video');
 const sourceImage = document.getElementById('source-image');
 const backendSelect = document.getElementById('backend-select');
+
+// Navigator Elements
+const imageNavigator = document.querySelector('.image-navigator');
+const prevBtn = document.getElementById('prev-btn');
+const nextBtn = document.getElementById('next-btn');
+const imageCounter = document.getElementById('image-counter');
+
+// Drag and Drop Elements
+const dropZone = document.getElementById('drop-zone');
+const dropOverlay = document.getElementById('drop-overlay');
 
 // Metrics Elements
 const preprocessEl = document.getElementById('preprocess-time');
@@ -146,6 +159,7 @@ function postprocess(outputData, originalWidth, originalHeight) {
     // Threshold and collect points
     // We downsample points to speed up hull calculation
     const step = 4;
+    let maskPixelCount = 0;
 
     for (let y = 0; y < INPUT_SIZE; y++) {
         for (let x = 0; x < INPUT_SIZE; x++) {
@@ -155,6 +169,7 @@ function postprocess(outputData, originalWidth, originalHeight) {
 
             if (docScore > bgScore) {
                 mask[i] = 1;
+                maskPixelCount++;
                 // Collect boundary points (simple edge check)
                 if (x % step === 0 && y % step === 0) {
                     points.push({ x, y });
@@ -165,15 +180,56 @@ function postprocess(outputData, originalWidth, originalHeight) {
         }
     }
 
+    // Check if a document is actually present
+    // Calculate mask coverage ratio
+    const coverageRatio = maskPixelCount / size;
+    const minCoverage = 0.02; // At least 2% of the image should be document
+    const maxCoverage = 0.95; // Document shouldn't cover more than 95% (likely noise)
+
+    // If coverage is outside reasonable range, no valid document detected
+    if (coverageRatio < minCoverage || coverageRatio > maxCoverage) {
+        return {
+            mask,
+            corners: null,
+            time: performance.now() - startTime
+        };
+    }
+
     let corners = null;
     if (points.length > 20) {
         // 1. Get Convex Hull
         const hull = convexHull(points);
 
+        // Check hull area to ensure it's a reasonable document size
+        const hullArea = Math.abs(polygonArea(hull));
+        const hullCoverageRatio = hullArea / (INPUT_SIZE * INPUT_SIZE);
+
+        // Hull should cover at least 1.5% of the image
+        if (hullCoverageRatio < 0.015) {
+            return {
+                mask,
+                corners: null,
+                time: performance.now() - startTime
+            };
+        }
+
         // 2. Find 4 corners
         const rawCorners = findCorners(hull);
 
         if (rawCorners) {
+            // Validate corners - check if they form a reasonable quadrilateral
+            const quadArea = Math.abs(polygonArea(rawCorners));
+            const quadCoverageRatio = quadArea / (INPUT_SIZE * INPUT_SIZE);
+
+            // Quad should cover at least 1% of the image
+            if (quadCoverageRatio < 0.01) {
+                return {
+                    mask,
+                    corners: null,
+                    time: performance.now() - startTime
+                };
+            }
+
             // Scale corners to original image size
             const scaleX = originalWidth / INPUT_SIZE;
             const scaleY = originalHeight / INPUT_SIZE;
@@ -190,6 +246,18 @@ function postprocess(outputData, originalWidth, originalHeight) {
         corners,
         time: performance.now() - startTime
     };
+}
+
+// Helper: Calculate polygon area using Shoelace formula
+function polygonArea(points) {
+    if (points.length < 3) return 0;
+    let area = 0;
+    for (let i = 0; i < points.length; i++) {
+        const j = (i + 1) % points.length;
+        area += points[i].x * points[j].y;
+        area -= points[j].x * points[i].y;
+    }
+    return area / 2;
 }
 
 // Helper: Draw Overlay
@@ -265,7 +333,9 @@ function handleDetectionResult(output, timings) {
 
     // If not webcam, we need to explicitly draw because there is no loop
     if (!isWebcamActive) {
-        ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+        // Use currentImageElement if available, fallback to sourceImage
+        const imgToDraw = currentImageElement || sourceImage;
+        ctx.drawImage(imgToDraw, 0, 0, canvas.width, canvas.height);
         drawOverlay(postResult.mask, postResult.corners);
     }
 
@@ -290,25 +360,149 @@ async function processFrame(imageSource) {
 
 // Event Listeners
 fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            sourceImage.src = e.target.result;
-            sourceImage.onload = () => {
-                // Stop webcam if active
-                if (isWebcamActive) stopWebcam();
+    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+        handleFiles(files);
+    }
+});
 
-                // Resize canvas to match image aspect ratio
-                const aspect = sourceImage.width / sourceImage.height;
-                const maxWidth = 800;
-                canvas.width = Math.min(sourceImage.width, maxWidth);
-                canvas.height = canvas.width / aspect;
+// Navigator button handlers
+prevBtn.addEventListener('click', () => {
+    if (currentImageIndex > 0) {
+        displayImage(currentImageIndex - 1);
+    }
+});
 
-                processFrame(sourceImage);
-            };
+nextBtn.addEventListener('click', () => {
+    if (currentImageIndex < images.length - 1) {
+        displayImage(currentImageIndex + 1);
+    }
+});
+
+// Handle files from upload or drag-and-drop
+function handleFiles(files) {
+    // Stop webcam if active
+    if (isWebcamActive) stopWebcam();
+
+    // Clean up old image URLs
+    images.forEach(img => {
+        if (img.url) URL.revokeObjectURL(img.url);
+    });
+    images = [];
+
+    // Load all images
+    let loadedCount = 0;
+    files.forEach((file, index) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            loadedCount++;
+            if (loadedCount === files.length) {
+                // All images loaded, display first one
+                updateNavigator();
+                displayImage(0);
+            }
         };
-        reader.readAsDataURL(file);
+        img.onerror = () => {
+            loadedCount++;
+            console.error(`Failed to load image ${index}`);
+            if (loadedCount === files.length) {
+                updateNavigator();
+                if (images.length > 0) {
+                    displayImage(0);
+                }
+            }
+        };
+        img.src = url;
+        images.push({ url, img, file });
+    });
+}
+
+// Display image at given index and trigger detection
+function displayImage(index) {
+    if (index < 0 || index >= images.length) return;
+
+    currentImageIndex = index;
+    const { img } = images[index];
+
+    // Helper to render and detect
+    const renderAndDetect = () => {
+        const aspect = img.naturalWidth / img.naturalHeight;
+        const maxWidth = 800;
+        canvas.width = Math.min(img.naturalWidth, maxWidth);
+        canvas.height = canvas.width / aspect;
+
+        // Draw the image
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // Store reference for detection result handler
+        currentImageElement = img;
+
+        // Update source image for detection (fallback)
+        sourceImage.src = img.src;
+
+        // Reset latest result and trigger detection
+        latestResult = null;
+        processFrame(img);
+
+        updateNavigator();
+    };
+
+    // Image should already be loaded from handleFiles, but check anyway
+    if (img.complete && img.naturalWidth > 0) {
+        renderAndDetect();
+    } else {
+        img.onload = renderAndDetect;
+    }
+}
+
+// Update navigator UI
+function updateNavigator() {
+    if (images.length === 0) {
+        imageNavigator.style.display = 'none';
+        return;
+    }
+
+    imageNavigator.style.display = 'flex';
+    imageCounter.textContent = `${currentImageIndex + 1} / ${images.length}`;
+
+    prevBtn.disabled = currentImageIndex <= 0;
+    nextBtn.disabled = currentImageIndex >= images.length - 1;
+}
+
+// Drag and Drop Event Handlers
+let dragCounter = 0;
+
+dropZone.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter++;
+    dropOverlay.classList.add('active');
+});
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+});
+
+dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter--;
+    if (dragCounter === 0) {
+        dropOverlay.classList.remove('active');
+    }
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter = 0;
+    dropOverlay.classList.remove('active');
+
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+        handleFiles(files);
     }
 });
 
