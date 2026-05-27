@@ -665,37 +665,7 @@ function polygonArea(points) {
 
 // Helper: Draw Overlay
 function drawOverlay(mask, corners) {
-    const width = canvas.width;
-    const height = canvas.height;
-
-    const showMask = document.getElementById('show-mask').checked;
     const showBoundary = document.getElementById('show-boundary').checked;
-
-    if (showMask && mask && corners) {
-        // Create ImageData from mask
-        // We need to resize the 384x384 mask to canvas size
-        // For speed, we draw to a small canvas then scale up
-        const smallCanvas = document.createElement('canvas');
-        smallCanvas.width = INPUT_SIZE;
-        smallCanvas.height = INPUT_SIZE;
-        const smallCtx = smallCanvas.getContext('2d');
-        const imgData = smallCtx.createImageData(INPUT_SIZE, INPUT_SIZE);
-        const data = imgData.data;
-
-        for (let i = 0; i < INPUT_SIZE * INPUT_SIZE; i++) {
-            if (mask[i] === 1) {
-                const idx = i * 4;
-                data[idx] = 0;     // R
-                data[idx + 1] = 255; // G
-                data[idx + 2] = 0;   // B
-                data[idx + 3] = 100; // Alpha
-            }
-        }
-        smallCtx.putImageData(imgData, 0, 0);
-
-        // Draw scaled up
-        ctx.drawImage(smallCanvas, 0, 0, width, height);
-    }
 
     if (showBoundary && corners) {
         ctx.strokeStyle = 'red';
