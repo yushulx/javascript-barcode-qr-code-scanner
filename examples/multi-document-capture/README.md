@@ -14,13 +14,14 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/multi-document-ca
 - **Configurable Stabilization**: Adjust IoU threshold, area-delta threshold, stable frame count, and toggle auto-capture via the in-app settings panel.
 - **Gallery Import**: Load images from your device for document detection and normalization (EXIF orientation is preserved).
 - **Multi-Page Scanning**: Capture multiple pages in a single session with a thumbnail preview bar.
-- **Edit Quad**: Drag the four document-boundary corners on the original image, then apply perspective correction.
+- **Edit Quad**: Drag the four document-boundary corners on the original image, then apply perspective correction. If detection misses the document, the app seeds a default quad so you can place the corners manually.
 - **Retake**: Recapture the current page in-place.
 - **Image Filters**: Apply Color, Grayscale, or Binary filters per page.
 - **Rotate**: Rotate pages by 90 degrees.
 - **Drag-and-Drop Reorder**: Sort captured pages by dragging (mouse or touch).
 - **PDF Export**: Save all pages as a multi-page PDF (opens in a new tab).
 - **Image Export**: Download each page as a PNG file.
+- **Long Image Export**: Stitch sequential captures into a single PNG for long receipts or documents by finding duplicated overlap bands and trimming them out before export.
 - **Touch & Mouse**: All controls work with both pointer types.
 
 ## Prerequisites

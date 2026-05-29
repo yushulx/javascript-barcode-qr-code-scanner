@@ -43,6 +43,7 @@ const saveBtn = document.getElementById("save-btn");
 const saveMenu = document.getElementById("save-menu");
 const savePdfBtn = document.getElementById("save-pdf-btn");
 const saveImagesBtn = document.getElementById("save-images-btn");
+const saveLongImageBtn = document.getElementById("save-long-image-btn");
 
 const pageIndicator = document.getElementById("page-indicator");
 const resultCanvas = document.getElementById("result-canvas");
@@ -89,6 +90,19 @@ const quadStabilizer = {
     areaDeltaThreshold: 0.15,
     stableFrameCount: 3,
 };
+
+const STITCH_SAMPLE_WIDTH = 96;
+const STITCH_SAMPLE_MAX_HEIGHT = 2200;
+const STITCH_MIN_OVERLAP_RATIO = 0.10;
+const STITCH_MAX_OVERLAP_RATIO = 0.55;
+const STITCH_MIN_OVERLAP_ROWS = 28;
+const STITCH_PATCH_ROWS = 72;
+const STITCH_PATCH_GAP_ROWS = 18;
+const STITCH_MAX_PATCHES = 3;
+const STITCH_MATCH_SCORE_THRESHOLD = 26;
+const STITCH_MATCH_GAP_THRESHOLD = 1.2;
+const STITCH_MAX_CANVAS_EDGE = 32767;
+const STITCH_MAX_CANVAS_AREA = 268435456;
 
 function updateInitStatus(message) {
     initStatus.textContent = message;
@@ -320,13 +334,358 @@ function copyCanvas(c) {
     return out;
 }
 
+function createDefaultQuadPoints(canvas) {
+    const maxInsetX = Math.max(1, Math.floor((canvas.width - 2) / 2));
+    const maxInsetY = Math.max(1, Math.floor((canvas.height - 2) / 2));
+    const insetX = Math.min(maxInsetX, Math.max(1, Math.min(96, Math.round(canvas.width * 0.08))));
+    const insetY = Math.min(maxInsetY, Math.max(1, Math.min(96, Math.round(canvas.height * 0.08))));
+    const right = canvas.width - insetX - 1;
+    const bottom = canvas.height - insetY - 1;
+
+    return [
+        { x: insetX, y: insetY },
+        { x: right, y: insetY },
+        { x: right, y: bottom },
+        { x: insetX, y: bottom },
+    ];
+}
+
+function getMedian(values) {
+    if (!values.length) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 0) {
+        return (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+    return sorted[mid];
+}
+
+function resizeCanvasToWidth(canvas, targetWidth) {
+    if (canvas.width === targetWidth) {
+        return copyCanvas(canvas);
+    }
+
+    const out = document.createElement("canvas");
+    out.width = targetWidth;
+    out.height = Math.max(1, Math.round((canvas.height / canvas.width) * targetWidth));
+    const ctx = out.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(canvas, 0, 0, out.width, out.height);
+    return out;
+}
+
+function smoothSeries(values, radius = 2) {
+    const out = new Float32Array(values.length);
+    for (let i = 0; i < values.length; i += 1) {
+        let sum = 0;
+        let count = 0;
+        const start = Math.max(0, i - radius);
+        const end = Math.min(values.length - 1, i + radius);
+        for (let j = start; j <= end; j += 1) {
+            sum += values[j];
+            count += 1;
+        }
+        out[i] = count ? sum / count : 0;
+    }
+    return out;
+}
+
+function getMaxValue(values) {
+    let maxValue = 0;
+    for (let i = 0; i < values.length; i += 1) {
+        maxValue = Math.max(maxValue, values[i]);
+    }
+    return maxValue;
+}
+
+function buildStitchSample(canvas) {
+    const sample = document.createElement("canvas");
+    sample.width = STITCH_SAMPLE_WIDTH;
+    sample.height = Math.max(
+        STITCH_MIN_OVERLAP_ROWS,
+        Math.min(STITCH_SAMPLE_MAX_HEIGHT, Math.round((canvas.height / canvas.width) * STITCH_SAMPLE_WIDTH)),
+    );
+
+    const ctx = sample.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(canvas, 0, 0, sample.width, sample.height);
+
+    const { data } = ctx.getImageData(0, 0, sample.width, sample.height);
+    const compareStartX = Math.floor(sample.width * 0.18);
+    const compareEndX = Math.ceil(sample.width * 0.82);
+    const compareWidth = Math.max(1, compareEndX - compareStartX);
+    const gray = new Uint8ClampedArray(sample.width * sample.height);
+    const edge = new Uint8ClampedArray(sample.width * sample.height);
+    const rowEdge = new Float32Array(sample.height);
+    const rowInk = new Float32Array(sample.height);
+
+    for (let i = 0, px = 0; i < data.length; i += 4, px += 1) {
+        gray[px] = Math.round(data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+    }
+
+    for (let y = 0; y < sample.height; y += 1) {
+        for (let x = 0; x < sample.width; x += 1) {
+            const idx = y * sample.width + x;
+            const left = x > 0 ? gray[idx - 1] : gray[idx];
+            const up = y > 0 ? gray[idx - sample.width] : gray[idx];
+            edge[idx] = Math.min(255, Math.abs(gray[idx] - left) + Math.abs(gray[idx] - up));
+            if (x >= compareStartX && x < compareEndX) {
+                rowEdge[y] += edge[idx];
+                if (gray[idx] < 232) {
+                    rowInk[y] += 1;
+                }
+            }
+        }
+    }
+
+    const signal = new Float32Array(sample.height);
+    for (let y = 0; y < sample.height; y += 1) {
+        rowEdge[y] /= compareWidth;
+        rowInk[y] /= compareWidth;
+        signal[y] = rowEdge[y] * 0.75 + rowInk[y] * 140;
+    }
+
+    return {
+        width: sample.width,
+        height: sample.height,
+        gray,
+        edge,
+        compareStartX,
+        compareEndX,
+        compareWidth,
+        signal: smoothSeries(signal, 2),
+    };
+}
+
+function buildPatchPlan(sample, maxOverlap) {
+    const patchRows = Math.max(STITCH_MIN_OVERLAP_ROWS, Math.min(STITCH_PATCH_ROWS, maxOverlap));
+    const maxSignal = getMaxValue(sample.signal);
+    const threshold = Math.max(10, maxSignal * 0.18);
+    const maxStart = Math.max(0, maxOverlap - patchRows);
+    const offsets = [];
+
+    let searchRow = 0;
+    while (offsets.length < STITCH_MAX_PATCHES && searchRow <= maxStart) {
+        let found = -1;
+        for (let row = searchRow; row <= maxStart; row += 1) {
+            if (sample.signal[row] >= threshold) {
+                found = Math.max(0, row - 4);
+                break;
+            }
+        }
+
+        if (found < 0) {
+            break;
+        }
+
+        const clampedFound = Math.min(found, maxStart);
+        if (!offsets.length || clampedFound - offsets[offsets.length - 1] >= Math.max(12, Math.floor(patchRows * 0.6))) {
+            offsets.push(clampedFound);
+        }
+        searchRow = clampedFound + patchRows + STITCH_PATCH_GAP_ROWS;
+    }
+
+    if (!offsets.length) {
+        offsets.push(0);
+    }
+
+    return { offsets, patchRows, threshold };
+}
+
+function scorePatchMatch(previousSample, currentSample, overlapRows, patchStart, patchRows, signalThreshold) {
+    const previousStart = previousSample.height - overlapRows + patchStart;
+    const currentStart = patchStart;
+
+    let grayDiff = 0;
+    let edgeDiff = 0;
+    let signalDiff = 0;
+    let signalWeight = 0;
+
+    for (let row = 0; row < patchRows; row += 1) {
+        const previousRow = previousStart + row;
+        const currentRow = currentStart + row;
+        const previousOffset = previousRow * previousSample.width;
+        const currentOffset = currentRow * currentSample.width;
+
+        signalDiff += Math.abs(previousSample.signal[previousRow] - currentSample.signal[currentRow]);
+        signalWeight += currentSample.signal[currentRow];
+
+        for (let x = previousSample.compareStartX; x < previousSample.compareEndX; x += 1) {
+            const previousIdx = previousOffset + x;
+            const currentIdx = currentOffset + x;
+            grayDiff += Math.abs(previousSample.gray[previousIdx] - currentSample.gray[currentIdx]);
+            edgeDiff += Math.abs(previousSample.edge[previousIdx] - currentSample.edge[currentIdx]);
+        }
+    }
+
+    const samples = patchRows * previousSample.compareWidth;
+    const meanGrayDiff = grayDiff / samples;
+    const meanEdgeDiff = edgeDiff / samples;
+    const meanSignalDiff = signalDiff / patchRows;
+    const meanSignalWeight = signalWeight / patchRows;
+    const blankPenalty = meanSignalWeight < signalThreshold ? (signalThreshold - meanSignalWeight) * 1.6 : 0;
+
+    return {
+        score: meanGrayDiff * 0.35 + meanEdgeDiff * 0.55 + meanSignalDiff * 0.25 + blankPenalty,
+        weight: Math.max(1, meanSignalWeight),
+    };
+}
+
+function scoreOverlapCandidate(previousSample, currentSample, overlapRows, patchPlan) {
+    let weightedScore = 0;
+    let totalWeight = 0;
+    let usedPatches = 0;
+
+    for (const patchStart of patchPlan.offsets) {
+        if (patchStart + patchPlan.patchRows > overlapRows) {
+            continue;
+        }
+        const match = scorePatchMatch(
+            previousSample,
+            currentSample,
+            overlapRows,
+            patchStart,
+            patchPlan.patchRows,
+            patchPlan.threshold,
+        );
+        weightedScore += match.score * match.weight;
+        totalWeight += match.weight;
+        usedPatches += 1;
+    }
+
+    if (!usedPatches || !totalWeight) {
+        return null;
+    }
+
+    const seamRows = Math.min(patchPlan.patchRows, overlapRows);
+    let seamSignalDiff = 0;
+    for (let row = 0; row < seamRows; row += 1) {
+        const previousRow = previousSample.height - seamRows + row;
+        const currentRow = overlapRows - seamRows + row;
+        seamSignalDiff += Math.abs(previousSample.signal[previousRow] - currentSample.signal[currentRow]);
+    }
+
+    const coverage = usedPatches / patchPlan.offsets.length;
+    return {
+        score: weightedScore / totalWeight + (seamSignalDiff / seamRows) * 0.12 - coverage * 1.4,
+        usedPatches,
+        coverage,
+    };
+}
+
+function estimateVerticalOverlap(previousCanvas, currentCanvas) {
+    const previousSample = buildStitchSample(previousCanvas);
+    const currentSample = buildStitchSample(currentCanvas);
+    const minHeight = Math.min(previousSample.height, currentSample.height);
+    const minOverlap = Math.max(STITCH_MIN_OVERLAP_ROWS, Math.round(minHeight * STITCH_MIN_OVERLAP_RATIO));
+    const maxOverlap = Math.max(minOverlap, Math.round(minHeight * STITCH_MAX_OVERLAP_RATIO));
+    const patchPlan = buildPatchPlan(currentSample, maxOverlap);
+
+    let best = null;
+    let runnerUpScore = Number.POSITIVE_INFINITY;
+
+    for (let overlapRows = minOverlap; overlapRows <= maxOverlap; overlapRows += 1) {
+        const metrics = scoreOverlapCandidate(previousSample, currentSample, overlapRows, patchPlan);
+        if (!metrics) {
+            continue;
+        }
+        const candidate = { ...metrics, overlapRows };
+        if (!best || candidate.score < best.score) {
+            if (best) {
+                runnerUpScore = best.score;
+            }
+            best = candidate;
+        } else if (candidate.score < runnerUpScore) {
+            runnerUpScore = candidate.score;
+        }
+    }
+
+    if (!best) {
+        return 0;
+    }
+
+    const confidence = runnerUpScore - best.score;
+    const availablePatches = patchPlan.offsets.filter((offset) => offset + patchPlan.patchRows <= best.overlapRows).length;
+    const requiredPatches = Math.min(2, Math.max(1, availablePatches));
+    const minGap = availablePatches > 1 ? STITCH_MATCH_GAP_THRESHOLD : 0.6;
+    const reliableMatch =
+        best.usedPatches >= requiredPatches &&
+        best.score <= STITCH_MATCH_SCORE_THRESHOLD &&
+        confidence >= minGap;
+    if (!reliableMatch) {
+        return 0;
+    }
+
+    const overlapRatio = best.overlapRows / previousSample.height;
+    return Math.min(
+        previousCanvas.height - 1,
+        currentCanvas.height - 1,
+        Math.round(previousCanvas.height * overlapRatio),
+    );
+}
+
+function buildStitchedCanvas(sourceCanvases) {
+    if (!sourceCanvases.length) {
+        return { canvas: null, matchedSegments: 0 };
+    }
+
+    const targetWidth = Math.max(1, Math.round(getMedian(sourceCanvases.map((canvas) => canvas.width))));
+    const canvases = sourceCanvases.map((canvas) => resizeCanvasToWidth(canvas, targetWidth));
+    const overlaps = [];
+    let matchedSegments = 0;
+    let totalHeight = canvases[0].height;
+
+    for (let i = 1; i < canvases.length; i += 1) {
+        const previous = canvases[i - 1];
+        const current = canvases[i];
+        const overlap = estimateVerticalOverlap(previous, current);
+        overlaps.push(overlap);
+        if (overlap > 0) {
+            matchedSegments += 1;
+        }
+        totalHeight += current.height - overlap;
+    }
+
+    if (targetWidth > STITCH_MAX_CANVAS_EDGE || totalHeight > STITCH_MAX_CANVAS_EDGE) {
+        throw new Error("Combined image exceeds the browser canvas size limit.");
+    }
+    if (targetWidth * totalHeight > STITCH_MAX_CANVAS_AREA) {
+        throw new Error("Combined image is too large to export safely in the browser.");
+    }
+
+    const out = document.createElement("canvas");
+    out.width = targetWidth;
+    out.height = totalHeight;
+    const ctx = out.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, out.width, out.height);
+
+    let currentY = 0;
+    ctx.drawImage(canvases[0], 0, currentY);
+    currentY += canvases[0].height;
+
+    for (let i = 1; i < canvases.length; i += 1) {
+        const canvas = canvases[i];
+        const overlap = overlaps[i - 1];
+        const visibleHeight = canvas.height - overlap;
+        if (visibleHeight <= 0) {
+            continue;
+        }
+        ctx.drawImage(canvas, 0, overlap, canvas.width, visibleHeight, 0, currentY, canvas.width, visibleHeight);
+        currentY += visibleHeight;
+    }
+
+    return { canvas: out, matchedSegments };
+}
+
 function addPage(baseCanvas, opts = {}) {
+    const sourceCanvas = opts.originalCanvas || baseCanvas;
     const page = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         baseCanvas: copyCanvas(baseCanvas),
         filter: "color",
-        hasOriginal: !!opts.originalCanvas,
-        originalCanvas: opts.originalCanvas ? copyCanvas(opts.originalCanvas) : null,
+        hasOriginal: !!sourceCanvas,
+        originalCanvas: sourceCanvas ? copyCanvas(sourceCanvas) : null,
         quadPoints: opts.quadPoints ? opts.quadPoints.map(p => ({ x: p.x, y: p.y })) : null,
     };
 
@@ -660,7 +1019,7 @@ function renderResult() {
     pageIndicator.textContent = `${currentPageIndex + 1} / ${pages.length}`;
     prevPageBtn.classList.toggle("disabled", currentPageIndex <= 0);
     nextPageBtn.classList.toggle("disabled", currentPageIndex >= pages.length - 1);
-    editBtn.classList.toggle("disabled", !page.originalCanvas || !page.quadPoints);
+    editBtn.classList.toggle("disabled", !page.originalCanvas);
     setFilterButtons(page.filter);
 }
 
@@ -810,13 +1169,22 @@ function openSort() {
 
 function openEdit() {
     const page = pages[currentPageIndex];
-    if (!page.originalCanvas || !page.quadPoints) {
-        showToast("No quad data available for editing.");
+    if (!page.originalCanvas) {
+        showToast("No source image available for editing.");
         return;
     }
+
+    const quadPoints = page.quadPoints && page.quadPoints.length === 4
+        ? page.quadPoints.map(p => ({ x: p.x, y: p.y }))
+        : createDefaultQuadPoints(page.originalCanvas);
+
+    if (!page.quadPoints || page.quadPoints.length !== 4) {
+        showToast("Drag the corners to set the document manually.");
+    }
+
     editState = {
         originalCanvas: page.originalCanvas,
-        quadPoints: page.quadPoints.map(p => ({ x: p.x, y: p.y })),
+        quadPoints,
         draggingCorner: -1,
         imgRect: null,
     };
@@ -934,6 +1302,23 @@ function exportImages() {
     showToast("Images exported.");
 }
 
+function exportLongImage() {
+    if (!pages.length) return;
+
+    try {
+        const filteredCanvases = pages.map((page) => buildFilteredCanvas(page));
+        const { canvas, matchedSegments } = buildStitchedCanvas(filteredCanvases);
+        if (!canvas) return;
+
+        const stamp = Date.now();
+        downloadDataUrl(canvas.toDataURL("image/png"), `document_${stamp}_stitched.png`);
+        showToast(matchedSegments ? "Long image exported." : "Long image exported with stacked pages.");
+    } catch (error) {
+        console.error(error);
+        showToast(error?.message || "Failed to export long image.", 2800);
+    }
+}
+
 async function exportPdf() {
     if (!pages.length || !window.jspdf) return;
     const { jsPDF } = window.jspdf;
@@ -1028,6 +1413,10 @@ function wireEvents() {
     pointerTap(saveImagesBtn, () => {
         hideSaveMenu();
         exportImages();
+    });
+    pointerTap(saveLongImageBtn, () => {
+        hideSaveMenu();
+        exportLongImage();
     });
 
     document.addEventListener("pointerdown", (event) => {
