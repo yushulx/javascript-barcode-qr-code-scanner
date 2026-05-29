@@ -21,7 +21,7 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/multi-document-ca
 - **Drag-and-Drop Reorder**: Sort captured pages by dragging (mouse or touch).
 - **PDF Export**: Save all pages as a multi-page PDF (opens in a new tab).
 - **Image Export**: Download each page as a PNG file.
-- **Long Image Export**: Stitch sequential captures into a single PNG for long receipts or documents by finding duplicated overlap bands and trimming them out before export.
+- **Long Image Export**: Stitch sequential captures into a single PNG for long receipts or documents. Uses OpenCV.js template matching to locate the duplicated overlap band between consecutive shots and trims it out, with a built-in matcher as fallback.
 - **Touch & Mouse**: All controls work with both pointer types.
 
 ## Prerequisites

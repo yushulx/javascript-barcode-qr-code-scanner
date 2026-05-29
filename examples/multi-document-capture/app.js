@@ -104,6 +104,99 @@ const STITCH_MATCH_GAP_THRESHOLD = 1.2;
 const STITCH_MAX_CANVAS_EDGE = 32767;
 const STITCH_MAX_CANVAS_AREA = 268435456;
 
+const OPENCV_SRC = "https://docs.opencv.org/4.10.0/opencv.js";
+const STITCH_CV_WORK_WIDTH = 460;
+const STITCH_CV_MIN_CONFIDENCE = 0.42;
+const STITCH_CV_BAND_FRACTIONS = [0.02, 0.05, 0.09, 0.14, 0.20];
+let openCvPromise = null;
+
+function ensureOpenCv() {
+    if (window.cv && window.cv.Mat) {
+        return Promise.resolve(window.cv);
+    }
+    if (openCvPromise) {
+        return openCvPromise;
+    }
+
+    openCvPromise = new Promise((resolve, reject) => {
+        let settled = false;
+        const timeoutId = setTimeout(() => {
+            if (!settled) {
+                settled = true;
+                openCvPromise = null;
+                reject(new Error("OpenCV.js load timed out."));
+            }
+        }, 30000);
+
+        const fail = (error) => {
+            if (settled) return;
+            settled = true;
+            openCvPromise = null;
+            clearTimeout(timeoutId);
+            reject(error);
+        };
+
+        const finalize = (candidate = window.cv) => {
+            if (settled) return true;
+            const cvModule = candidate && candidate.Mat ? candidate : window.cv;
+            if (!cvModule || !cvModule.Mat) return false;
+            settled = true;
+            clearTimeout(timeoutId);
+            resolve(cvModule);
+            return true;
+        };
+
+        const onModuleReady = () => {
+            try {
+                const candidate = window.cv;
+                if (finalize(candidate)) return;
+
+                if (candidate && typeof candidate.then === "function") {
+                    candidate
+                        .then((real) => {
+                            if (!finalize(real)) {
+                                fail(new Error("OpenCV.js initialized without cv.Mat."));
+                            }
+                        })
+                        .catch(fail);
+                } else if (candidate) {
+                    const previousReady = candidate.onRuntimeInitialized;
+                    candidate.onRuntimeInitialized = () => {
+                        if (typeof previousReady === "function") {
+                            previousReady.call(candidate);
+                        }
+                        finalize(candidate);
+                    };
+                }
+            } catch (error) {
+                fail(error);
+            }
+        };
+
+        const existing = document.getElementById("opencv-js");
+        if (existing) {
+            if (window.cv) {
+                onModuleReady();
+            } else {
+                existing.addEventListener("load", onModuleReady, { once: true });
+            }
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.id = "opencv-js";
+        script.src = OPENCV_SRC;
+        script.async = true;
+        script.onload = onModuleReady;
+        script.onerror = () => {
+            fail(new Error("Failed to load OpenCV.js."));
+        };
+        document.head.appendChild(script);
+    });
+
+    return openCvPromise;
+}
+
 function updateInitStatus(message) {
     initStatus.textContent = message;
 }
@@ -573,7 +666,7 @@ function scoreOverlapCandidate(previousSample, currentSample, overlapRows, patch
     };
 }
 
-function estimateVerticalOverlap(previousCanvas, currentCanvas) {
+function estimateVerticalOverlapHeuristic(previousCanvas, currentCanvas) {
     const previousSample = buildStitchSample(previousCanvas);
     const currentSample = buildStitchSample(currentCanvas);
     const minHeight = Math.min(previousSample.height, currentSample.height);
@@ -624,7 +717,123 @@ function estimateVerticalOverlap(previousCanvas, currentCanvas) {
     );
 }
 
-function buildStitchedCanvas(sourceCanvases) {
+function makeGrayWorkMat(cv, canvas, width) {
+    const scale = Math.min(1, width / canvas.width);
+    const w = Math.max(1, Math.round(canvas.width * scale));
+    const h = Math.max(1, Math.round(canvas.height * scale));
+
+    const src = cv.imread(canvas);
+    const resized = new cv.Mat();
+    cv.resize(src, resized, new cv.Size(w, h), 0, 0, cv.INTER_AREA);
+    src.delete();
+
+    const gray = new cv.Mat();
+    cv.cvtColor(resized, gray, cv.COLOR_RGBA2GRAY);
+    resized.delete();
+
+    const blurred = new cv.Mat();
+    cv.GaussianBlur(gray, blurred, new cv.Size(3, 3), 0, 0, cv.BORDER_DEFAULT);
+    gray.delete();
+
+    return { mat: blurred, scale, width: w, height: h };
+}
+
+function estimateVerticalOverlapCv(cv, previousCanvas, currentCanvas) {
+    const trash = [];
+    const track = (mat) => {
+        trash.push(mat);
+        return mat;
+    };
+
+    try {
+        const prev = makeGrayWorkMat(cv, previousCanvas, STITCH_CV_WORK_WIDTH);
+        const cur = makeGrayWorkMat(cv, currentCanvas, STITCH_CV_WORK_WIDTH);
+        track(prev.mat);
+        track(cur.mat);
+
+        const sw = prev.width;
+        const prevH = prev.height;
+        const curH = cur.height;
+        const bandH = Math.max(16, Math.round(curH * 0.05));
+        const colStart = Math.round(sw * 0.12);
+        const colEnd = Math.round(sw * 0.88);
+        const colW = Math.max(8, colEnd - colStart);
+        const margin = Math.round(curH * 0.015);
+        const searchTop = Math.round(prevH * 0.30);
+        const searchH = prevH - searchTop;
+
+        if (searchH <= bandH + 2 || colW >= sw) {
+            return 0;
+        }
+
+        const searchRegion = track(prev.mat.roi(new cv.Rect(0, searchTop, sw, searchH)));
+
+        let best = null;
+        for (const fraction of STITCH_CV_BAND_FRACTIONS) {
+            const ty = margin + Math.round(curH * fraction);
+            if (ty + bandH >= curH) {
+                continue;
+            }
+
+            const templ = cur.mat.roi(new cv.Rect(colStart, ty, colW, bandH));
+            const mean = new cv.Mat();
+            const std = new cv.Mat();
+            cv.meanStdDev(templ, mean, std);
+            const sd = std.doubleAt(0, 0);
+            mean.delete();
+            std.delete();
+
+            if (sd < 8) {
+                templ.delete();
+                continue;
+            }
+
+            const result = new cv.Mat();
+            cv.matchTemplate(searchRegion, templ, result, cv.TM_CCOEFF_NORMED);
+            const match = cv.minMaxLoc(result);
+            result.delete();
+            templ.delete();
+
+            const matchedTop = searchTop + match.maxLoc.y;
+            const overlapScaled = ty + (prevH - matchedTop);
+            if (overlapScaled <= 0) {
+                continue;
+            }
+
+            if (!best || match.maxVal > best.confidence) {
+                best = { confidence: match.maxVal, overlapScaled, scale: prev.scale };
+            }
+        }
+
+        if (!best || best.confidence < STITCH_CV_MIN_CONFIDENCE) {
+            return 0;
+        }
+
+        const overlap = Math.round(best.overlapScaled / best.scale);
+        return Math.max(0, Math.min(previousCanvas.height - 1, currentCanvas.height - 1, overlap));
+    } finally {
+        for (const mat of trash) {
+            try {
+                mat.delete();
+            } catch (_) {
+                /* already released */
+            }
+        }
+    }
+}
+
+function estimateVerticalOverlap(previousCanvas, currentCanvas, cv) {
+    if (cv && cv.Mat) {
+        try {
+            return estimateVerticalOverlapCv(cv, previousCanvas, currentCanvas);
+        } catch (error) {
+            console.warn("OpenCV stitching failed, falling back to heuristic.", error);
+        }
+    }
+    return estimateVerticalOverlapHeuristic(previousCanvas, currentCanvas);
+}
+
+function buildStitchedCanvas(sourceCanvases, cv = null) {
     if (!sourceCanvases.length) {
         return { canvas: null, matchedSegments: 0 };
     }
@@ -638,7 +847,7 @@ function buildStitchedCanvas(sourceCanvases) {
     for (let i = 1; i < canvases.length; i += 1) {
         const previous = canvases[i - 1];
         const current = canvases[i];
-        const overlap = estimateVerticalOverlap(previous, current);
+        const overlap = estimateVerticalOverlap(previous, current, cv);
         overlaps.push(overlap);
         if (overlap > 0) {
             matchedSegments += 1;
@@ -731,6 +940,26 @@ function pointerTap(element, handler) {
         if (event.button !== 0 && event.pointerType === "mouse") return;
         event.preventDefault();
         handler();
+    });
+}
+
+function bindFilterButton(element, mode) {
+    let handledPointerId = null;
+
+    element.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0 && event.pointerType === "mouse") return;
+        handledPointerId = event.pointerId;
+        event.preventDefault();
+        applyFilter(mode);
+    });
+
+    element.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (handledPointerId !== null) {
+            handledPointerId = null;
+            return;
+        }
+        applyFilter(mode);
     });
 }
 
@@ -1178,10 +1407,6 @@ function openEdit() {
         ? page.quadPoints.map(p => ({ x: p.x, y: p.y }))
         : createDefaultQuadPoints(page.originalCanvas);
 
-    if (!page.quadPoints || page.quadPoints.length !== 4) {
-        showToast("Drag the corners to set the document manually.");
-    }
-
     editState = {
         originalCanvas: page.originalCanvas,
         quadPoints,
@@ -1302,17 +1527,29 @@ function exportImages() {
     showToast("Images exported.");
 }
 
-function exportLongImage() {
+async function exportLongImage() {
     if (!pages.length) return;
 
     try {
+        showToast("Stitching images\u2026", 6000);
+        let cv = null;
+        try {
+            cv = await ensureOpenCv();
+        } catch (loadError) {
+            console.warn("OpenCV.js unavailable, using built-in matcher.", loadError);
+        }
+
         const filteredCanvases = pages.map((page) => buildFilteredCanvas(page));
-        const { canvas, matchedSegments } = buildStitchedCanvas(filteredCanvases);
+        const { canvas, matchedSegments } = buildStitchedCanvas(filteredCanvases, cv);
         if (!canvas) return;
 
         const stamp = Date.now();
         downloadDataUrl(canvas.toDataURL("image/png"), `document_${stamp}_stitched.png`);
-        showToast(matchedSegments ? "Long image exported." : "Long image exported with stacked pages.");
+        if (matchedSegments) {
+            showToast(cv ? "Long image stitched with OpenCV." : "Long image stitched.");
+        } else {
+            showToast("Long image exported (no overlap detected; pages stacked).", 2800);
+        }
     } catch (error) {
         console.error(error);
         showToast(error?.message || "Failed to export long image.", 2800);
@@ -1437,9 +1674,9 @@ function wireEvents() {
         renderResult();
     });
 
-    pointerTap(filterColorBtn, () => applyFilter("color"));
-    pointerTap(filterGrayBtn, () => applyFilter("grayscale"));
-    pointerTap(filterBinaryBtn, () => applyFilter("binary"));
+    bindFilterButton(filterColorBtn, "color");
+    bindFilterButton(filterGrayBtn, "grayscale");
+    bindFilterButton(filterBinaryBtn, "binary");
 
     editCanvasEl.addEventListener("pointerdown", (e) => {
         if (!editState) return;

@@ -349,10 +349,15 @@ body {
 }
 
 .filter-bar {
-    height: 56px;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    flex: 0 0 calc(64px + env(safe-area-inset-bottom, 0px));
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    padding: 6px 6px calc(10px + env(safe-area-inset-bottom, 0px));
     background: var(--dy-black-34);
+    position: relative;
+    z-index: 2;
 }
 
 .filter-btn {
@@ -361,11 +366,30 @@ body {
     color: var(--dy-gray);
     font-size: 14px;
     font-weight: 600;
+    min-width: 0;
+    min-height: 48px;
+    width: 100%;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border-radius: 6px;
+    white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
     cursor: pointer;
+}
+
+.filter-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .filter-btn.active {
     color: var(--dy-orange);
+    background: rgba(254, 142, 20, 0.12);
 }
 
 .settings-modal {
@@ -518,7 +542,7 @@ input[type="range"] {
 
 .toast {
     position: fixed;
-    bottom: 110px;
+    bottom: calc(136px + env(safe-area-inset-bottom, 0px));
     left: 50%;
     transform: translateX(-50%) translateY(100px);
     opacity: 0;
@@ -530,6 +554,7 @@ input[type="range"] {
     font-size: 13px;
     transition: 0.25s ease;
     z-index: 140;
+    pointer-events: none;
 }
 
 .toast.show {
