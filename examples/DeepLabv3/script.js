@@ -1,6 +1,6 @@
 // Configuration
 const INPUT_SIZE = 384;
-const OPENCV_SCRIPT_URL = 'https://docs.opencv.org/4.10.0/opencv.js';
+const OPENCV_SCRIPT_URL = 'https://docs.opencv.org/4.x/opencv.js';
 
 // State
 let worker = null;
