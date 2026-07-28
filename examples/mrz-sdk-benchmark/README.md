@@ -2,7 +2,8 @@
 
 A browser-based benchmark that compares **Dynamsoft Capture Vision** and **Scanbot Web SDK** on MRZ (Machine Readable Zone) recognition: exact-match accuracy against ground truth, character-level match rate, and per-image scan latency, with a side-by-side comparison and an exportable HTML report.
 
-![Cover](assets/cover.png)
+
+https://github.com/user-attachments/assets/1a4b572f-e7ad-4891-9f4f-f11616add1f5
 
 
 ## Benchmark Results (MIDV-500, 3,315 images)
