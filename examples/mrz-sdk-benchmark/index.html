@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRZ Benchmark</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Dynamsoft Capture Vision Bundle (includes CVR, DLR, DCP, DDN for MRZ) -->
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.4.2001/dist/dcv.bundle.min.js" crossorigin="anonymous"></script>
+    <!-- Scanbot Web SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/scanbot-web-sdk@8/bundle/ScanbotSDK.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>MRZ Benchmark</h1>
+        <p class="subtitle">Compare MRZ recognition performance across SDKs</p>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading_overlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p id="loading_text">Initializing...</p>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings_modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>SDK Settings</h2>
+                <button class="btn-icon" onclick="closeSettings()" title="Close">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Dynamsoft License -->
+                <div class="license-section">
+                    <div class="license-header">
+                        <span class="sdk-name">Dynamsoft MRZ Scanner</span>
+                        <span id="badge_dynamsoft" class="badge badge-inactive">Not Activated</span>
+                    </div>
+                    <p class="license-hint">
+                        <a class="link" href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform" target="_blank">Get a trial license</a>
+                    </p>
+                    <div class="input-group">
+                        <input type="text" id="license_dynamsoft" class="form-input" value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==" placeholder="Enter Dynamsoft license key">
+                        <button class="btn btn-primary" onclick="activateDynamsoft()">Activate</button>
+                    </div>
+                </div>
+                <!-- Scanbot License -->
+                <div class="license-section">
+                    <div class="license-header">
+                        <span class="sdk-name">Scanbot Web SDK</span>
+                        <span id="badge_scanbot" class="badge badge-inactive">Not Activated</span>
+                    </div>
+                    <p class="license-hint">
+                        <a class="link" href="https://scanbot.io/trial/" target="_blank">Get a trial license</a>
+                        <span class="hint">(leave empty for free trial ~60s/session)</span>
+                    </p>
+                    <div class="input-group">
+                        <input type="text" id="license_scanbot" class="form-input" placeholder="Enter Scanbot license key (optional)">
+                        <button class="btn btn-primary" onclick="activateScanbot()">Activate</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Top Controls -->
+        <div class="top-controls">
+            <div class="vendor-selector">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="chk_dynamsoft" checked disabled>
+                    <span class="checkbox-name" style="--vendor-color: #fe8e14">Dynamsoft</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="chk_scanbot" disabled>
+                    <span class="checkbox-name" style="--vendor-color: #0fb5ae">Scanbot</span>
+                </label>
+            </div>
+            <button class="btn-icon" onclick="openSettings()" title="SDK Settings">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- File Upload Zone -->
+        <div id="upload_zone" class="upload-zone">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p>Drag & drop MRZ images or folder here</p>
+            <span class="upload-hint">or click to browse (supports batch & folder selection)</span>
+            <input type="file" id="file_input" multiple accept="image/*,.tif,.tiff" style="display:none">
+        </div>
+
+        <!-- Image Info Bar -->
+        <div id="image_info" class="image-info hidden">
+            <span id="image_count">0 images loaded</span>
+            <button class="btn btn-sm btn-secondary" onclick="clearImages()">Clear</button>
+        </div>
+
+        <!-- Ground Truth Section -->
+        <div class="ground-truth-section">
+            <div class="gt-row">
+                <label class="label-text">Ground Truth (labels.csv)</label>
+                <div class="input-group">
+                    <input type="file" id="gt_input" accept=".csv" style="display:none">
+                    <button class="btn btn-sm btn-secondary" onclick="document.getElementById('gt_input').click()">Import CSV</button>
+                    <span id="gt_status" class="gt-status">No ground truth loaded</span>
+                    <button id="gt_clear_btn" class="btn btn-sm btn-secondary hidden" onclick="clearGroundTruth()">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Benchmark Controls -->
+        <div class="benchmark-controls">
+            <div class="benchmark-options">
+                <label class="label-text">Runs per image (best of N):</label>
+                <select id="runs_select" class="form-select form-select-sm">
+                    <option value="1" selected>1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                </select>
+                <label class="label-text" style="margin-left:16px">Limit:</label>
+                <input type="number" id="limit_input" class="form-input form-input-sm" placeholder="All" min="1" style="width:70px">
+            </div>
+            <div class="benchmark-actions">
+                <button id="btn_run" class="btn btn-primary btn-lg" onclick="runBenchmark()" disabled>Run Benchmark</button>
+                <button id="btn_export" class="btn btn-secondary btn-lg hidden" onclick="exportReport()">Export HTML Report</button>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div id="progress_section" class="progress-section hidden">
+            <div class="progress-header">
+                <span id="progress_label">Running...</span>
+                <span id="progress_pct">0%</span>
+            </div>
+            <div class="progress-track">
+                <div id="progress_bar" class="progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results_section" class="results-section hidden">
+            <h3>Results</h3>
+            <div id="summary_cards" class="summary-cards"></div>
+            <div id="comparison_chart" class="comparison-chart hidden"></div>
+            <div id="detail_table" class="detail-table-wrapper"></div>
+        </div>
+    </div>
+
+    <script src="report.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
