@@ -35,7 +35,7 @@ const DEFAULT_SCANBOT_LICENSE =
   "psb2NhbGhvc3QKMTc4NTg4Nzk5OQo4" +
   "Mzg4NjA3Cjg=\n";
 
-const SCANBOT_CDN_ENGINE = 'https://cdn.jsdelivr.net/npm/scanbot-web-sdk@8/bundle/bin/complete/';
+const SCANBOT_CDN_ENGINE = 'https://cdn.jsdelivr.net/npm/scanbot-web-sdk@9/bundle/bin/complete/';
 
 // Embedded MRZ template for CaptureVisionRouter (avoids fetch dependency for file:// usage)
 const MRZ_TEMPLATE_JSON = JSON.stringify({
@@ -247,9 +247,12 @@ async function activateDynamsoft() {
     state.dynamsoft.parser = parser;
     state.dynamsoft.activated = true;
 
-    // Extract version
+    // Extract version (3.4.3000 moved version info to Core.innerVersions)
     try {
-      state.dynamsoft.version = Dynamsoft.Core.CoreModule.Version || null;
+      state.dynamsoft.version =
+        Dynamsoft.Core.CoreModule.Version ||
+        (Dynamsoft.Core.innerVersions && Dynamsoft.Core.innerVersions.cvr && Dynamsoft.Core.innerVersions.cvr.worker) ||
+        null;
     } catch (_) {}
 
     saveLicense('dynamsoft', license);

@@ -9,16 +9,18 @@ A browser-based benchmark that compares **Dynamsoft Capture Vision** and **Scanb
 
 Run on the curated 3,315-image [MIDV-500](https://github.com/fcakyon/midv500) MRZ subset (mobile-phone video frames — see the companion article series for dataset details). Full results: [`mrz_benchmark_dynamsoft_vs_scanbot.html`](mrz_benchmark_dynamsoft_vs_scanbot.html).
 
-| Metric | Dynamsoft Capture Vision | Scanbot Web SDK 8.1.1 |
+> Recorded with **Dynamsoft Capture Vision 3.4.3000** and **Scanbot Web SDK 9.0.0** (July 2026, single run per image).
+
+| Metric | Dynamsoft Capture Vision 3.4.3000 | Scanbot Web SDK 9.0.0 |
 |---|---|---|
 | **Exact Accuracy** | **46.49% (1541/3315)** | 42.78% (1418/3315) |
 | Success Rate | 58.73% (1947/3315) | **63.86% (2117/3315)** |
-| **Avg Scan Time** | **650.7 ms** | 691.8 ms |
-| **P50 Latency** | **411.0 ms** | 696.8 ms |
-| P95 Latency | 2063.0 ms | **884.3 ms** |
+| **Avg Scan Time** | **455.6 ms** | 828.7 ms |
+| **P50 Latency** | **388.1 ms** | 831.3 ms |
+| P95 Latency | 1024.0 ms | **1010.9 ms** |
 
 - **Dynamsoft produced 123 more fully correct reads** (+3.71 pp exact accuracy) — the metric that matters for identity verification, where one wrong character invalidates the result.
-- **Dynamsoft's median scan was ~41% faster** (411 ms vs 696.8 ms).
+- **Dynamsoft was ~45% faster on average** (455.6 ms vs 828.7 ms) and **~53% faster at the median** (388.1 ms vs 831.3 ms), finishing the full dataset in 1550 s versus Scanbot's 2762 s; P95 latency is effectively tied (1024.0 ms vs 1010.9 ms).
 - Scanbot returned raw MRZ text more often, but more of those strings contained at least one wrong character.
 
 
