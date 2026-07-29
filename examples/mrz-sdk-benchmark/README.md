@@ -87,3 +87,5 @@ mrz-sdk-benchmark/
 - **Match rate** = position-wise character agreement over the max length of recognized vs ground-truth MRZ.
 - "Best of N" runs keep the fastest scan time per image.
 
+## Blog
+[How to Benchmark MRZ Scanner SDKs on MIDV-500 in the Browser: Dynamsoft vs Scanbot](https://www.dynamsoft.com/codepool/benchmark-mrz-scanner-sdks-midv-500-browser.html)
