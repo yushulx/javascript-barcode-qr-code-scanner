@@ -48,7 +48,7 @@ Run on the curated 3,315-image [MIDV-500](https://github.com/fcakyon/midv500) MR
 ```bash
 cd examples/mrz-sdk-benchmark
 python -m http.server 8000
-# open http://localhost:8000 (or just open index.html)
+# open http://localhost:8000 
 ```
 
 ### Usage
