@@ -1,0 +1,113 @@
+:root {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --ok: #34d399;
+  --warn: #fbbf24;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  padding: 24px 32px 8px;
+}
+
+h1 { margin: 0 0 8px; font-size: 1.5rem; }
+h2 { margin: 0 0 12px; font-size: 1.05rem; color: var(--accent); }
+
+.subtitle { color: var(--muted); margin: 0; max-width: 900px; line-height: 1.5; }
+
+main {
+  display: grid;
+  gap: 16px;
+  padding: 16px 32px 48px;
+  max-width: 1100px;
+}
+
+.panel {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.row { margin-bottom: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+label { color: var(--muted); min-width: 160px; }
+
+input[type="text"] {
+  flex: 1;
+  min-width: 320px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #0b1220;
+  color: var(--text);
+}
+
+button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #04283d;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.status { color: var(--muted); font-size: 0.9rem; min-height: 1.2em; }
+
+.progress-track {
+  height: 12px;
+  background: #0b1220;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--ok));
+  transition: width 0.3s ease;
+}
+
+.stats { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+
+.stat-card {
+  background: #0b1220;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-card strong { color: var(--accent); }
+.stat-card span { color: var(--muted); font-size: 0.85rem; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th, td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #334155;
+}
+
+th { color: var(--muted); font-weight: 600; }

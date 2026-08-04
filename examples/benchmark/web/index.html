@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BarBeR Benchmark — zxing-wasm vs. Dynamsoft Barcode Reader (JavaScript/WASM)</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.2/dist/iife/full/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.4.3000/dist/dbr.bundle.js"></script>
+</head>
+<body>
+  <header>
+    <h1>BarBeR Barcode Benchmark — JavaScript / WASM</h1>
+    <p class="subtitle">
+      zxing-wasm 3.1.2 vs. Dynamsoft Barcode Reader (dynamsoft-barcode-reader-bundle 11.4.3000) on the
+      7,894-image audited BarBeR manifest. Only the decode call is timed; image fetch + decode to
+      ImageBitmap/canvas is recorded separately.
+    </p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Setup</h2>
+      <div class="row">
+        <label for="license">Dynamsoft license key</label>
+        <input id="license" type="text" placeholder="Paste a trial license key (defaults to a public demo key)">
+      </div>
+      <div class="row buttons">
+        <button id="init-btn">Initialize SDKs</button>
+        <button id="run-btn" disabled>Run benchmark</button>
+        <button id="stop-btn" disabled>Stop</button>
+        <button id="finalize-btn" disabled>Finalize &amp; summarize</button>
+      </div>
+      <div id="sdk-status" class="status"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Progress</h2>
+      <div class="progress-track"><div id="progress-bar" class="progress-fill"></div></div>
+      <div id="progress-text" class="status">Idle.</div>
+      <div id="live-stats" class="stats"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Summary</h2>
+      <div id="summary"></div>
+    </section>
+  </main>
+
+  <script src="benchmark.js"></script>
+</body>
+</html>

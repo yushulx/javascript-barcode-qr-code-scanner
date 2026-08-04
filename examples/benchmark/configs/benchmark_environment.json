@@ -1,0 +1,22 @@
+{
+  "measured_at": "2026-08-03T09:04:38.811Z",
+  "operating_system": "win32 10.0.26200",
+  "processor": "13th Gen Intel(R) Core(TM) i5-13400F",
+  "logical_processors": 16,
+  "node": "v24.13.0",
+  "architecture": "x64",
+  "configuration": "Browser WASM run driven by Node harness",
+  "benchmark_processes": 1,
+  "repetitions": 1,
+  "dbr_template": "ReadBarcodes_Default",
+  "zxing_wasm_package": "zxing-wasm (jsdelivr CDN, pinned)",
+  "dynamsoft_package": "dynamsoft-barcode-reader-bundle (jsdelivr CDN, pinned)",
+  "browser": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+    "hardwareConcurrency": 16,
+    "zxing_wasm": "3.1.2",
+    "dynamsoft_bundle": "11.4.3000",
+    "dbr_engine": "11.4.3000"
+  },
+  "manifest_sha256": "75c976e0c1c8fda5607c7facb05685b4e9fd7c332dda61609f515aeac6fe9464"
+}
