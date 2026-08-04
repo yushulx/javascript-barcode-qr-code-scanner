@@ -136,3 +136,6 @@ Dynamsoft, the developer of Dynamsoft Barcode Reader, built and published this b
 itself is an independent public dataset whose standardized annotations were produced with help from
 proprietary Datalogic software. Source hashes, exclusion lists, configurations, raw records, and the
 generated report all ship with the project so anyone can re-check the comparison.
+
+## Blog
+[https://www.dynamsoft.com/codepool/benchmark-barcode-reading-javascript-zxing-wasm-dynamsoft-barcode-reader.html](https://www.dynamsoft.com/codepool/benchmark-barcode-reading-javascript-zxing-wasm-dynamsoft-barcode-reader.html)
