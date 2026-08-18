@@ -13,6 +13,8 @@ and
 articles in this series, so the three runs form one controlled experiment: identical input,
 identical scoring rules, a different language/runtime binding.
 
+https://github.com/user-attachments/assets/b1e57459-1812-4b6a-9525-ef1dada9b57a
+
 ## How it works
 
 The browser is the natural runtime for both WASM decoders, so the benchmark is split into two halves:
@@ -160,3 +162,6 @@ Dynamsoft, the developer of Dynamsoft Barcode Reader, built and published this b
 itself is an independent public dataset whose standardized annotations were produced with help from
 proprietary Datalogic software. Source hashes, exclusion lists, configurations, raw records, and the
 generated report all ship with the project so anyone can re-check the comparison.
+
+## Blog
+[https://www.dynamsoft.com/codepool/benchmark-barcode-reading-javascript-zxing-wasm-dynamsoft-barcode-reader.html](https://www.dynamsoft.com/codepool/benchmark-barcode-reading-javascript-zxing-wasm-dynamsoft-barcode-reader.html)
