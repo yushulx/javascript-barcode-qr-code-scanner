@@ -13,7 +13,7 @@ and
 articles in this series, so the three runs form one controlled experiment: identical input,
 identical scoring rules, a different language/runtime binding.
 
-https://github.com/user-attachments/assets/b1e57459-1812-4b6a-9525-ef1dada9b57a
+https://github.com/user-attachments/assets/67d1875c-ac11-4b90-8cca-e5e297219363
 
 ## How it works
 
