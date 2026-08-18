@@ -1,7 +1,8 @@
 /**
  * Scoring library for the zxing-wasm vs. Dynamsoft Barcode Reader JS benchmark.
  * Faithful port of the Python/C++ series harness (protocol-v1):
- * - canonical format mapping and UPC-A / zero-prefixed EAN-13 payload normalization
+ * - canonical format mapping plus payload normalization (UPC-A / EAN-13, CODE_39 asterisks,
+ *   CODE_128 GS1 markers, HTML entities, trailing newlines, leading \\000001)
  * - one-to-one multiset matching (correct / wrong_text / wrong_format / not_found / extra_result)
  * - recall, precision, Wilson CI, decode-time statistics
  */
@@ -48,12 +49,52 @@ export function canonicalFormat(value) {
   return FORMAT_MAPPING[key] || key;
 }
 
-export function normalizedPayload(fmt, payload) {
-  fmt = canonicalFormat(fmt);
-  if (fmt === "UPC_A" && payload.length === 13 && payload.startsWith("0")) {
-    return payload.slice(1);
+function unescapeHtmlEntities(value) {
+  return String(value || "")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&apos;", "'");
+}
+
+function stripLeadingGs1Marker(value) {
+  for (;;) {
+    if (value.startsWith("{GS}")) {
+      value = value.slice(4);
+      continue;
+    }
+    if (value.startsWith("{FNC1}")) {
+      value = value.slice(6);
+      continue;
+    }
+    if (value.startsWith("\u001d")) {
+      value = value.slice(1);
+      continue;
+    }
+    return value;
   }
-  return payload;
+}
+
+export function isUnreliablePlaceholder(payload) {
+  return payload === "^";
+}
+
+export function normalizedPayload(fmt, payload) {
+  let result = unescapeHtmlEntities(payload).replace(/[\r\n]+$/, "");
+  if (result.startsWith("\\000001")) result = result.slice(7);
+  fmt = canonicalFormat(fmt);
+  if (fmt === "UPC_A" && result.length === 13 && result.startsWith("0")) {
+    return result.slice(1);
+  }
+  if (fmt === "CODE_39" && result.length >= 2 && result.startsWith("*") && result.endsWith("*")) {
+    return result.slice(1, -1);
+  }
+  if (fmt === "CODE_128" || fmt === "GS1_128") {
+    return stripLeadingGs1Marker(result);
+  }
+  return result;
 }
 
 export function isSupported(decoder, fmt) {
@@ -80,6 +121,7 @@ export function matchResults(truth, predictions, decoder) {
   for (let ti = 0; ti < truth.length; ti++) {
     const gt = truth[ti];
     if (!gt.decode_eligible) continue;
+    if (isUnreliablePlaceholder(gt.text)) continue;
     if (!isSupported(decoder, gt.format)) {
       output.push({ truth_index: ti, prediction_index: null, outcome: "unsupported_format" });
       continue;

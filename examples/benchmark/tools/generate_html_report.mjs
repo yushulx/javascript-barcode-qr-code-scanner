@@ -84,7 +84,7 @@ const document_ =
   decoderRecords.toLocaleString() +
   '</div>decoder records</div></div></section><section><h2>Method and disclosures</h2><p class="disclosure">' +
   escape(summary.disclosure) +
-  '</p><p>Both JavaScript decoders receive the same canvas painted from a single ImageBitmap; the fetch and bitmap decode stage is recorded separately as image_load_ns. Matching is a location-independent one-to-one multiset match of canonical format and exact normalized payload. UPC-A and EAN-13 leading zero equivalence is normalized before scoring.</p><p><strong>Measured environment:</strong> ' +
+  '</p><p>Both JavaScript decoders receive the same canvas painted from a single ImageBitmap; the fetch and bitmap decode stage is recorded separately as image_load_ns. Matching is a location-independent one-to-one multiset match of canonical format and exact normalized payload. UPC-A/EAN-13 leading zeros, CODE_39 start/stop asterisks, CODE_128 GS1 markers, HTML entity escaping, trailing newlines, and a leading \\000001 escape are normalized before scoring. Ground truth payload ^ is treated as an unreliable placeholder and excluded from scoring.</p><p><strong>Measured environment:</strong> ' +
   escape(environment.operating_system || "") +
   ', ' +
   escape(environment.processor || "") +

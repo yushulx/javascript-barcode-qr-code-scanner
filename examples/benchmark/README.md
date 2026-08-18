@@ -26,16 +26,19 @@ The browser is the natural runtime for both WASM decoders, so the benchmark is s
 
 ### Protocol (kept identical to the C++/Python articles)
 
-- The scoring manifest covers **7,894 deduplicated images** with **8,615 vetted ground truth values**,
-  all traced to BarBeR's VIA annotations.
+- The scoring manifest covers **7,894 deduplicated images** with **8,615 original eligible
+  annotations**. **204** of those payloads are the unreliable placeholder `^` and are excluded from
+  scoring, leaving **8,411 scored ground truth values**.
 - Each image is fetched once and decoded into an `ImageBitmap`, then painted onto a shared canvas.
   That fetch + bitmap-decode stage is recorded separately as `image_load_ns` and never enters the
   decode clock.
 - Both decoders read the same pixels; only the decoder call is timed (`decode_ns`).
 - Decoder order is shuffled per (sample, repetition) with a seeded PRNG so neither side gets a
   systematic warm-up advantage.
-- Matching is a location-independent one-to-one multiset match of canonical format + exact normalized
-  payload. UPC-A is normalized to its zero-prefixed EAN-13 equivalent, and DBR `CODE39EXTENDED`
+- Matching is a /EAN-13 leading zeros, CODE_39 start/stop asterisks, CODE_128 GS1 markers, HTML
+  entities, trailing newlines, and a leading `\000001` escape are normalized before scoring. Ground
+  truth payload `^` is excluded. DBR `CODE39EXTENDED` results fold into `CODE_39` when the payload
+ fixed EAN-13 equivalent, and DBR `CODE39EXTENDED`
   results fold into `CODE_39` when the payload matches.
 - Every record is appended to `results.jsonl`, so an interrupted run resumes where it stopped.
 
@@ -53,6 +56,7 @@ benchmark/
 ├── tools/
 │   ├── validate_results.mjs  # JSONL structure / uniqueness / count checks
 │   ├── generate_html_report.mjs  # self-contained report + downloads
+│   ├── rematch_results.mjs   # re-score an existing JSONL after matching-rule changes
 │   └── generate_benchmark_media.py # cover/poster/slide video (Pillow + ffmpeg)
 ├── manifests/                # audited BarBeR manifest (shared with the series)
 ├── configs/                  # benchmark_environment.json (written on finalize)
@@ -104,6 +108,8 @@ node tools/validate_results.mjs \
   --results results/full/results.jsonl \
   --summary results/full/summary.json \
   --expected-images 7894 --expected-ground-truth 8615 --expected-repetitions 1
+# 8615 is the audited annotation count stored in each record.
+# Scoring excludes 204 "^" placeholders, so recall uses 8411.
 
 # self-contained HTML report + downloads
 node tools/generate_html_report.mjs \
@@ -119,9 +125,29 @@ python tools/generate_benchmark_media.py \
   --inventory manifests/barber_source_files.json \
   --summary results/full/summary.json \
   --output report/media
+
+# re-score an existing JSONL after a matching-rule change (no decoder rerun)
+node tools/rematch_results.mjs \
+  --results results/full/results.jsonl \
+  --output results/full
 ```
 
 ## Results
+
+The current full run uses one repetition on 7,894 unique BarBeR images. Recall is calculated as
+correct ground truth matches divided by 8,411 scored ground truth instances. Precision is calculated
+as correct predictions divided by evaluated predictions, where evaluated predictions are
+`correct + wrong_text + wrong_format + extra_result`.
+
+| Decoder | Correct | Recall | Precision | Image all-read rate | Mean decode time | Median decode time | P95 decode time |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Dynamsoft Barcode Reader JS 11.4.3000 | **7,637 / 8,411** | **90.80%** | **95.93%** | **90.77%** | 127.00 ms | 100.20 ms | 313.80 ms |
+| zxing-wasm 3.1.2 | 5,958 / 8,411 | 70.84% | 94.96% | 70.66% | 121.75 ms | 74.10 ms | 409.10 ms |
+
+DBR read 1,679 more ground truth barcodes in this run and improved recall by 19.96 percentage
+points. DBR also had 0.97 percentage points higher precision. zxing-wasm had the lower mean decode
+time in this browser run (121.75 ms versus 127.00 ms). Five images failed browser image decode for
+both readers and are recorded as `input_pipeline_error`, not as no-reads.
 
 See `report/index.html` for the full interactive report (searchable per-image records, dataset audit
 card, method and disclosures). The raw `results.jsonl`, combined `results.json`, `summary.json`,
