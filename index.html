@@ -1,26 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="utf-8">
     <title>NFC and Barcode Scanner</title>
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0" />
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.2/dist/dbr.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-camera-enhancer@3.2.0/dist/dce.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.2100/dist/dbr.bundle.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.js"></script>
     <style>
-      @keyframes dce-rotate{from{transform:rotate(0turn);}to{transform:rotate(1turn);}}
-      @keyframes dce-scanlight{from{top:0;}to{top:97%;}}
-      .scanner{width:100%;height:100%;min-width:100px;min-height:100px;background:#eee;position:absolute;left:0;top:0;}
-      .dce-bg-loading{animation:1s linear infinite dce-rotate;width:40%;height:40%;position:absolute;margin:auto;left:0;top:0;right:0;bottom:0;fill:#aaa;}
-      .dce-bg-camera{display:none;width:40%;height:40%;position:absolute;margin:auto;left:0;top:0;right:0;bottom:0;fill:#aaa;}
-      .dce-video-container{position:absolute;left:0;top:0;width:100%;height:100%;}
-      .dce-scanarea{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;}
-      .sel-container{position: absolute;left: 0;top: 0;}
-      .sel-container .dce-sel-camera{display:block;}
-      .sel-container .dce-sel-resolution{display:block;margin-top:5px;}
-      .sel-container {display:block;margin-top:5px;}
-      .close-btn{position: absolute;right: 0;top: 0;}
-      li {word-break: break-all;}
-      span {word-break: break-all;}
+      body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; }
+      .app { max-width: 640px; margin: 0 auto; padding: 16px; }
+      button { margin: 4px; padding: 8px 14px; font-size: 14px; }
+      ol { line-height: 1.8; }
+      li { word-break: break-all; }
+      .scanner { position: fixed; inset: 0; background: #000; display: none; z-index: 100; }
+      .scanner video { width: 100%; height: 100%; object-fit: contain; }
+      .scanner canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+      .scanner .close-btn { position: absolute; right: 12px; top: 12px; z-index: 10; }
     </style>
 </head>
 <body>
@@ -32,8 +27,10 @@
     </div>
     <div>
       <button id="NFC-btn" onclick="toggleNFCScanning();">Scan NFC Tags</button>
+      <button id="NFC-simulate-btn" onclick="simulateNFCTag();" style="display:none;">Simulate NFC Tag</button>
       <button id="barcode-btn" onclick="scanBarcodes();">Scan Barcodes</button>
     </div>
+    <div id="NFC-note" style="display:none; margin-bottom: 8px; font-size: 13px; color: #666;"></div>
     <div>
       NFC Results:
       <ol id="NFC-results"></ol>
@@ -45,16 +42,9 @@
     <button onclick="decrypt();">Decrypt</button>
     <div id="decrypted"></div>
   </div>
-  <div class="scanner" style="display:none;">
-    <svg class="dce-bg-loading" viewBox="0 0 1792 1792"><path d="M1760 896q0 176-68.5 336t-184 275.5-275.5 184-336 68.5-336-68.5-275.5-184-184-275.5-68.5-336q0-213 97-398.5t265-305.5 374-151v228q-221 45-366.5 221t-145.5 406q0 130 51 248.5t136.5 204 204 136.5 248.5 51 248.5-51 204-136.5 136.5-204 51-248.5q0-230-145.5-406t-366.5-221v-228q206 31 374 151t265 305.5 97 398.5z"/></svg>
-    <svg class="dce-bg-camera" viewBox="0 0 2048 1792"><path d="M1024 672q119 0 203.5 84.5t84.5 203.5-84.5 203.5-203.5 84.5-203.5-84.5-84.5-203.5 84.5-203.5 203.5-84.5zm704-416q106 0 181 75t75 181v896q0 106-75 181t-181 75h-1408q-106 0-181-75t-75-181v-896q0-106 75-181t181-75h224l51-136q19-49 69.5-84.5t103.5-35.5h512q53 0 103.5 35.5t69.5 84.5l51 136h224zm-704 1152q185 0 316.5-131.5t131.5-316.5-131.5-316.5-316.5-131.5-316.5 131.5-131.5 316.5 131.5 316.5 316.5 131.5z"/></svg>
-    <div class="dce-video-container"></div>
-    <div class="dce-scanarea">
-    </div>
-    <div class="sel-container">
-      <select class="dce-sel-camera"></select>
-      <select class="dce-sel-resolution"></select>
-    </div>
+  <div class="scanner" id="scanner">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="overlay"></canvas>
     <button class="close-btn" onclick="stopBarcodeScan();">Close</button>
   </div>
   <script type="text/javascript">
@@ -62,35 +52,51 @@
     let abortController;
     let NFCResults = [];
     let barcodeResults = [];
-    let reader;
-    let camera;
+    let cvr;
+    let stream;
     let interval;
     let processing = false;
 
     checkIFNFCSupported();
-    initDBR();
+    initBarcodeReader();
 
     function checkIFNFCSupported(){
       if (!("NDEFReader" in window)) {
-        alert("NFC is not supported.");
+        // NFC is not available (e.g. on a desktop browser). Enable a simulation
+        // flow so users can still try the full NFC + barcode workflow.
         document.getElementById("NFC-btn").disabled = true;
+        document.getElementById("NFC-simulate-btn").style.display = "inline-block";
+        const note = document.getElementById("NFC-note");
+        note.style.display = "block";
+        note.innerText = 'NFC is not supported in this browser. Use "Simulate NFC Tag" to enter a key and follow the same workflow.';
       }
     }
 
-    async function initDBR() {
+    function simulateNFCTag(){
+      const defaultValue = "dynamsoft";
+      const value = prompt("Enter the key to store in the NFC tag (simulated):", defaultValue);
+      if (value === null || value === "") {
+        return;
+      }
+      // Mimic an NDEF record so the rest of the flow reuses the same code path.
+      const bytes = new TextEncoder().encode(value);
+      NFCResults = [{
+        data: new DataView(bytes.buffer)
+      }];
+      displayNFCResults();
+      updateStatus("Simulated NFC tag: " + value);
+    }
+
+    async function initBarcodeReader() {
       updateStatus('Initializing...');
-      Dynamsoft.DBR.BarcodeReader.license = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==';
-      reader = await Dynamsoft.DBR.BarcodeReader.createInstance();
-      camera = await Dynamsoft.DCE.CameraEnhancer.createInstance();
-      await camera.setUIElement(document.getElementsByClassName("scanner")[0]);
-      camera.setScanRegion({
-        regionLeft:0,
-        regionTop:35,
-        regionRight:100,
-        regionBottom:65,
-        regionMeasuredByPercentage: 1
-      });
-      updateStatus('Initialized');
+      try {
+        Dynamsoft.License.LicenseManager.initLicense('DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==', true);
+        await Dynamsoft.Core.CoreModule.loadWasm(['DBR']);
+        cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+        updateStatus('Initialized');
+      } catch (ex) {
+        updateStatus('Failed to initialize: ' + (ex.message || ex));
+      }
     }
  
     function toggleNFCScanning(){
@@ -131,13 +137,24 @@
     }
 
     async function scanBarcodes(){
-      await camera.open(true);
-      startProcessingLoop();
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } });
+        const video = document.getElementById("video");
+        video.srcObject = stream;
+        document.getElementById("scanner").style.display = "block";
+        startProcessingLoop();
+      } catch (error) {
+        alert(`Error! Scan failed to start: ${error}.`);
+      }
     }
 
     function stopBarcodeScan(){
       stopProcessingLoop();
-      camera.close(true);
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+      document.getElementById("scanner").style.display = "none";
     }
 
     function startProcessingLoop(){
@@ -153,28 +170,42 @@
       processing = false;
     }
 
+    // CaptureVisionRouter.capture() does not support concurrent calls,
+    // so guard every call with a mutex to avoid overlapping frames.
+    async function captureWithLock(canvas) {
+      if (processing) {
+        return null;
+      }
+      processing = true;
+      try {
+        return await cvr.capture(canvas, 'ReadBarcodes_Default');
+      } finally {
+        processing = false;
+      }
+    }
+
     async function captureAndDecode() {
-      if (!camera || !reader) {
-        return
-      }
-      if (camera.isOpen() === false) {
+      if (!cvr) {
         return;
       }
-      if (processing == true) {
+      const video = document.getElementById("video");
+      if (video.readyState !== video.HAVE_ENOUGH_DATA) {
         return;
       }
-      processing = true; // set decoding to true so that the next frame will be skipped if the decoding has not completed.
-      let frame = camera.getFrame();
-      if (frame) {
-        let results = await reader.decode(frame);
-        if (results.length > 0) {
-          barcodeResults = results;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const result = await captureWithLock(canvas);
+      if (result && result.items && result.items.length > 0) {
+        barcodeResults = result.items.filter(item => item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE);
+        if (barcodeResults.length > 0) {
           displayBarcodeResults();
           stopBarcodeScan();
         }
-        processing = false;
       }
-    };
+    }
 
     function displayNFCResults(){
       const ol = document.getElementById("NFC-results");
@@ -194,17 +225,17 @@
       const ol = document.getElementById("barcode-results");
       ol.innerHTML = "";
       for (let index = 0; index < barcodeResults.length; index++) {
-        const result = barcodeResults[index];
+        const item = barcodeResults[index];
         const li = document.createElement("li");
         const container = document.createElement("div");
         const span = document.createElement("span");
-        span.innerText = result.barcodeText;
+        span.innerText = item.text;
         container.appendChild(span);
         if ("NDEFReader" in window) {
           const btn = document.createElement("button");
           btn.innerText = "Write to NFC Tag"
           btn.addEventListener('click',function(){
-            writeNFCTag(result.barcodeText);
+            writeNFCTag(item.text);
           });
           container.appendChild(btn);
         }
@@ -219,7 +250,7 @@
 
     function decrypt(){
       if (NFCResults.length>0 && barcodeResults.length>0) {
-        const message = barcodeResults[0].barcodeText;
+        const message = barcodeResults[0].text;
         const record = NFCResults[0];
         const buf = record.data.buffer;
         const key = new TextDecoder().decode(buf);
