@@ -11,7 +11,7 @@ Dynamsoft.License.LicenseManager.initLicense("LICENSE-KEY");
 ```
 
 ## Try Example
-[https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/webgl/](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/webgl/)
+[https://yushulx.me/javascript-barcode-qr-code-scanner/examples/webgl/](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/webgl/)
 
 ![WebGL for JavaScript barcode](https://www.dynamsoft.com/codepool/wp-content/uploads/2020/07/webgl-javascript-barcode.png)
 
