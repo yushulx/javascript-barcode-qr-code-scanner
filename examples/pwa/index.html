@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Barcode Scanner PWA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2F3BA2">
+  <meta name="description" content="A progressive web app for scanning barcodes and QR codes with Dynamsoft.">
+  <!-- Add to home screen for Safari on iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Barcode Scanner">
+  <link rel="apple-touch-icon" href="icons/icon-152.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+  <header class="app-header">
+    <div class="header-brand">
+      <img src="icons/icon-192.png" alt="Barcode Scanner" width="40" height="40">
+      <div>
+        <h1>Barcode Scanner</h1>
+        <p>Read QR codes &amp; barcodes with Dynamsoft</p>
+      </div>
+    </div>
+    <button id="installBtn" class="install-btn" hidden>Install App</button>
+  </header>
+
+  <main class="app-main">
+    <div class="tabs" role="tablist" aria-label="Scan mode">
+      <button class="tab tab-active" data-tab="camera" role="tab" aria-selected="true">📷 Camera</button>
+      <button class="tab" data-tab="image" role="tab" aria-selected="false">🖼️ Image</button>
+    </div>
+
+    <!-- Camera panel -->
+    <section id="cameraPanel" class="panel">
+      <div class="toolbar">
+        <div class="toolbar-item">
+          <label for="cameraSelect">Camera</label>
+          <select id="cameraSelect" class="form-select"></select>
+        </div>
+        <button id="torchBtn" class="btn-icon" title="Toggle torch" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8l-1 6h-6z"></path><path d="M9 8v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V8"></path><path d="M12 16v4"></path></svg>
+        </button>
+      </div>
+
+      <div class="scanner-wrap" id="cameraViewWrap">
+        <video id="cameraView" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+        <div class="scan-frame" aria-hidden="true"></div>
+        <div id="cameraStatus" class="camera-status">Loading…</div>
+      </div>
+
+      <div class="result-panel">
+        <div class="result-header">
+          <span>Detected <span id="scanCount" class="count-badge">0</span></span>
+          <button id="clearResults" class="btn-ghost">Clear</button>
+        </div>
+        <ul id="resultList" class="result-list">
+          <li id="resultPlaceholder" class="placeholder">Point the camera at a barcode to scan.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Image panel -->
+    <section id="imagePanel" class="panel" hidden>
+      <label id="dropzone" class="dropzone" for="fileInput">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        <span class="dropzone-title">Click to upload or drag &amp; drop an image</span>
+        <span class="hint">JPG, PNG, GIF, BMP, WebP &middot; you can also paste an image (Ctrl+V)</span>
+        <input type="file" id="fileInput" accept="image/*" hidden>
+      </label>
+
+      <div class="image-wrap" id="imageWrap" hidden>
+        <img id="imageView" alt="Uploaded barcode image">
+        <canvas id="imageOverlay"></canvas>
+      </div>
+
+      <div class="result-panel">
+        <div class="result-header">
+          <span>Detected <span id="imageCount" class="count-badge">0</span></span>
+          <button id="clearImageResults" class="btn-ghost">Clear</button>
+        </div>
+        <ul id="imageResultList" class="result-list">
+          <li id="imageResultPlaceholder" class="placeholder">Upload an image to detect barcodes in it.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>Powered by <a href="https://www.dynamsoft.com/barcode-reader/sdk-javascript/" target="_blank" rel="noopener">Dynamsoft Barcode Reader</a></span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.2100/dist/dbr.bundle.js"></script>
+  <script src="overlay.js"></script>
+  <script src="main.js"></script>
+</body>
+
+</html>
