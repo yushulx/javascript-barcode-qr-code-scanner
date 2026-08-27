@@ -3,10 +3,7 @@
 <head>
   <title>QR Code Scanner with Auto-Zoom</title>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0" />
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-core@3.2.10/dist/core.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-license@3.2.10/dist/license.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader@10.2.10/dist/dbr.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-router@2.2.10/dist/cvr.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3000/dist/dbr.bundle.js"></script>
   <style>
     video {
       max-width: 100%;
@@ -99,8 +96,8 @@
     }
 
     async function initCVR(){
-      Dynamsoft.License.LicenseManager.initLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9");
-      Dynamsoft.Core.CoreModule.loadWasm(["dbr"]);
+      await Dynamsoft.License.LicenseManager.initLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9");
+      await Dynamsoft.Core.CoreModule.loadWasm(["DBR"]);
       router = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
       intermediateResultManager = router.getIntermediateResultManager();
       const intermediateResultReceiver = new Dynamsoft.CVR.IntermediateResultReceiver();
@@ -207,9 +204,10 @@
     function displayResults(result){
       let ol = document.querySelector(".results ol");
       ol.innerHTML = "";
-      if (result && result.barcodeResultItems && result.barcodeResultItems.length > 0) {     
-        for (let index = 0; index < result.barcodeResultItems.length; index++) {
-          const item = result.barcodeResultItems[index];
+      if (result && result.items) {
+        for (let index = 0; index < result.items.length; index++) {
+          const item = result.items[index];
+          if (item.type !== Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE) continue;
           const li = document.createElement("li");
           li.innerText = item.formatString+": "+item.text;
           ol.appendChild(li);

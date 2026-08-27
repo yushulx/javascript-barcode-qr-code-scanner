@@ -3,12 +3,7 @@
 <head>
   <title>QR Code Scanner with Auto-Zoom</title>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0" />
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-core@3.2.10/dist/core.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-license@3.2.10/dist/license.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-utility@1.2.10/dist/utility.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader@10.2.10/dist/dbr.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-router@2.2.10/dist/cvr.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-camera-enhancer@4.0.2/dist/dce.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3000/dist/dbr.bundle.js"></script>
   <style>
     #enhancerUIContainer {
       height: 480px;
@@ -57,7 +52,7 @@
     let cameraEnhancer;
     let interval;
     window.onload = async function(){
-      Dynamsoft.License.LicenseManager.initLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9");
+      await Dynamsoft.License.LicenseManager.initLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9");
       await initDCE();
       await initCVR();
       await listCameras();
@@ -66,7 +61,7 @@
     async function initDCE(){
       let cameraView = await Dynamsoft.DCE.CameraView.createInstance();
       cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
-      await cameraEnhancer.enableEnhancedFeatures(Dynamsoft.DCE.EnumEnhancedFeatures.EF_AUTO_ZOOM);
+      cameraEnhancer.enableEnhancedFeatures(Dynamsoft.DCE.EnumEnhancedFeatures.EF_AUTO_ZOOM);
       document.querySelector("#enhancerUIContainer").append(cameraView.getUIElement());
       cameraEnhancer.on("played", () => {
         startCheckingZoomFactor();
@@ -74,7 +69,7 @@
     }
 
     async function initCVR(){
-      Dynamsoft.Core.CoreModule.loadWasm(["dbr"]);
+      await Dynamsoft.Core.CoreModule.loadWasm(["DBR"]);
       router = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
       router.setInput(cameraEnhancer);
 
