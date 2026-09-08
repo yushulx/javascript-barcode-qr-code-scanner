@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Dynamsoft JavaScript Barcode Scanner</title>
+    <!-- Dynamsoft Barcode Reader Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+    <script src="overlay.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #videoview {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #videoContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 1
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            object-fit: contain
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        Barcode Result: <a id='result'>N/A</a>
+    </div>
+    <div id="barcodeScanner">
+        <span id='loading-status' style='font-size:x-large'>Loading Library...</span>
+    </div>
+
+    <div id="videoview">
+        <div id="videoContainer"></div>
+        <canvas id="overlay"></canvas>
+    </div>
+    <script>
+        // Make sure to set the key before you call any other APIs under Dynamsoft
+        // You can register for a free 30-day trial here: https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform
+        const LICENSE_KEY = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+        var enhancer = null;
+        initOverlay(document.getElementById('overlay'));
+
+        window.onload = async function () {
+            try {
+                await Dynamsoft.License.LicenseManager.initLicense(LICENSE_KEY, true);
+                await Dynamsoft.Core.CoreModule.loadWasm(["DBR"]);
+                await initBarcodeScanner();
+            } catch (ex) {
+                alert(ex.message);
+                throw ex;
+            }
+        };
+
+        function updateResolution() {
+            if (enhancer) {
+                let resolution = enhancer.getResolution();
+                updateOverlay(resolution.width, resolution.height);
+            }
+        }
+
+        async function initBarcodeScanner() {
+            let cameraView = await Dynamsoft.DCE.CameraView.createInstance();
+            enhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
+            document.getElementById('videoContainer').appendChild(cameraView.getUIElement());
+            // Update the overlay whenever the video resolution is known
+            cameraView.getVideoElement().addEventListener('loadedmetadata', updateResolution);
+
+            let cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+            cvr.setInput(enhancer);
+            // onCapturedResultReceived fires on every frame, so the overlay
+            // is cleared even when no barcode is detected.
+            cvr.addResultReceiver({
+                onCapturedResultReceived: (result) => {
+                    showResults(result.items);
+                }
+            });
+            document.getElementById('loading-status').hidden = true;
+            await enhancer.open();
+            await cvr.startCapturing("ReadBarcodes_Default");
+        }
+
+        function showResults(items) {
+            clearOverlay();
+
+            let txts = [];
+            let barcodes = items.filter(item =>
+                item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE);
+            if (barcodes.length > 0) {
+                for (const item of barcodes) {
+                    txts.push(item.text);
+                    if (item.location) {
+                        drawOverlay(item.location.points, item.text);
+                    }
+                }
+                document.getElementById('result').innerHTML = txts.join(', ');
+            }
+            else {
+                document.getElementById('result').innerHTML = "No barcode found";
+            }
+        }
+    </script>
+</body>
+
+</html>

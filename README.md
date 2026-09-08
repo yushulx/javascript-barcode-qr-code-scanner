@@ -5,20 +5,12 @@ This repository contains **JavaScript** examples demonstrating how to use [Dynam
 - Obtain a [30-day trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform).
 
 ## Try Examples
-- [barcode-reader.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/barcode-reader.html)
-- [barcode-result-overlay.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/barcode-result-overlay.html)
-- [hello-world.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/hello-world.html)
-- [manually-load.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/manually-load.html)
-- [qr-code-scanner.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/qr-code-scanner.html)
-- [ui-customization.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/ui-customization.html)
-- [wrapper-test.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/wrapper-test.html)
-    
-    Build the TypeScript file:
-
-    ```bash
-    tsc --target ES5 dbr-scanner-wrapper.ts
-    ```
-
+- [barcode-reader.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode-reader.html)
+- [barcode-result-overlay.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode-result-overlay.html)
+- [hello-world.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/hello-world.html)
+- [manually-load.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/manually-load.html)
+- [qr-code-scanner.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/qr-code-scanner.html)
+- [ui-customization.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/ui-customization.html)
 - [WebGL](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/webgl/)
 - [Driver License PDF417 Scanner](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/driver_license/foundational/)
 - [Scan 1D Barcode and OCR Text](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_ocr_text)
