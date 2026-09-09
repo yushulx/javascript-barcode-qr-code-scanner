@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" data-page-node-id="e2UqeEoUXz47tix5XjJFvN">
+
+<head data-page-node-id="xF5vI7DGpBun31v4HGwvSe">
+    <meta charset="UTF-8" data-page-node-id="C2c1hCvIFMYUZdD9iZpzqN">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="bCfdKiaaJAl7QeIDLbKZr3">
+    <link rel="stylesheet" href="styles.css" data-page-node-id="E01OPfiUu25EXJue93avCQ">
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+    <script src="utils.js"></script>
+    <title>Barcode Scanner</title>
+</head>
+
+<body data-page-node-id="aHtEcsMgtCF7unvPKexhAB">
+    <div class="header" data-page-node-id="CWKyR7BaavurGedjy1sfwE">
+        <h1 data-page-node-id="7XPG41BFB1lyA8CF59CWUZ">📷 Barcode Scanner</h1>
+        <p class="subtitle" data-page-node-id="Tt1jpefv08E9rnbVBXP0HZ">Powered by Dynamsoft Barcode Reader — scan 1D/2D barcodes from your camera, images, or video
+            files</p>
+    </div>
+
+    <div id="loading-indicator" class="loading-indicator" data-page-node-id="6a0IeiZFEinDUVQCTFvX0C">
+        <div class="spinner" data-page-node-id="VDtXmQXmwqiEbNqdA5RHeC"></div>
+        <p id="loading-text" data-page-node-id="bCgS5dfXB8ymhWqpNsVv3t">Loading...</p>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings_modal" class="modal-overlay" style="display: none;" data-page-node-id="USTJo0MINeHyBGkt8wmmIf">
+        <div class="modal-content" data-page-node-id="EGfxknsCZEZbYZxhxk26FQ">
+            <div class="modal-header" data-page-node-id="ZK13NHzt3f8PDIJed3NXkG">
+                <h2 data-page-node-id="CuTBY3WLjcLN2lPHq493G6">Settings</h2>
+                <button class="modal-close" onclick="closeSettings()" data-page-node-id="C5vnSXdy7u8R0UQViui3Ek">&times;</button>
+            </div>
+            <div class="modal-body" data-page-node-id="qTUGJBqF67bDjDl9j5LTyx">
+                <!-- Dynamsoft License -->
+                <div class="settings-sdk-section" data-page-node-id="10OWS7fuQm6u8YR9YoX0TZ">
+                    <div class="settings-sdk-header" data-page-node-id="JdkLpeFDxw6a26mFwIoPYB">
+                        <strong data-page-node-id="M1ZHUjwqyy3JB8od2XFzYi">Dynamsoft Barcode Reader</strong>
+                        <span id="dynamsoft_status" class="sdk-badge badge-inactive" data-page-node-id="8jAsrfuiODPxRIeAn8gvX5">Not Activated</span>
+                    </div>
+                    <span class="hint" data-page-node-id="ewDlot2FoeGduHYDfpwp9Y">Get your license <a
+                            href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                            target="_blank" class="link" data-page-node-id="nhUMNR9ehXn4B2Wunti9Qj">here</a></span>
+                    <div class="input-group" data-page-node-id="E0D4ZU4m9xF97MJ1smllkG">
+                        <input type="text" id="dynamsoft_license_key" class="form-input"
+                            value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=="
+                            placeholder="Enter your Dynamsoft license key" data-page-node-id="OlMRa6KTkT35fcAfunQcRr">
+                        <button onclick="activateDynamsoft()" class="btn btn-primary" id="dynamsoft_activate_btn" data-page-node-id="HpqsQmlw4ZwNPOb304tEMj">Activate</button>
+                    </div>
+                    <div style="margin-top: 10px;" data-page-node-id="VjkfyVMiBwA2gOeEdCODX3">
+                        <label class="label-text" style="margin-bottom: 4px; font-size:0.85rem;" data-page-node-id="ApmzUpsu3BT2R3LwnyTfHV">Scan Template (JSON)</label>
+                        <div class="template-load-row" data-page-node-id="EJWPoH1fcdqzGDve3OQHc8">
+                            <label class="btn btn-secondary btn-sm template-load-btn" for="dynamsoft_template_input" data-page-node-id="W7gJeFzuOZJB4hbbP2EzyB">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle;" data-page-node-id="AErL0UAF9NnF2z988MbPdS"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" data-page-node-id="lW7UGSBo7uO37RktWLKdiD"></path><polyline points="17 8 12 3 7 8" data-page-node-id="3Y5LSrp0EMkW0VXt1pHHkB"></polyline><line x1="12" y1="3" x2="12" y2="15" data-page-node-id="wTAd9rg0aFTtGmInrjElow"></line></svg>
+                                Load Template File
+                            </label>
+                            <input type="file" id="dynamsoft_template_input" accept=".json" class="file-input" onchange="loadDynamsoftTemplate(this)" data-page-node-id="SXCjmIthBT5Oz2DnXlDh2C" />
+                            <span id="dynamsoft_template_status" class="template-status" data-page-node-id="C7uyzLQcG7CAwDy87qOlGV">Using built-in default</span>
+                            <button id="dynamsoft_template_clear_btn" class="btn btn-sm" onclick="clearDynamsoftTemplate()" style="display:none;" data-page-node-id="pHg4zqYTjCIW4G0a4Yf23E">&#x2715; Reset</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Controls -->
+    <div class="container" data-page-node-id="fw2b9VFlbGGUFQQvnTKYxt">
+        <div class="top-controls" data-page-node-id="3vAB7gIioBRWOaRvVX1PmH">
+            <div class="mode-selector" id="scan_mode_selector" data-page-node-id="hv0mvxNUnylSepC5q4O3RS">
+                <label class="label-text" data-page-node-id="YTDOPQhlUw0oY0qCyG0No9"><strong data-page-node-id="RtxbwLTU6FP5Fh4esWkN9M">Scan Mode</strong></label>
+                <select onchange="selectChanged()" id="dropdown" class="form-select" data-page-node-id="OrInJmRbUjsHVVBAiJwJU9">
+                    <option value="file" data-page-node-id="Uj575sIK4CGy5lOYJYiTfg">📁 File (Image / Video)</option>
+                    <option value="camera" data-page-node-id="3XoRQSUOexo1LgXALhMqtv">📹 Live Camera</option>
+                </select>
+            </div>
+
+            <div class="top-controls-right" data-page-node-id="lANkKtIUDz98VkPrj5cjqk">
+                <div class="mode-toggle" data-page-node-id="woMbpaCcACY5PAPscXCgu6">
+                    <label class="label-text" data-page-node-id="hmMhsebkB83Dcaxoa7jaVF"><strong data-page-node-id="ykerWx9yLBTBDKQ3wDU2qH">Mode</strong></label>
+                    <div class="toggle-group" data-page-node-id="FwvMDn4ukVdvEtclep2D2u">
+                        <button id="mode_default" class="toggle-btn toggle-active" onclick="setMode('default')" data-page-node-id="etxEJwB6hkKqHTSVjd7q1j">Default</button>
+                        <button id="mode_benchmark" class="toggle-btn" onclick="setMode('benchmark')" data-page-node-id="lDJ1wLvZRagfllPFsMT3BC">Benchmark</button>
+                    </div>
+                </div>
+                <button class="btn btn-icon" onclick="openSettings()" title="Settings" data-page-node-id="bar0TKtVqiqGWgIO33WVF7">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="gGlpROSIU2ozG5GIL673E2">
+                        <circle cx="12" cy="12" r="3" data-page-node-id="XBgvqX380yYlTxlQybChbx"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" data-page-node-id="pxyiKvjpwPgpTtSFjazHHI"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- File (Image or Video) -->
+    <div class="container" id="file_container" data-page-node-id="GojOko8xP7L7do2ULIyUya">
+        <div class="file-upload-section" data-page-node-id="bgCcqsNKa4mRhL2vAgqGsi">
+            <label for="pick_file" class="file-upload-label" data-page-node-id="r8Pnc8yFxu1WGYJgtH5H6r">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="d3GQ62mOtxUC1J6tDPMyVZ">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" data-page-node-id="iE3OqvFvCstS4r9JbHJJfS"></path>
+                    <polyline points="17 8 12 3 7 8" data-page-node-id="3RxJVm9jOhsf5BqXciuc2U"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15" data-page-node-id="oFCHFkYNAtAMYfiQvbSl3y"></line>
+                </svg>
+                <span data-page-node-id="aQH2mHhEnc4uE4k12lcKwq">Click to upload or drag & drop files</span>
+                <span class="hint" data-page-node-id="GPgu65LWgWfGEd9FE22egr">Supports: JPG, PNG, GIF (multiple images), MP4, WebM, MOV</span>
+            </label>
+            <input type="file" id="pick_file" accept="image/*,video/*" multiple class="file-input" data-page-node-id="VDBEI8wtozxWemY16rrHOF" />
+        </div>
+
+        <!-- Image preview -->
+        <div class="imageview-container" id="image_preview_container" style="display: none;" data-page-node-id="MjnphLlRni1n0e0F69Xneh">
+            <div class="imageview" data-page-node-id="GcS91CwnipDA1dwP2v4roc">
+                <img id="image_file" src="default.png" alt="Preview" data-page-node-id="sE7WN21z8Eyl6LI4rlQFhB" />
+                <canvas id="overlay_canvas" class="overlay" data-page-node-id="APNUdFdphFq2q9QG0Bc8rK"></canvas>
+            </div>
+        </div>
+
+        <!-- Image navigator -->
+        <div id="image_navigator" style="display: none;" data-page-node-id="kshZ1H5ICyHCgjVhPrpGgi">
+            <div class="navigator-bar" data-page-node-id="Wrck8xM404mlNZkzG6wFB1">
+                <button class="btn btn-nav" onclick="navigateImage(-1)" aria-label="Previous image" data-page-node-id="vYZhpbpP6Z4eYaN0vchECJ">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="MxfeHBEQbBShZJaMvTqds4"><polyline points="15 18 9 12 15 6" data-page-node-id="sVppe2NOOt0B3ORZoXdFL6"></polyline></svg>
+                    Prev
+                </button>
+                <span id="navigator_counter" class="navigator-counter" data-page-node-id="PpUKdBrTD0zrgMOpliTW0H">1 / 1</span>
+                <button class="btn btn-nav" onclick="navigateImage(1)" aria-label="Next image" data-page-node-id="OCCFbk55XPGIpLsIKpXsc8">
+                    Next
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="IuNSz0thosEjnttzz28lNw"><polyline points="9 18 15 12 9 6" data-page-node-id="GQNiTq8EwiGhF7tQcHj1w1"></polyline></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Video preview -->
+        <div class="video-wrapper" id="video_file_wrapper" style="display: none;" data-page-node-id="6tfOdjyAsc8GLIrLT0OT2S">
+            <video id="video_file_player" controls playsinline muted data-page-node-id="mPB4LmjNJ0wf4oDg8CvYoE"></video>
+            <canvas id="video_overlay" class="video-overlay" data-page-node-id="gEuLwKqJRjvTkePX5CSeeb"></canvas>
+        </div>
+
+        <!-- Default mode results -->
+        <div class="result-section" id="default_result_section" data-page-node-id="obw2xlsoeih9vYimPMF4d4">
+            <label class="label-text" data-page-node-id="YdJpmQAUldR8T5mxaV3qhr"><strong data-page-node-id="ojG940bD5TzfAYJ5Q41vDt">Detection Results</strong></label>
+            <textarea id="detection_result" placeholder="Results will appear here..." readonly></textarea>
+        </div>
+
+        <!-- Benchmark mode results -->
+        <div id="benchmark_section" style="display: none;" data-page-node-id="PDCzToiNe3zNDo6JifwpBO">
+            <div class="benchmark-header" data-page-node-id="t2H2oxFTQDMVtTGQuY7U4a">
+                <label class="label-text" data-page-node-id="5KApkVESpgTxah1b8IvNvu"><strong data-page-node-id="tfbPMq9Yn9IFhLm2EYGjEB">Benchmark Results</strong></label>
+                <p class="hint" style="margin:2px 0 8px;" data-page-node-id="v5HDR5Y2WZKXWj6qxcKJXU">Upload multiple images to measure Dynamsoft's speed and
+                    accuracy across the entire set</p>
+                <div class="benchmark-controls" data-page-node-id="yi4VboFzawKQH1wLVCHsCj">
+                    <button class="btn btn-primary btn-sm" onclick="runBenchmark()" data-page-node-id="06vBFMqr4TmlJC9WFyFcf3">Run Benchmark</button>
+                    <button id="benchmark_export_btn" class="btn btn-secondary btn-sm" onclick="exportBenchmarkResults()" style="display:none;" data-page-node-id="adAxjPzpa2nXFtd3Co8ErO">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle;" data-page-node-id="gOxEsKNPTeH0Ac7AHI9HpC"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" data-page-node-id="i30DopHUNuVOzJU2nUs3Z8"></path><polyline points="7 10 12 15 17 10" data-page-node-id="U3OQ8Ho1RRekldl4Y9UESA"></polyline><line x1="12" y1="15" x2="12" y2="3" data-page-node-id="vM8vh6RoBXATaUdfyqDTpA"></line></svg>
+                        Export HTML
+                    </button>
+                </div>
+                <!-- Annotation ground truth import -->
+                <div class="benchmark-annotation-row" data-page-node-id="FCFbgXEyMAEE6RkIRX9nEL">
+                    <span style="font-size:0.85rem; color:var(--text-secondary); font-weight:600;" data-page-node-id="EhF1Ow2CrD5mkuyE0R1WNE">Ground Truth:</span>
+                    <label class="btn btn-secondary btn-sm annotation-import-btn" for="annotation_import_input" data-page-node-id="duNAAKTHA1vCuptqGM0TvM">
+                        📄 Import annotations.json
+                    </label>
+                    <input type="file" id="annotation_import_input" accept=".json" class="file-input" onchange="importAnnotations(this)" data-page-node-id="BSmYO2ETrZwte92TZMk8fa" />
+                    <span id="annotation_status" class="annotation-status" data-page-node-id="4dFt3ZOLTekOlFQGF6CYxH"></span>
+                    <button id="annotation_clear_btn" class="btn btn-sm" onclick="clearAnnotations()" style="display:none; padding:6px 12px; font-size:0.82rem; background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;" data-page-node-id="q3XA588pZ6WtxcFLP73rkJ">✕ Clear</button>
+                </div>
+            </div>
+            <div id="benchmark_progress" style="display: none;" data-page-node-id="ests6GCstNmLw8UjevEgoH">
+                <div class="progress-bar-container" data-page-node-id="BJQoPBMBnl6ek8hBvD3obp">
+                    <div id="benchmark_progress_bar" class="progress-bar" data-page-node-id="3I72j1y01Cx2DIYi8EDW9i"></div>
+                </div>
+                <p id="benchmark_progress_text" class="progress-text" data-page-node-id="UyGRDWiJdGjLKs55FW7T7e">Running...</p>
+            </div>
+            <div id="benchmark_results_container" data-page-node-id="F4dspRLBn4JGCun4O3YgsH"></div>
+        </div>
+    </div>
+
+    <!-- Camera Stream -->
+    <div class="container" id="camera_container" style="display: none;" data-page-node-id="L7BmCjrGY4F2c7fLOi5dWP">
+        <div class="controls" data-page-node-id="UQaodq1g0S7AkJ6xXkZGOc">
+            <div class="control-group" data-page-node-id="wf3b5k6lRSCkiA5V6WAssn">
+                <label class="label-text" data-page-node-id="5NqjPHjGwwTmd8B9E7jFeE"><strong data-page-node-id="VuuPa8sST6mrMa3JEsFN3N">Select Camera</strong></label>
+                <select onchange="cameraChanged()" id="camera_source" class="form-select" data-page-node-id="kKWcH4W6qX9DZ8ssXWX3lV"></select>
+            </div>
+        </div>
+        <div id="videoview" class="video-wrapper" data-page-node-id="6KWEMiH9jyU9YTfdmiBnVt">
+            <video id="camera_view" autoplay playsinline muted data-page-node-id="S4b7deBk13ARTnAOicQimH"></video>
+            <canvas id="camera_overlay" data-page-node-id="FXzENb46DWiRLQz6RidtnG"></canvas>
+        </div>
+
+        <div class="result-section" data-page-node-id="vRRC9G3f26U8uma9pmLKXW">
+            <label class="label-text" data-page-node-id="DasnxWrbcLk7j0uCgdiCwe"><strong data-page-node-id="CLrnKbCBbjcPir10YXYxeL">Scan Results</strong></label>
+            <textarea id="scan_result" placeholder="Scan results will appear here..." readonly></textarea>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
