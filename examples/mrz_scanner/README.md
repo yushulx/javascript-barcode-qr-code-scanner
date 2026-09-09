@@ -5,7 +5,7 @@ This project is a plain JavaScript web sample that extracts MRZ fields, document
 https://github.com/user-attachments/assets/12c8765e-8364-4ff4-9712-bcef35601e30
 
 ## Online Demo
-https://yushulx.me/javascript-barcode-qr-code-scanner/examples/mrz_scanner/
+[https://yushulx.me/javascript-barcode-qr-code-scanner/examples/mrz_scanner/](https://www.dynamsoft.com/codepool/demos/mrz-scanner/)
 
 ## What It Does
 
