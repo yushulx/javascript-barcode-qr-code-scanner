@@ -110,7 +110,7 @@ benchmark scanning, and can be reset with the ✕ button.
 
 ## Online Demo
 
-https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode-scanner/
+[https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode-scanner/](https://www.dynamsoft.com/codepool/demos/barcode-scanner/)
 
 ## How to Run
 
