@@ -12,7 +12,7 @@ This repository contains **JavaScript** examples demonstrating how to use [Dynam
 - [qr-code-scanner.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/qr-code-scanner.html)
 - [ui-customization.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/ui-customization.html)
 - [WebGL](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/webgl/)
-- [Driver License PDF417 Scanner](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/driver_license/foundational/)
+- [Driver License PDF417 Scanner](https://www.dynamsoft.com/codepool/demos/driver-license-scanner/)
 - [Scan 1D Barcode and OCR Text](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_ocr_text)
 - [Detect Barcode, MRZ and Document](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_mrz_document/)
 - [Aadhaar Card](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/aadhaar_card/)
