@@ -1,147 +1,117 @@
-# Driver License Scanner Examples
+# Driver License PDF417 Scanner
 
-A comprehensive collection of driver license scanning solutions using Dynamsoft APIs, ranging from foundational implementations to production-ready components.
+A modern, responsive web application that scans and extracts information from driver license **PDF417** barcodes using the [Dynamsoft Barcode Reader SDK](https://www.npmjs.com/package/dynamsoft-barcode-reader-bundle).
 
-## Prerequisites
-- Node.js 14+ (for ready-to-use component)
-- Modern web browser
-- [Dynamsoft License Key](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform)
+## Features
 
-## 📁 Project Structure
+- **PDF417 Barcode Recognition**: Optimized for the barcode found on driver licenses
+- **Dual Scan Modes with Modern Toggle**:
+  - **Camera Mode**: Real-time video scanning with a live camera feed (mobile and desktop)
+  - **Image Mode**: Single frame capture with file upload / gallery picking
+  - **Seamless Switching**: Toggle between modes without reloading the page
+- **Structured Data Extraction**: Parses the raw barcode payload into named fields
+- **Multi-Standard Support**:
+  - AAMVA DL/ID (US / Canada standard)
+  - AAMVA DL/ID with Magnetic Stripe
+  - South Africa Driver License
+- **Responsive Design**: Adapts to desktop, tablet, and mobile browsers — including safe-area
+  insets on iOS, dynamic viewport height (`100dvh`) so mobile browser chrome does not clip the
+  camera, and a bottom-sheet layout for scan results on phones
+- **Modern UI**: Clean, intuitive interface with smooth animations and mode indicators
 
-This project demonstrates two different approaches to building driver license scanners:
+## Project Structure
 
 ```
 driver_license/
-├── foundational/           # Low-level API implementation
-│   ├── index.html         # Single-file scanner with PDF417 barcode reading
-│   ├── style.css          # Modern responsive styling
-│   └── README.md          # Foundational example documentation
-└── ready_to_use/          # High-level component implementation
-    ├── src/               # TypeScript source code
-    ├── samples/           # Example implementations
-    ├── dist/              # Built JavaScript bundles
-    └── README.md          # Ready-to-use component documentation
+├── index.html    # Single-file scanner: UI + PDF417 scanning + AAMVA parsing
+├── style.css     # Responsive styling (desktop / tablet / mobile)
+├── 1.jpg         # Sample driver license image (front)
+├── 2.jpg         # Sample driver license image (back)
+└── README.md
 ```
 
-## 🎯 Examples Overview
+## Prerequisites
 
-### 1. Foundational Example
-**Path:** `foundational/`
-**Complexity:** ⭐⭐⭐☆☆ (Intermediate - Manual Implementation)
+- A modern web browser (Chrome, Edge, Firefox, or Safari)
+- A [Dynamsoft License Key](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform)
+- Camera access requires a **secure context** (HTTPS or `http://localhost`)
 
-A lightweight, single-file implementation that demonstrates:
-- PDF417 barcode scanning from driver licenses
-- Camera and image upload modes
-- Basic barcode data extraction
-- Responsive web design
+## Quick Start
 
-**Perfect for:**
-- Learning the basics of barcode scanning
-- Understanding manual implementation details
-- Custom integration requirements
-- Developers who want full control over the scanning process
+1. Serve the folder over HTTP (opening `index.html` from `file://` blocks camera access):
 
-### 2. Ready-to-Use Component
-**Path:** `ready_to_use/`
-**Complexity:** ⭐☆☆☆☆ (Beginner - Drop-in Component)
+   ```bash
+   # Python
+   python -m http.server 8000
 
-A comprehensive pre-built component that provides:
-- Full front/back image capture workflow
-- Automatic document detection and correction
-- PDF417 barcode reading with data extraction
-- Professional license input UI
-- Structured data parsing and validation
-- Production-ready error handling
+   # Node.js
+   npx http-server -p 8000
+   ```
 
-**Perfect for:**
-- Production applications
-- Quick deployment and integration
-- Developers who want a complete solution
-- Professional UI without custom development
+2. Open `http://localhost:8000/` in a browser.
+3. Paste your license key and click **Initialize Scanner** — or click **Use Trial License** to
+   start with the SDK's public 24-hour trial key.
+4. Allow camera permission, then point the camera at the PDF417 barcode on a driver license.
+   Switch the toggle to **Upload** to scan a still image instead (try `1.jpg` / `2.jpg`).
+5. The parsed fields are shown in an overlay. Close it to resume scanning.
 
-## 🚀 Quick Start
+## How It Works
 
-### Option 1: Foundational Example (5 minutes)
-1. Navigate to `foundational/`
-2. Open `index.html` in a web browser
-3. Allow camera permissions
-4. Scan a driver license barcode
+```html
+<script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+```
 
-### Option 2: Ready-to-Use Component (5 minutes)
-1. Navigate to `ready_to_use/samples/`
-2. Open `hello-world.html` in a web browser
-3. Enter your Dynamsoft license key or use trial
-4. Click "Start Driver License Scanner"
-5. Follow the guided scanning workflow
+The bundle ships every component the sample needs:
 
-## 📖 Learning Path
+| Component | Purpose |
+|---|---|
+| `CaptureVisionRouter` | Core engine that routes frames to the decoder |
+| `CameraEnhancer` / `CameraView` | Camera lifecycle + built-in camera UI |
+| `CodeParser` | Turns raw PDF417 bytes into named AAMVA fields |
+| `LicenseManager` | Activates the SDK with your license key |
 
-We recommend following this progression:
+Initialization order matters — the license must be activated **before** any component is created:
 
-1. **Start with Foundational** (`foundational/`)
-   - Understand basic barcode scanning concepts
-   - Learn PDF417 data extraction
-   - Experiment with camera integration
+```js
+await Dynamsoft.License.LicenseManager.initLicense(licenseKey, true);
+await Dynamsoft.Core.CoreModule.loadWasm(["DBR", "DCP"]);
+await Dynamsoft.DCP.CodeParserModule.loadSpec("AAMVA_DL_ID");
+await Dynamsoft.DCP.CodeParserModule.loadSpec("AAMVA_DL_ID_WITH_MAG_STRIPE");
+await Dynamsoft.DCP.CodeParserModule.loadSpec("SOUTH_AFRICA_DL");
+```
 
-2. **Move to Ready-to-Use** (`ready_to_use/`)
-   - Experience professional UI and workflow
-   - See complete production-ready implementation
-   - Use for actual projects and deployment
+The scanner then restricts decoding to PDF417 and parses the payload:
 
-## 🔧 Technologies Used
+```js
+const settings = await cvRouter.getSimplifiedSettings("ReadDenseBarcodes");
+settings.barcodeSettings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_PDF417;
+await cvRouter.updateSettings("ReadDenseBarcodes", settings);
+```
 
-### Foundational Example
-- Vanilla JavaScript
-- Dynamsoft Barcode Reader SDK
-- Modern CSS with responsive design
-- HTML5 Camera API
+## Supported Driver License Types
 
-### Ready-to-Use Component
-- TypeScript
-- Dynamsoft Driver License Scanner SDK
-- Advanced image processing
-- Modular component architecture
-- Professional UI components
+| Type | Spec | Notes |
+|---|---|---|
+| AAMVA DL/ID | `AAMVA_DL_ID` | US / Canada driver licenses and ID cards |
+| AAMVA DL/ID + Magnetic Stripe | `AAMVA_DL_ID_WITH_MAG_STRIPE` | Adds data read from the magnetic stripe |
+| South Africa Driver License | `SOUTH_AFRICA_DL` | Region-specific field layout |
 
-## 📋 Features Comparison
+## Local Development
 
-| Feature | Foundational | Ready-to-Use |
-|---------|-------------|--------------|
-| **Setup Complexity** | ⭐⭐⭐☆☆ | ⭐☆☆☆☆ |
-| **Code Required** | ⭐⭐⭐⭐☆ | ⭐☆☆☆☆ |
-| **Learning Curve** | ⭐⭐⭐☆☆ | ⭐☆☆☆☆ |
-| Barcode Scanning | ✅ PDF417 | ✅ PDF417 + Enhanced |
-| Image Capture | ✅ Camera/Upload | ✅ Front/Back Workflow |
-| Data Extraction | ✅ Basic | ✅ Comprehensive |
-| Document Detection | ❌ | ✅ Automatic |
-| Image Correction | ❌ | ✅ Smart Correction |
-| UI Components | ✅ Simple | ✅ Professional |
-| Error Handling | ✅ Basic | ✅ Production-Ready |
-| TypeScript Support | ❌ | ✅ Full Support |
-| Build Process | ❌ None | ✅ Pre-built |
+Camera access needs HTTPS or `localhost`:
 
-## 🎯 Use Cases
+```bash
+python -m http.server 8000 --bind 127.0.0.1
+```
 
-### Foundational Example Best For:
-- **Educational Projects**: Learning barcode scanning implementation details
-- **Custom Solutions**: When you need full control over scanning logic
-- **Understanding Concepts**: Developers who want to understand how scanning works
-- **Specialized Requirements**: When ready-to-use component doesn't fit your needs
+Then open `http://localhost:8000/` — `localhost` is treated as a secure context, so the camera
+works without a certificate. To test on a phone over the LAN you need HTTPS, so put a
+self-signed certificate in front of the static server or use a tunnelling tool.
 
-### Ready-to-Use Component Best For:
-- **Production Applications**: Complete driver license processing with minimal code
-- **Rapid Development**: Drop-in component for instant integration
-- **Beginner-Friendly**: No barcode scanning knowledge required
-- **Professional Projects**: Enterprise-grade UI and error handling
+## Live Demo
 
-## 🔗 Live Demos
-
-- **Foundational Example**: [Try it here](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/driver_license/foundational/)
-- **Ready-to-Use Component**: Built samples in `ready_to_use/samples/`
+[codepool/demos/driver-license](https://www.dynamsoft.com/codepool/demos/driver-license/)
 
 ## Blog
-[How to Build a JavaScript Driver's License Scanner: PDF417 & AAMVA Barcode Parsing](https://www.dynamsoft.com/codepool/javascript-driver-license-pdf417-scanner-web.html)
 
-
-
+[JavaScript Driver's License Barcode Scanner: Read PDF417 and Parse AAMVA ID Data in the Browser](https://www.dynamsoft.com/codepool/javascript-driver-license-pdf417-scanner-web.html)

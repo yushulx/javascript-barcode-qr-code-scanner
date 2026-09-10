@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
   <meta name="description" content="Instantly Read PDF417 barcodes on Driver Licenses with Dynamsoft Barcode Reader.">
   <meta name="keywords" content="read driver license barcode">
   <title>Driver License PDF417 Scanner</title>
@@ -50,7 +50,7 @@
       <h1>Driver License Scanner</h1>
 
       <!-- Mode Switch Toggle -->
-      <div id="mode-switch-container" class="mode-switch">
+      <div id="mode-switch-container" class="mode-switch" data-active="camera">
         <div class="mode-options">
           <label class="mode-option active" data-mode="camera">
             <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20">
@@ -73,13 +73,7 @@
 
       <!-- Main scanning area -->
       <div id="main-container">
-        <!-- Camera start button -->
-        <!-- <svg id="camera-start-btn" viewBox="0 0 2048 1792" aria-label="Start camera">
-          <path
-            d="M1024 672q119 0 203.5 84.5t84.5 203.5-84.5 203.5-203.5 84.5-203.5-84.5-84.5-203.5 84.5-203.5 203.5-84.5zm704-416q106 0 181 75t75 181v896q0 106-75 181t-181 75h-1408q-106 0-181-75t-75-181v-896q0-106 75-181t181-75h224l51-136q19-49 69.5-84.5t103.5-35.5h512q53 0 103.5 35.5t69.5 84.5l51 136h224zm-704 1152q185 0 316.5-131.5t131.5-316.5-131.5-316.5-316.5-131.5-316.5 131.5-131.5 316.5 131.5 316.5 316.5 131.5z" />
-        </svg> -->
-
-        <!-- Camera view container -->
+        <!-- Camera view container (the SDK mounts its own UI element here) -->
         <div id="camera-view"></div>
       </div>
 
@@ -99,25 +93,28 @@
       </div>
     </div> <!-- End scanner-app -->
   </div>
-  <!-- Dynamsoft Barcode Reader SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.0.3000/dist/dbr.bundle.js"></script>
+
+  <!-- Dynamsoft Barcode Reader SDK (DBR + DCP + DCE + CVR bundled) -->
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
 
   <script>
     // Driver License Scanner Application
     class DriverLicenseScanner {
       constructor() {
         this.components = {};
-        this.timers = {};
         this.parsedInfo = {};
         this.isInitialized = false;
         this.currentMode = 'camera'; // Track current scanning mode
-        this.licenseKey = ''; // Store license key
+        this.licenseKey = '';        // Store license key
 
         // Initialize the application
         this.init();
       }
 
-      // Initialize license setup
+      /* ------------------------------------------------------------------ *
+       * License setup                                                       *
+       * ------------------------------------------------------------------ */
+
       initLicenseSetup() {
         const elements = {
           licenseSubmit: document.getElementById('license-submit'),
@@ -125,7 +122,7 @@
           licenseInput: document.getElementById('license-key')
         };
 
-        // Default trial license key
+        // Public 24-hour trial license shipped with the SDK.
         const defaultTrialKey = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
 
         elements.licenseSubmit?.addEventListener('click', async () => {
@@ -141,119 +138,105 @@
           await this.initializeWithLicense(defaultTrialKey);
         });
 
-        // Allow Enter key to submit
-        elements.licenseInput?.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter' && e.ctrlKey) {
+        // Allow Ctrl/Cmd + Enter to submit
+        elements.licenseInput?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
             elements.licenseSubmit.click();
           }
         });
       }
 
-      // Initialize scanner with license key
+      // Activate the SDK with the given license key, then reveal the scanner
       async initializeWithLicense(licenseKey) {
         const submitBtn = document.getElementById('license-submit');
         const trialBtn = document.getElementById('use-trial');
 
         try {
-          // Disable buttons and show loading
           submitBtn.disabled = true;
           trialBtn.disabled = true;
           submitBtn.textContent = 'Initializing...';
 
           this.licenseKey = licenseKey;
-          const success = await this.initSDK();
+          await this.initSDK();
 
-          if (success) {
-            // Hide license setup and show scanner
-            document.getElementById('license-setup').style.display = 'none';
-            document.getElementById('scanner-app').classList.remove('hidden');
-            this.switchToVideoMode();
-          }
+          // Hide license setup and show scanner
+          document.getElementById('license-setup').style.display = 'none';
+          document.getElementById('scanner-app').classList.remove('hidden');
+          await this.startCapturingMode();
         } catch (error) {
           console.error('License initialization failed:', error);
           alert('Failed to initialize with the provided license key. Please check the key and try again.');
         } finally {
-          // Re-enable buttons
           submitBtn.disabled = false;
           trialBtn.disabled = false;
           submitBtn.textContent = 'Initialize Scanner';
         }
-      }      // Initialize Dynamsoft SDK and components
-      async initSDK() {
-        try {
-          // Set license from user input
-          Dynamsoft.License.LicenseManager.initLicense(this.licenseKey);
-
-          // Preload modules
-          await Dynamsoft.Core.CoreModule.loadWasm(["DBR", "DCP"]);
-          await Dynamsoft.DCP.CodeParserModule.loadSpec("AAMVA_DL_ID");
-          await Dynamsoft.DCP.CodeParserModule.loadSpec("AAMVA_DL_ID_WITH_MAG_STRIPE");
-          await Dynamsoft.DCP.CodeParserModule.loadSpec("SOUTH_AFRICA_DL");
-
-          // Create components
-          this.components.parser = await Dynamsoft.DCP.CodeParser.createInstance();
-          this.components.cameraView = await Dynamsoft.DCE.CameraView.createInstance();
-          this.components.cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(this.components.cameraView);
-          this.components.cvRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
-
-          // Setup camera view
-          const cameraContainer = document.getElementById('camera-view');
-          cameraContainer.appendChild(this.components.cameraView.getUIElement());
-
-          // Configure router
-          this.components.cvRouter.setInput(this.components.cameraEnhancer);
-
-          // Setup result filter
-          const filter = new Dynamsoft.Utility.MultiFrameResultCrossFilter();
-          filter.enableResultDeduplication("barcode", true);
-          await this.components.cvRouter.addResultFilter(filter);
-
-          // Configure barcode settings
-          const settings = await this.components.cvRouter.getSimplifiedSettings("ReadDenseBarcodes");
-          settings.barcodeSettings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_PDF417;
-          await this.components.cvRouter.updateSettings("ReadDenseBarcodes", settings);
-
-          this.components.receiver = {
-            onCapturedResultReceived: (result) => this.handleCapturedResult(result),
-            onDecodedBarcodesReceived: (result) => this.handleBarcodeResult(result)
-          };
-
-          this.isInitialized = true;
-          return true;
-        } catch (error) {
-          console.error('SDK initialization failed:', error);
-          alert('Failed to initialize barcode scanner: ' + error.message);
-          return false;
-        }
       }
 
-      // Initialize UI event handlers
-      initEventHandlers() {
-        const elements = {
-          // startBtn: document.getElementById('camera-start-btn'),
-          closeResult: document.querySelector('#results .close-button'),
-          modeOptions: document.querySelectorAll('.mode-option'),
-          modeSwitch: document.getElementById('mode-switch-container')
+      /* ------------------------------------------------------------------ *
+       * SDK bootstrap                                                       *
+       * ------------------------------------------------------------------ */
+
+      // Initialize Dynamsoft SDK and components
+      async initSDK() {
+        // 1. Activate the license. This must resolve before any component is
+        //    created, otherwise CaptureVisionRouter.createInstance() throws.
+        //    The second argument runs the license check in a dedicated worker.
+        await Dynamsoft.License.LicenseManager.initLicense(this.licenseKey, true);
+
+        // 2. Preload the WebAssembly modules. The bundle ships DBR (barcode
+        //    decoding) and DCP (code parsing) together.
+        await Dynamsoft.Core.CoreModule.loadWasm(["DBR", "DCP"]);
+
+        // 3. Load the driver license specs the parser needs. Since bundle
+        //    11.6 the parser resources ship as one .data file per spec, and
+        //    AAMVA_DL_ID already covers magnetic-stripe licenses (the returned
+        //    CodeType is still AAMVA_DL_ID_WITH_MAG_STRIPE for those).
+        await Dynamsoft.DCP.CodeParserModule.loadSpec("AAMVA_DL_ID");
+        await Dynamsoft.DCP.CodeParserModule.loadSpec("SOUTH_AFRICA_DL");
+
+        // 4. Create the components.
+        this.components.parser = await Dynamsoft.DCP.CodeParser.createInstance();
+        this.components.cameraView = await Dynamsoft.DCE.CameraView.createInstance();
+        this.components.cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(this.components.cameraView);
+        this.components.cvRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+
+        // Mount the built-in camera UI into the page.
+        const cameraContainer = document.getElementById('camera-view');
+        cameraContainer.replaceChildren(this.components.cameraView.getUIElement());
+
+        // Route camera frames into the capture vision router.
+        this.components.cvRouter.setInput(this.components.cameraEnhancer);
+
+        // Drop duplicate barcode results arriving from consecutive frames.
+        const filter = new Dynamsoft.Utility.MultiFrameResultCrossFilter();
+        filter.enableResultDeduplication("barcode", true);
+        await this.components.cvRouter.addResultFilter(filter);
+
+        // Driver licenses carry a PDF417 barcode, so narrow the format down.
+        const settings = await this.components.cvRouter.getSimplifiedSettings("ReadDenseBarcodes");
+        settings.barcodeSettings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_PDF417;
+        await this.components.cvRouter.updateSettings("ReadDenseBarcodes", settings);
+
+        this.components.receiver = {
+          onCapturedResultReceived: (result) => this.handleCapturedResult(result),
+          onDecodedBarcodesReceived: (result) => this.handleBarcodeResult(result)
         };
 
-        // elements.startBtn?.addEventListener('click', () => this.startScanning());
-        elements.closeResult?.addEventListener('click', () => this.closeResults());
-
-        // Mode switch handlers
-        elements.modeOptions.forEach(option => {
-          option.addEventListener('click', (e) => {
-            const mode = e.currentTarget.getAttribute('data-mode');
-            this.switchMode(mode);
-          });
-        });
-
+        this.isInitialized = true;
       }
 
-      // Handle captured results (for single frame mode)
-      handleCapturedResult(result) {
-        if (this.components.cameraEnhancer.singleFrameMode === "disabled" || !this.components.cameraEnhancer.isOpen()) return;
+      /* ------------------------------------------------------------------ *
+       * Scanning                                                            *
+       * ------------------------------------------------------------------ */
 
-        const hasBarcodes = result.items.some(item =>
+      // Handle captured results (used to report "nothing found" in image mode)
+      handleCapturedResult(result) {
+        if (!this.components.cameraEnhancer) return;
+        if (this.components.cameraEnhancer.singleFrameMode === "disabled"
+          || !this.components.cameraEnhancer.isOpen()) return;
+
+        const hasBarcodes = (result.items || []).some(item =>
           item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE
         );
 
@@ -264,15 +247,19 @@
 
       // Handle successful barcode detection
       async handleBarcodeResult(result) {
-        if (!result.barcodeResultItems.length) return;
+        if (!result.barcodeResultItems || !result.barcodeResultItems.length) return;
 
         Dynamsoft.DCE.Feedback.beep();
 
         const success = await this.parseDriverLicense(result.barcodeResultItems[0].bytes);
         if (success) {
-          this.components.cvRouter.stopCapturing();
+          await this.components.cvRouter.stopCapturing();
         }
       }
+
+      /* ------------------------------------------------------------------ *
+       * AAMVA / South Africa parsing                                        *
+       * ------------------------------------------------------------------ */
 
       // Parse driver license information
       async parseDriverLicense(bytesToParse) {
@@ -316,7 +303,7 @@
 
       // Extract AAMVA standard fields
       extractAAMVAFields(resultInfo, targetField) {
-        for (const info of resultInfo) {
+        for (const info of resultInfo || []) {
           if (info.FieldName === targetField && info.ChildFields) {
             this.processChildFields(info.ChildFields);
           }
@@ -325,7 +312,7 @@
 
       // Extract AAMVA magnetic stripe fields
       extractAAMVAMagStripeFields(resultInfo) {
-        for (const info of resultInfo) {
+        for (const info of resultInfo || []) {
           if (info.FieldName.includes("track") && info.ChildFields) {
             this.processChildFields(info.ChildFields);
           }
@@ -334,7 +321,7 @@
 
       // Extract South Africa driver license fields
       extractSouthAfricaFields(resultInfo) {
-        for (const info of resultInfo) {
+        for (const info of resultInfo || []) {
           this.parsedInfo[info.FieldName] = info.Value;
           if (info.ChildFields) {
             this.processChildFields(info.ChildFields);
@@ -358,15 +345,18 @@
         }
       }
 
-      // Display extracted information
+      /* ------------------------------------------------------------------ *
+       * Results                                                             *
+       * ------------------------------------------------------------------ */
+
       displayResults() {
         const resultsContainer = document.getElementById('results-content');
         const resultHTML = Object.entries(this.parsedInfo)
-          .filter(([key, value]) => value)
+          .filter(([, value]) => value)
           .map(([key, value]) => `
             <div class="result-item">
               <label>${this.formatFieldName(key)}:</label>
-              <span>${value}</span>
+              <span>${this.escapeHtml(value)}</span>
             </div>
           `)
           .join('');
@@ -383,20 +373,55 @@
           .trim();
       }
 
-      // Mode switching methods
+      escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      /* ------------------------------------------------------------------ *
+       * Mode switching                                                      *
+       * ------------------------------------------------------------------ */
+
+      initEventHandlers() {
+        document.querySelector('#results .close-button')
+          ?.addEventListener('click', () => this.closeResults());
+
+        document.querySelectorAll('.mode-option').forEach(option => {
+          option.addEventListener('click', (e) => {
+            this.switchMode(e.currentTarget.getAttribute('data-mode'));
+          });
+        });
+
+        // Mobile browsers show/hide the address bar while scrolling, which
+        // changes the usable viewport height. Keep the camera view in sync.
+        window.addEventListener('resize', () => this.handleViewportChange());
+        window.addEventListener('orientationchange', () => this.handleViewportChange());
+      }
+
+      handleViewportChange() {
+        const enhancer = this.components.cameraEnhancer;
+        if (enhancer && typeof enhancer.resize === 'function') {
+          try {
+            enhancer.resize();
+          } catch (e) {
+            /* ignore: enhancer not open yet */
+          }
+        }
+      }
+
       switchMode(mode) {
-        if (this.currentMode === mode) return;
+        if (this.currentMode === mode || !mode) return;
 
         this.currentMode = mode;
         this.updateModeUI();
 
-        // If scanner is already running, switch modes
         if (this.isInitialized && this.components.cameraEnhancer) {
-          if (mode === 'camera') {
-            this.switchToVideoMode();
-          } else {
-            this.switchToSingleFrameMode();
-          }
+          this.startCapturingMode().catch((error) => {
+            console.error('Failed to switch capture mode:', error);
+            alert('Failed to switch mode: ' + error.message);
+          });
         }
       }
 
@@ -405,93 +430,88 @@
         const modeOptions = document.querySelectorAll('.mode-option');
         const tipMessage = document.getElementById('tip-message');
 
-        // Update active state
         modeOptions.forEach(option => {
           option.classList.toggle('active', option.getAttribute('data-mode') === this.currentMode);
         });
 
-        // Update slider position
         modeSwitch.setAttribute('data-active', this.currentMode);
 
-        // Update tip message based on mode
         if (this.currentMode === 'camera') {
           tipMessage.textContent = 'Aim at the barcode on the driver\'s license.';
         } else {
-          tipMessage.textContent = 'Click below to select an image containing a driver license barcode.';
+          tipMessage.textContent = 'Tap the gallery button to pick an image containing a driver license barcode.';
         }
       }
 
-      // UI Control Methods
-      async startScanning() {
-        if (!this.isInitialized) {
-          const success = await this.initSDK();
-          if (!success) return;
-        }
-
-        document.querySelector('h1').style.display = 'none';
-        // document.getElementById('camera-start-btn').style.display = 'none';
-
-        // Start in the selected mode
-        if (this.currentMode === 'camera') {
-          await this.switchToVideoMode();
-        } else {
-          await this.switchToSingleFrameMode();
-        }
-      }
-
-      async switchToVideoMode() {
+      // Start (or restart) frame capture in the current mode.
+      //
+      // The CameraEnhancer is created once in initSDK() and reused here: a
+      // CameraView can only host one enhancer, so creating a second one for the
+      // same view on every mode switch leaves the previous instance tearing the
+      // camera down in parallel and open() fails with "Camera closed.".
+      async startCapturingMode() {
         const elements = {
           mainContainer: document.getElementById('main-container'),
           tipMessage: document.getElementById('tip-message'),
           cameraView: document.getElementById('camera-view')
         };
 
-        elements.mainContainer.style.display = 'block';
-        elements.tipMessage.textContent = 'Aim at the barcode on the driver\'s license.';
+        elements.mainContainer.style.display = 'flex';
         elements.tipMessage.hidden = false;
         elements.cameraView.style.display = 'block';
 
         this.components.cvRouter.removeResultReceiver(this.components.receiver);
         await this.components.cvRouter.stopCapturing();
-        await this.components.cameraEnhancer.close();
-        this.components.cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(this.components.cameraView);
-        this.components.cameraEnhancer.singleFrameMode = "disabled";
-        await this.components.cameraEnhancer.open();
-        this.components.cvRouter.setInput(this.components.cameraEnhancer);
-        await this.components.cvRouter.startCapturing("ReadDenseBarcodes");
-        // Setup result receiver
-        this.components.cvRouter.addResultReceiver(this.components.receiver);
-      }
 
-      async switchToSingleFrameMode() {
-        this.components.cvRouter.removeResultReceiver(this.components.receiver);
-        await this.components.cvRouter.stopCapturing();
-        await this.components.cameraEnhancer.close();
-        this.components.cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(this.components.cameraView);
-        this.components.cameraEnhancer.singleFrameMode = "image";
-        await this.components.cameraEnhancer.open();
-        this.components.cvRouter.setInput(this.components.cameraEnhancer);
-        await this.components.cvRouter.startCapturing("ReadDenseBarcodes");
-        // Setup result receiver
-        this.components.cvRouter.addResultReceiver(this.components.receiver);
-
-      }
-
-      // UI Display Methods
-      showResults(content = null) {
-        const resultsContainer = document.getElementById('results');
-        if (content) {
-          document.getElementById('results-content').innerHTML = `<p>${content}</p>`;
+        // singleFrameMode has to change while the camera is closed.
+        if (this.components.cameraEnhancer.isOpen()) {
+          await this.components.cameraEnhancer.close();
         }
-        resultsContainer.style.display = 'block';
-        document.addEventListener('mousedown', this.handleClickToHide.bind(this));
+        // "disabled" keeps a continuous video stream, "image" hands frame
+        // capture to the user and shows a gallery button in the built-in UI.
+        this.components.cameraEnhancer.singleFrameMode =
+          this.currentMode === 'camera' ? 'disabled' : 'image';
+        await this.openCamera();
+
+        this.components.cvRouter.setInput(this.components.cameraEnhancer);
+        await this.components.cvRouter.startCapturing("ReadDenseBarcodes");
+        this.components.cvRouter.addResultReceiver(this.components.receiver);
+      }
+
+      // Open the camera, retrying once: right after a mode switch the previous
+      // session may still be releasing the device and open() then rejects with
+      // "Error opening camera: Camera closed.".
+      async openCamera() {
+        try {
+          await this.components.cameraEnhancer.open();
+        } catch (error) {
+          console.warn('Camera open failed, retrying once:', error);
+          await new Promise((resolve) => setTimeout(resolve, 400));
+          await this.components.cameraEnhancer.open();
+        }
+      }
+
+      /* ------------------------------------------------------------------ *
+       * Results overlay                                                     *
+       * ------------------------------------------------------------------ */
+
+      showResults(content = null) {
+        if (content) {
+          document.getElementById('results-content').innerHTML = `<p>${this.escapeHtml(content)}</p>`;
+        }
+        document.getElementById('results').style.display = 'flex';
+        // Bind once and remember the reference so it can be removed again.
+        this.boundClickToHide = this.boundClickToHide || this.handleClickToHide.bind(this);
+        document.addEventListener('mousedown', this.boundClickToHide);
       }
 
       closeResults() {
         document.getElementById('results').style.display = 'none';
         document.getElementById('results-content').innerHTML = '';
-        document.removeEventListener('mousedown', this.handleClickToHide);
-
+        if (this.boundClickToHide) {
+          document.removeEventListener('mousedown', this.boundClickToHide);
+        }
+        // Resume scanning in whichever mode is currently active.
         this.components.cvRouter?.startCapturing("ReadDenseBarcodes");
       }
 
@@ -501,11 +521,14 @@
         }
       }
 
-      // Initialize the application
-      async init() {
+      /* ------------------------------------------------------------------ *
+       * Bootstrap                                                           *
+       * ------------------------------------------------------------------ */
+
+      init() {
         this.initLicenseSetup();
         this.initEventHandlers();
-        this.updateModeUI(); // Set initial mode UI
+        this.updateModeUI();
         console.log('Driver License Scanner initialized');
       }
     }
