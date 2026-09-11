@@ -118,4 +118,4 @@ No camera and no licence key are required.
 
 ## Blog
 
-[JavaScript Driver's License Barcode Scanner: Read PDF417 and Parse AAMVA ID Data in the Browser](https://www.dynamsoft.com/codepool/javascript-driver-license-pdf417-scanner-web.html)
+[How to Generate an AAMVA Driver's License Barcode in JavaScript for Scanner Testing](https://www.dynamsoft.com/codepool/generate-aamva-driver-license-barcode-javascript.html)
