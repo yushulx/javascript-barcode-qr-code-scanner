@@ -236,6 +236,17 @@ button,
     margin-bottom: 20px;
 }
 
+/* Name of the file in the preview, with its page number when it is one page of
+   a multi-page PDF or TIFF. Long names must wrap — never push the page wide. */
+.page-caption {
+    margin: 0 0 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
 .imageview {
     position: relative;
     width: 100%;

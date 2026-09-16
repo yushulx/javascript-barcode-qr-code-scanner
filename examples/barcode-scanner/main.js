@@ -20,6 +20,7 @@ const imagePreviewContainer = document.getElementById('image_preview_container')
 const videoFileWrapper = document.getElementById('video_file_wrapper');
 const imageNavigator = document.getElementById('image_navigator');
 const navigatorCounter = document.getElementById('navigator_counter');
+const pageCaption = document.getElementById('page_caption');
 const loadingIndicator = document.getElementById('loading-indicator');
 const loadingText = document.getElementById('loading-text');
 const settingsModal = document.getElementById('settings_modal');
@@ -45,8 +46,11 @@ let cameraScanning = false;
 let cameraAnimationFrame = null;
 let cameraScanResults = [];
 
-// Multi-image state
-let imageFiles = [];
+// Multi-page state: one entry per displayable page, in display order. A plain
+// image contributes one entry; a multi-page PDF or TIFF contributes one entry
+// per page, so the preview, the navigator and benchmark mode all treat a page
+// exactly like an image.
+let imagePages = [];         // [{ name, src }]
 let currentImageIndex = 0;
 
 // Mode state: 'default' or 'benchmark'
@@ -60,6 +64,36 @@ let dynamsoftCustomTemplateContent = null; // pending JSON string applied after 
 
 // Annotation ground truth data (map: filename -> [{text, format, points}])
 let annotationData = null;
+
+// ========== Multi-Page Documents (PDF / TIFF) ==========
+/* capture() hands a Blob to createImageBitmap()/<img>, so it can only decode
+   what the browser itself can — and the web SDK's multi-page entry point,
+   captureMultiPages(), accepts application/pdf only. A PDF or a TIFF is
+   therefore rasterized into one image per page here, and each page then travels
+   the ordinary image path: same capture() call, same overlay canvas, same
+   benchmark code.
+
+   PDF uses pdf.js, TIFF uses UTIF (plus pako, which UTIF needs for Deflate).
+   Both load from jsDelivr on first use, so a visitor who never opens a document
+   never downloads them. */
+const PAGE_MAX_SIDE = 2000;   // px, long edge of one rasterized page
+const MAX_DOCUMENT_PAGES = 50;
+const PDFJS_BASE = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149';
+const PAKO_URL = 'https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js';
+const UTIF_URL = 'https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js';
+/* UTIF implements exactly these compression codes; anything else decodes to
+   noise, so it is rejected with a message instead of a black page. */
+const TIFF_READABLE_COMPRESSION = [1, 3, 4, 5, 6, 7, 8, 32767, 32773, 32809, 34713];
+/* Adobe Deflate (32946) and Deflate (8) carry the same zlib stream; UTIF only
+   branches on 8, and 32946 is what libtiff-family writers emit, so it is
+   relabelled before decoding rather than rejected as unreadable. */
+const TIFF_ADOBE_DEFLATE = 32946;
+const UNSUPPORTED_FILES_MESSAGE = 'Unsupported file type. Please upload an image '
+    + '(JPG, PNG, GIF, BMP, WebP, TIFF, PDF) or a video file (MP4, WebM, MOV).';
+
+let pdfjsPromise = null;
+let tiffPromise = null;
+let loadingDepth = 0;  // nested showLoading()/hideLoading() pairs must not clobber
 
 // ========== Drag & Drop ==========
 overlayCanvas.addEventListener('dragover', function (event) {
@@ -128,66 +162,135 @@ async function selectChanged() {
 }
 
 // ========== File Handling ==========
-function handleFiles(files) {
+/* Which pipeline handles an uploaded file. The extension is checked as well as
+   the MIME type because browsers report an empty type for some .tif files and
+   for a .pdf served without its registered type. */
+function fileKind(file) {
+    const extension = (file.name.split('.').pop() || '').toLowerCase();
+    if (file.type === 'application/pdf' || extension === 'pdf') return 'pdf';
+    if (file.type === 'image/tiff' || extension === 'tif' || extension === 'tiff') return 'tiff';
+    if (file.type.startsWith('image/')) return 'image';
+    if (file.type.startsWith('video/')) return 'video';
+    return 'unknown';
+}
+
+function isScanableImage(file) {
+    const kind = fileKind(file);
+    return kind === 'image' || kind === 'pdf' || kind === 'tiff';
+}
+
+function readFileAsDataURL(file) {
+    return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function (e) { resolve(e.target.result); };
+        reader.onerror = function () { reject(new Error('Could not read ' + file.name)); };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function handleFiles(files) {
     if (!files || files.length === 0) return;
 
-    const images = files.filter(f => f.type.startsWith('image/'));
-    const videos = files.filter(f => f.type.startsWith('video/'));
+    const documentFiles = files.filter(isScanableImage);
+    const videos = files.filter(f => fileKind(f) === 'video');
 
-    if (images.length > 0) {
-        stopFileScanning();
-        detectionResult.value = '';
-        fileScanResults = [];
-        videoFileWrapper.style.display = 'none';
-
-        imageFiles = images;
-        currentImageIndex = 0;
-        loadImageAtIndex(0);
+    if (documentFiles.length > 0) {
+        await loadPages(documentFiles);
     } else if (videos.length > 0) {
         handleFile(videos[0]);
     } else {
-        alert('Unsupported file type. Please upload image or video files.');
+        alert(UNSUPPORTED_FILES_MESSAGE);
     }
 }
 
-function handleFile(file) {
+async function handleFile(file) {
     if (!file) return;
 
+    if (isScanableImage(file)) {
+        await loadPages([file]);
+        return;
+    }
+
+    if (fileKind(file) === 'video') {
+        stopFileScanning();
+        detectionResult.value = '';
+        fileScanResults = [];
+        imagePreviewContainer.style.display = 'none';
+        imageNavigator.style.display = 'none';
+        imagePages = [];
+        loadVideoFile(file);
+        return;
+    }
+
+    alert(UNSUPPORTED_FILES_MESSAGE);
+}
+
+/* Turns every upload into page images and shows the first one. Images pass
+   through unchanged; a PDF or TIFF is rasterized page by page. */
+async function loadPages(files) {
     stopFileScanning();
     detectionResult.value = '';
     fileScanResults = [];
-    imagePreviewContainer.style.display = 'none';
     videoFileWrapper.style.display = 'none';
     imageNavigator.style.display = 'none';
-    imageFiles = [];
 
-    if (file.type.startsWith('image/')) {
-        imageFiles = [file];
+    let notice = null;
+    showLoading('Preparing files…');
+    try {
+        const pages = [];
+
+        for (const file of files) {
+            if (fileKind(file) === 'image') {
+                pages.push({ name: file.name, src: await readFileAsDataURL(file) });
+                continue;
+            }
+
+            setLoadingText((fileKind(file) === 'pdf' ? 'Rendering the pages of ' : 'Decoding ')
+                + file.name + '…');
+            const rendered = await rasterizeDocument(file);
+            rendered.pages.forEach(function (src, index) {
+                pages.push({
+                    name: rendered.pages.length > 1
+                        ? file.name + ' — page ' + (index + 1) + ' of ' + rendered.pages.length
+                        : file.name,
+                    src: src
+                });
+            });
+            if (rendered.totalPages > rendered.pages.length) {
+                notice = 'Only the first ' + rendered.pages.length + ' of '
+                    + rendered.totalPages + ' pages were loaded.';
+            }
+        }
+
+        imagePages = pages;
         currentImageIndex = 0;
         loadImageAtIndex(0);
-    } else if (file.type.startsWith('video/')) {
-        loadVideoFile(file);
-    } else {
-        alert('Unsupported file type. Please upload an image or video file.');
+    } catch (ex) {
+        console.error(ex);
+        imagePages = [];
+        imagePreviewContainer.style.display = 'none';
+        detectionResult.value = 'Could not read the file: ' + describeFileError(ex) + '\n';
+    } finally {
+        hideLoading();
     }
+
+    if (notice) alert(notice);
 }
 
 function loadImageAtIndex(index) {
-    const file = imageFiles[index];
-    if (!file) return;
-    let reader = new FileReader();
-    reader.onload = function (e) {
-        loadImage2Canvas(e.target.result);
-    };
-    reader.readAsDataURL(file);
+    const page = imagePages[index];
+    if (!page) return;
 
-    if (imageFiles.length > 1) {
+    pageCaption.textContent = page.name;
+    loadImage2Canvas(page.src);
+
+    if (imagePages.length > 1) {
         imageNavigator.style.display = 'block';
-        navigatorCounter.textContent = `${index + 1} / ${imageFiles.length}`;
+        navigatorCounter.textContent = `${index + 1} / ${imagePages.length}`;
         const prevBtn = imageNavigator.querySelector('.btn-nav:first-child');
         const nextBtn = imageNavigator.querySelector('.btn-nav:last-child');
         prevBtn.disabled = index === 0;
-        nextBtn.disabled = index === imageFiles.length - 1;
+        nextBtn.disabled = index === imagePages.length - 1;
     } else {
         imageNavigator.style.display = 'none';
     }
@@ -195,12 +298,145 @@ function loadImageAtIndex(index) {
 
 function navigateImage(delta) {
     const newIndex = currentImageIndex + delta;
-    if (newIndex < 0 || newIndex >= imageFiles.length) return;
+    if (newIndex < 0 || newIndex >= imagePages.length) return;
     currentImageIndex = newIndex;
     detectionResult.value = '';
     fileScanResults = [];
     loadImageAtIndex(currentImageIndex);
 }
+
+// ========== Document Rasterizers (PDF / TIFF) ==========
+function loadScript(url) {
+    return new Promise(function (resolve, reject) {
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = function () { resolve(); };
+        script.onerror = function () {
+            script.remove();
+            reject(new Error('Could not load ' + url));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+function loadPdfJs() {
+    if (!pdfjsPromise) {
+        pdfjsPromise = import(PDFJS_BASE + '/legacy/build/pdf.min.mjs')
+            .then(function (pdfjsLib) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + '/legacy/build/pdf.worker.min.mjs';
+                return pdfjsLib;
+            })
+            .catch(function (ex) {
+                pdfjsPromise = null;   // let the next upload retry
+                throw ex;
+            });
+    }
+    return pdfjsPromise;
+}
+
+// UTIF reads Deflate through pako and picks up `self.pako` as it loads, so pako
+// has to be in place first.
+function loadTiffDecoder() {
+    if (!tiffPromise) {
+        tiffPromise = loadScript(PAKO_URL)
+            .then(function () { return loadScript(UTIF_URL); })
+            .then(function () {
+                if (!window.UTIF) throw new Error('The TIFF decoder did not initialise.');
+                return window.UTIF;
+            })
+            .catch(function (ex) {
+                tiffPromise = null;
+                throw ex;
+            });
+    }
+    return tiffPromise;
+}
+
+// -> { pages: [dataURL, ...], totalPages } — totalPages exceeds pages.length when
+//    the document has more pages than MAX_DOCUMENT_PAGES.
+function rasterizeDocument(file) {
+    return fileKind(file) === 'tiff' ? rasterizeTiff(file) : rasterizePdf(file);
+}
+
+async function rasterizePdf(file) {
+    const pdfjsLib = await loadPdfJs();
+    const data = new Uint8Array(await file.arrayBuffer());
+    // isEvalSupported:false keeps pdf.js from eval()-ing content from a PDF the
+    // visitor supplied.
+    const pdf = await pdfjsLib.getDocument({ data: data, isEvalSupported: false }).promise;
+    const pageCount = Math.min(pdf.numPages, MAX_DOCUMENT_PAGES);
+    const pages = [];
+
+    try {
+        for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+            if (pageCount > 1) setLoadingText(`Rendering page ${pageNumber} of ${pageCount}…`);
+
+            const page = await pdf.getPage(pageNumber);
+            const unscaled = page.getViewport({ scale: 1 });
+            const scale = Math.min(3, Math.max(1, PAGE_MAX_SIDE / Math.max(unscaled.width, unscaled.height)));
+            const viewport = page.getViewport({ scale: scale });
+
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+
+            pages.push(canvas.toDataURL('image/png'));
+            page.cleanup();
+        }
+    } finally {
+        await pdf.destroy();
+    }
+
+    return { pages: pages, totalPages: pdf.numPages };
+}
+
+async function rasterizeTiff(file) {
+    const UTIF = await loadTiffDecoder();
+    const buffer = await file.arrayBuffer();
+    const ifds = UTIF.decode(buffer);
+    if (!ifds || ifds.length === 0) throw new Error('no image was found in this TIFF file.');
+
+    const pageCount = Math.min(ifds.length, MAX_DOCUMENT_PAGES);
+    const pages = [];
+
+    for (let index = 0; index < pageCount; index++) {
+        if (pageCount > 1) setLoadingText(`Decoding page ${index + 1} of ${pageCount}…`);
+
+        const ifd = ifds[index];
+        const compression = (ifd.t259 && ifd.t259[0]) || 1;
+        if (compression === TIFF_ADOBE_DEFLATE) {
+            ifd.t259 = [8];
+        } else if (TIFF_READABLE_COMPRESSION.indexOf(compression) === -1) {
+            throw new Error(`this TIFF uses compression ${compression}, which is not supported. `
+                + 'Re-save it as a standard TIFF or as a PDF.');
+        }
+
+        UTIF.decodeImage(buffer, ifd, ifds);
+
+        const width = ifd.width;
+        const height = ifd.height;
+        const pixels = new Uint8ClampedArray(width * height * 4);
+        pixels.set(UTIF.toRGBA8(ifd));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').putImageData(new ImageData(pixels, width, height), 0, 0);
+
+        pages.push(canvas.toDataURL('image/png'));
+    }
+
+    return { pages: pages, totalPages: ifds.length };
+}
+
+function describeFileError(ex) {
+    if (ex && ex.name === 'PasswordException') {
+        return 'this PDF is password-protected. Remove the password and try again.';
+    }
+    return (ex && ex.message) ? ex.message : String(ex);
+}
+
 
 function loadImage2Canvas(base64Image) {
     imageFile.src = base64Image;
@@ -636,14 +872,26 @@ function showCameraResult(result) {
 }
 
 // ========== Loading Indicator ==========
+/* Reference-counted: rasterizing a document runs inside loadPages(), and SDK
+   activation can overlap with it, so a bare show/hide pair would let one finish
+   hide the other's spinner. Every showLoading() needs its own hideLoading(). */
 function showLoading(text) {
     if (!loadingIndicator) return;
-    if (text && loadingText) loadingText.textContent = text;
+    loadingDepth++;
+    setLoadingText(text);
     loadingIndicator.style.display = 'flex';
 }
 
+/* Progress updates inside a long operation must not touch the count — a
+   showLoading() per page with a single hideLoading() at the end would leave the
+   overlay up for good and block every click on the page. */
+function setLoadingText(text) {
+    if (text && loadingText) loadingText.textContent = text;
+}
+
 function hideLoading() {
-    if (!loadingIndicator) return;
+    loadingDepth = Math.max(0, loadingDepth - 1);
+    if (loadingDepth > 0 || !loadingIndicator) return;
     loadingIndicator.style.display = 'none';
 }
 
@@ -699,7 +947,7 @@ async function runBenchmark() {
         return;
     }
 
-    if (!imageFiles || imageFiles.length === 0) {
+    if (imagePages.length === 0) {
         if (!img.src || !img.complete || img.naturalWidth === 0) {
             alert('Please load one or more images first.');
             return;
@@ -716,14 +964,15 @@ async function runBenchmark() {
     progressBar.style.width = '0%';
     resultsContainer.innerHTML = '';
 
-    // Build the list of images to benchmark
+    // Build the list of pages to benchmark — a PDF or TIFF contributes one
+    // entry per page, so the report breaks down per page.
     let imagesToBenchmark = [];
-    if (imageFiles && imageFiles.length > 0) {
-        for (let i = 0; i < imageFiles.length; i++) {
-            imagesToBenchmark.push({ file: imageFiles[i], name: imageFiles[i].name });
+    if (imagePages.length > 0) {
+        for (const page of imagePages) {
+            imagesToBenchmark.push({ src: page.src, name: page.name });
         }
     } else {
-        imagesToBenchmark.push({ file: null, name: 'Current Image' });
+        imagesToBenchmark.push({ src: img.src, name: 'Current Image' });
     }
 
     let results = [];
@@ -733,7 +982,7 @@ async function runBenchmark() {
         progressText.textContent = `Image ${i + 1}/${imagesToBenchmark.length}...`;
         progressBar.style.width = ((i / imagesToBenchmark.length) * 100) + '%';
 
-        let testImg = imgInfo.file ? await loadImageFromFile(imgInfo.file) : img;
+        let testImg = imgInfo.src ? await loadImageFromSrc(imgInfo.src) : img;
 
         // Look up ground truth for this image (matched by filename)
         let groundTruth = null;
@@ -756,17 +1005,12 @@ async function runBenchmark() {
     setTimeout(() => { progressDiv.style.display = 'none'; }, 1500);
 }
 
-function loadImageFromFile(file) {
+function loadImageFromSrc(src) {
     return new Promise((resolve, reject) => {
-        let reader = new FileReader();
-        reader.onload = function (e) {
-            let tempImg = new Image();
-            tempImg.onload = () => resolve(tempImg);
-            tempImg.onerror = () => reject(new Error('Failed to load image: ' + file.name));
-            tempImg.src = e.target.result;
-        };
-        reader.onerror = () => reject(new Error('Failed to read file: ' + file.name));
-        reader.readAsDataURL(file);
+        let tempImg = new Image();
+        tempImg.onload = () => resolve(tempImg);
+        tempImg.onerror = () => reject(new Error('Failed to load the image.'));
+        tempImg.src = src;
     });
 }
 
