@@ -59,10 +59,6 @@ body {
     margin-bottom: 25px;
 }
 
-.mode-selector {
-    margin-bottom: 15px;
-}
-
 .label-text {
     display: block;
     margin-bottom: 8px;
@@ -563,15 +559,24 @@ button,
 }
 
 /* ========== Top Controls ========== */
+/* A row of label+control columns: "Scan Mode" on the left, "Mode" (with the
+   settings button) on the right.
+   Top-aligned, not bottom-aligned: the two labels are the visual anchor of the
+   row, and aligning the columns' bottoms instead is what made the right-hand
+   group sit a stray margin lower than the left one. Both columns put their
+   control 8px under the same .label-text, so the labels and the control tops
+   line up. */
 .top-controls {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 15px;
     flex-wrap: wrap;
 }
 
+/* The settings button is a control, not a label, so it keeps to the bottom of
+   the row — level with the mode toggle. */
 .top-controls-right {
     display: flex;
     align-items: flex-end;
