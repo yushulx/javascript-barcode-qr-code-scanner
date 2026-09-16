@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online GS1 Barcode Generator | Dynamsoft</title>
+    <meta name="description"
+        content="Free online GS1 barcode generator. Build a valid GS1 element string — GTIN, expiry date, batch/lot, serial, SSCC — render it as GS1 DataBar, DataBar Expanded, GS1 DataMatrix, GS1 QR Code, GS1-128, ITF-14 or EAN-13, and download a realistic test label to check a GS1 scanner.">
+
+    <!--
+      ASSET VERSION (?v=): the site serves these files with
+      Cache-Control: max-age=86400, so browsers trust their cached copy for a
+      full day. Bump the ?v= value on EVERY change to styles.css, gs1-payload.js
+      or app.js, otherwise returning visitors keep the stale copy for up to 24h.
+    -->
+    <link rel="icon" href="favicon.svg?v=20260916a" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css?v=20260916a">
+    <!-- Barcode encoder (bwip-js / BWIPP) — the only third-party dependency -->
+    <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js.min.js"></script>
+    <!-- GS1 payload model: AI catalogue, validation, HRI, expected parse -->
+    <script src="gs1-payload.js?v=20260916a"></script>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/" aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg?v=20260916a" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product">GS1 Generator</span>
+            <nav class="header-nav" aria-label="Dynamsoft">
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/">Documentation</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">30-Day
+                    Free Trial</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>GS1 barcode generator</h1>
+        <p>
+            Build a valid GS1 element string, render it in the symbology a real supply chain would use,
+            and download a test label — together with the exact result a conformant scanner should
+            report back.
+        </p>
+    </div>
+
+    <div class="notice-banner" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <div>
+            <strong>Sample data only.</strong>
+            Every value here is synthetic and the preview is stamped <em>SAMPLE</em>. A GS1 barcode is
+            not a secret and not an authority — anyone with a phone can read what you encode, and a
+            well-formed payload proves nothing about the goods it is attached to. Use it to test a
+            scanner, not as a label for real stock.
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>Scenario</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="scenario">Start from a real-world payload</label>
+                        <select id="scenario" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="symbology">Symbology</label>
+                        <select id="symbology" class="form-control"></select>
+                    </div>
+                </div>
+
+                <p class="hint" id="scenarioNote"></p>
+                <p class="hint" id="symbologyNote"></p>
+
+                <div class="button-group">
+                    <button id="randomizeBtn" class="btn btn-secondary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="23 4 23 10 17 10" />
+                            <polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                            <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+                        </svg>
+                        <span class="btn-label">Randomize data</span>
+                    </button>
+                    <button id="recommendBtn" class="btn btn-secondary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M9 18h6" />
+                            <path d="M10 22h4" />
+                            <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" />
+                        </svg>
+                        <span class="btn-label">Use the recommended symbology</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Data elements</h2>
+            </div>
+            <div class="card-body">
+                <div class="element-list" id="elementList"></div>
+
+                <div class="add-element">
+                    <span class="chip-label">Add an element:</span>
+                    <select id="addAiSelect" class="form-control" style="max-width: 380px;"></select>
+                    <button id="addBtn" class="btn btn-secondary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" aria-hidden="true">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span class="btn-label">Add element</span>
+                    </button>
+                </div>
+
+                <p class="hint">
+                    Check digits are calculated for you on GTIN, SSCC and GLN. Dates are <code>YYMMDD</code>,
+                    where day <code>00</code> means "the last day of that month" — the way GS1 encodes a
+                    month-precision expiry.
+                </p>
+
+                <div class="form-error" id="formError" role="alert"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Preview</h2>
+            </div>
+            <div class="card-body">
+                <div class="segmented" role="group" aria-label="Preview style">
+                    <button id="modeLabel" type="button" aria-pressed="true">Full label</button>
+                    <button id="modeSymbol" type="button" aria-pressed="false">Symbol only</button>
+                </div>
+
+                <div class="canvas-wrapper">
+                    <canvas id="previewCanvas" width="1200" height="800"></canvas>
+                </div>
+                <p class="hint" id="renderStatus" role="status" aria-live="polite">Generating…</p>
+
+                <div class="button-group">
+                    <button id="downloadBtn" class="btn btn-primary" type="button" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span class="btn-label">Download PNG</span>
+                    </button>
+                    <button id="copyBtn" class="btn btn-secondary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                        <span class="btn-label">Copy element string</span>
+                    </button>
+                </div>
+
+                <p class="hint">
+                    <em>Full label</em> renders a package label — product details, the symbol and the
+                    human readable interpretation — which is what a camera sees in the field.
+                    <em>Symbol only</em> exports the bare symbol with a quiet zone, for a decoder test or
+                    a laser scanner.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>What a scanner should report</h2>
+            </div>
+            <div class="card-body">
+                <div class="field-block">
+                    <p class="field-label">Element string (raw decoder output)</p>
+                    <p class="code-line" id="expectedElementString"></p>
+                </div>
+
+                <div class="field-block">
+                    <p class="field-label">Human readable interpretation</p>
+                    <p class="code-line" id="expectedHri"></p>
+                </div>
+
+                <div class="field-block">
+                    <p class="field-label">Application identifiers</p>
+                    <table class="spec-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">AI</th>
+                                <th scope="col">Data element</th>
+                                <th scope="col">Value the scanner reads</th>
+                                <th scope="col">Check digit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expectedRows"></tbody>
+                    </table>
+                </div>
+
+                <div class="field-block">
+                    <p class="field-label">GS1 Digital Link</p>
+                    <p class="code-line" id="expectedDigitalLink"></p>
+                </div>
+
+                <p class="hint">
+                    This is the test oracle: scan the downloaded PNG with a GS1 reader and compare. A
+                    mismatch tells you which side is wrong — the symbol or the parser. An
+                    <span class="sep">|</span> in the element string marks a position where an FNC1 byte
+                    (0x1D) has to appear, which is only where a variable-length element needs terminating.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Symbologies</h2>
+            </div>
+            <div class="card-body">
+                <table class="spec-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Symbology</th>
+                            <th scope="col">Kind</th>
+                            <th scope="col">What it can carry</th>
+                        </tr>
+                    </thead>
+                    <tbody id="symbologyTable"></tbody>
+                </table>
+                <p class="hint">
+                    Only one of these carries the GTIN without an application identifier: the DataBar
+                    family and ITF-14 encode a bare GTIN-14. A decoder has to infer AI <code>01</code> from
+                    the symbology, which is why a GS1 parser that ignores the format gets those symbols
+                    wrong.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Scope and notes</h2>
+            </div>
+            <div class="card-body">
+                <p>
+                    This page builds a <strong>well-formed GS1 element string and encodes it</strong>.
+                    Everything about the payload — the AI table, the length rules, the mod-10 check digits,
+                    the FNC1 placement — is implemented locally, and the symbologies come from
+                    <a href="https://github.com/metafloor/bwip-js">bwip-js</a> (the JavaScript port of
+                    BWIPP), loaded from a CDN. Nothing is uploaded and no SDK licence is involved.
+                </p>
+                <p>
+                    The GS1 AI table is the part that decides whether a scan is read correctly, and it is
+                    <em>prefix-free by design</em>: no two-digit AI is the beginning of a three- or
+                    four-digit one. That single property is what makes a length-driven parser possible —
+                    fixed-length data is consumed by length, variable-length data runs to the next FNC1 —
+                    and it is why a generic barcode reader that only returns raw text cannot tell
+                    <code>010950600013435217270430</code> from a serial number starting
+                    <code>17270430</code>.
+                </p>
+                <p>
+                    A generated image is a fair test of a reader's <em>decoding</em> and of its AI
+                    parsing. It is not a test of authenticity: the payload is plaintext, so a parseable
+                    symbol proves only that it is well formed. Digitally signed carriers — an mDL, or the
+                    encrypted PDF417 on a South African driving licence — are the formats where a
+                    successful read says something about origin, and those cannot be generated from a
+                    web page at all.
+                </p>
+                <p class="hint">
+                    Two limits worth knowing. GS1 Composite (a DataBar linear part plus a 2D part) is not
+                    offered — bwip-js has no composite encoder, and a composite is anyway two symbols that
+                    a reader must associate. And DataBar Limited, ITF-14 and EAN-13 encode the GTIN and
+                    nothing else; if the payload needs a batch or a date, the page says so instead of
+                    silently dropping it.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="demo-footer">
+        <div class="demo-footer-inner">
+            <p class="disclaimer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                Generated locally on an HTML5 canvas — synthetic sample data only, nothing is uploaded and no
+                licence key is required.
+            </p>
+            <div class="footer-links">
+                <span>
+                    Built with plain JavaScript and
+                    <a href="https://github.com/metafloor/bwip-js">bwip-js</a>. Read the symbols back with
+                    <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft Barcode Reader</a>.
+                </span>
+                <a href="https://www.dynamsoft.com/codepool/demos/gs1-barcode-scanner/">Open the GS1 barcode
+                    scanner</a>
+                <a class="btn btn-primary footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">Get
+                    a 30-day free trial license</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- UI, canvas rendering and PNG export -->
+    <script src="app.js?v=20260916a"></script>
+</body>
+
+</html>
