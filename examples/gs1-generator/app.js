@@ -72,7 +72,11 @@
     scenario: 'pharma',
     symbology: 'gs1datamatrix',
     rows: [],
-    previewMode: 'label'
+    previewMode: 'label',
+    /* Row indexes whose value just changed, so renderElements() can mark them
+       briefly. Random values look alike, and without this a click on Randomize
+       data reads as "nothing happened". */
+    highlight: []
   };
 
   var lastRun = null;
@@ -122,10 +126,15 @@
       if (issue.level === 'error' && issue.ai) withError[issue.ai] = issue.message;
     });
 
+    var highlighted = {};
+    state.highlight.forEach(function (index) { highlighted[index] = true; });
+
     els.elementList.replaceChildren();
 
     state.rows.forEach(function (item, index) {
-      var row = node('div', 'element-row' + (withError[item.ai] ? ' has-error' : ''));
+      var row = node('div', 'element-row'
+        + (withError[item.ai] ? ' has-error' : '')
+        + (highlighted[index] ? ' just-changed' : ''));
 
       /* AI picker */
       var aiField = node('div', 'element-field');
@@ -186,6 +195,19 @@
     });
 
     showIssues(issues);
+
+    /* Consume the highlight: the marker is on the freshly built rows, and it is
+       removed on a timer so a second render is never pre-marked. */
+    if (state.highlight.length) {
+      var marked = state.highlight;
+      state.highlight = [];
+      setTimeout(function () {
+        marked.forEach(function (index) {
+          var row = els.elementList.children[index];
+          if (row) row.classList.remove('just-changed');
+        });
+      }, HIGHLIGHT_MS);
+    }
   }
 
   /* Group the AI picker by purpose, with the everyday ones first. */
@@ -243,19 +265,71 @@
     }
 
     var levels = ['error', 'warn', 'info'];
-    var titles = { error: 'Cannot encode this payload', warn: 'Worth checking', info: 'How this payload is separated' };
+    var titles = {
+      error: 'Cannot encode this payload',
+      warn: 'Worth checking',
+      info: 'How this payload is separated'
+    };
 
     levels.forEach(function (level) {
       var list = issues.filter(function (issue) { return issue.level === level; });
       if (!list.length) return;
+
       var box = node('ul', 'note-list is-' + level);
       box.appendChild(node('li', null, titles[level]));
+
       list.forEach(function (issue) {
-        box.appendChild(node('li', null, (issue.ai ? 'AI ' + issue.ai + ': ' : '') + issue.message));
+        var item = node('li');
+        item.appendChild(node('span', null,
+          (issue.ai ? 'AI ' + issue.ai + ': ' : '') + issue.message));
+
+        /* Every explanation that has a remedy gets the remedy beside it. The GS1
+           length rules and AI pairings are specialist knowledge, so a message
+           that only diagnoses is a dead end for most readers of this page. */
+        if (issue.fix) {
+          var button = node('button', 'fix-button', issue.fix.label);
+          button.type = 'button';
+          button.addEventListener('click', function () { applyFix(issue.fix); });
+          item.appendChild(button);
+        }
+
+        box.appendChild(item);
       });
+
       els.formError.appendChild(box);
     });
+
     els.formError.classList.add('is-visible');
+  }
+
+  /* Apply one remedy and re-render. Each fix says what it does; nothing here
+     guesses, because a fix that changes something unexpected is worse than no
+     fix at all. */
+  function applyFix(fix) {
+    if (!fix) return;
+
+    if (fix.kind === 'set-value') {
+      for (var i = 0; i < state.rows.length; i++) {
+        if (state.rows[i].ai === fix.ai) {
+          state.rows[i].value = fix.value;
+          state.highlight = [i];
+          break;
+        }
+      }
+    } else if (fix.kind === 'set-symbology') {
+      state.symbology = fix.symbology;
+      els.symbology.value = fix.symbology;
+      updateSymbologyNote();
+    } else if (fix.kind === 'add-element') {
+      var entry = P.AI_BY_CODE[fix.ai];
+      state.rows.push({ ai: fix.ai, value: entry ? entry.sample() : '' });
+      state.highlight = [state.rows.length - 1];
+    } else {
+      return;
+    }
+
+    analytics.action('apply_fix', { kind: fix.kind, ai: fix.ai || '', symbology: fix.symbology || '' });
+    updateEverything('fix');
   }
 
   /* ------------------------------------------------------------------ *
@@ -607,6 +681,69 @@
     }
   }
 
+  /* How long a changed value stays marked. Long enough to notice after a click,
+     short enough not to become part of the page. */
+  var HIGHLIGHT_MS = 1400;
+
+  /* What stands in for the preview when there is nothing valid to draw. A blank
+     or stale canvas both read as "this is what your payload produces"; a dashed
+     frame that says so cannot be misread. */
+  function showStalePreview() {
+    var canvas = els.previewCanvas;
+    var ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = '#dddddd';
+    ctx.lineWidth = 2;
+    if (ctx.setLineDash) ctx.setLineDash([7, 7]);
+    roundRect(ctx, 14, 14, canvas.width - 28, canvas.height - 28, 10);
+    ctx.stroke();
+    if (ctx.setLineDash) ctx.setLineDash([]);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#999999';
+    ctx.font = '600 24px Arial, Helvetica, sans-serif';
+    ctx.fillText('No preview — the payload has errors', canvas.width / 2, canvas.height / 2 - 16);
+    ctx.font = '400 17px Arial, Helvetica, sans-serif';
+    ctx.fillText('Use a fix below, or correct the highlighted element.',
+        canvas.width / 2, canvas.height / 2 + 22);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  /* Dim the expected-result card rather than emptying it: clearing it on every
+     keystroke while a value is mid-edit would flicker, and the previous values
+     are still worth comparing against. */
+  function markExpectedStale(stale) {
+    var card = els.expectedRows.closest ? els.expectedRows.closest('.card') : null;
+    if (!card) return;
+
+    card.classList.toggle('is-stale', stale);
+    var badge = card.querySelector('.stale-badge');
+
+    if (stale && !badge) {
+      var header = card.querySelector('.card-header');
+      if (header) header.appendChild(node('span', 'stale-badge', 'out of date'));
+    } else if (!stale && badge) {
+      badge.remove();
+    }
+  }
+
+  /* Disabled, not silently inert. The tabs used to look broken because the early
+     return in updateEverything() skipped the redraw while still flipping the
+     pressed state. */
+  function setPreviewTabsEnabled(enabled) {
+    [els.modeLabel, els.modeSymbol].forEach(function (button) {
+      button.disabled = !enabled;
+      if (enabled) button.removeAttribute('title');
+      else button.title = 'Fix the payload to enable the preview';
+    });
+  }
+
   /* ------------------------------------------------------------------ *
    * Expected result
    * ------------------------------------------------------------------ */
@@ -677,12 +814,29 @@
     var blocked = P.hasErrors(issues);
 
     renderElements();
+
+    /* An invalid payload produces no preview, and the previous one must not be
+       left standing in its place. It used to be: the canvas kept the last
+       successful render, the expected-result table kept the last successful
+       values, and the preview tabs appeared to do nothing because the early
+       return below skipped both redraws. Everything downstream of generation is
+       therefore marked out of date here, in one place. */
     if (blocked) {
-      els.renderStatus.textContent = 'Fix the payload before generating.';
+      lastRun = null;
+      showStalePreview();
+      markExpectedStale(true);
+      setPreviewTabsEnabled(false);
+      els.renderStatus.textContent = 'The payload has errors, so there is nothing to preview. '
+        + 'Preview and expected result are out of date.';
       els.renderStatus.classList.add('is-error');
       els.downloadBtn.disabled = true;
+      els.copyBtn.disabled = true;
       return Promise.resolve(false);
     }
+
+    markExpectedStale(false);
+    setPreviewTabsEnabled(true);
+    els.copyBtn.disabled = false;
     els.renderStatus.classList.remove('is-error');
     renderExpected();
 
@@ -779,6 +933,12 @@
 
   function randomize() {
     var scenario = P.SCENARIOS.filter(function (entry) { return entry.id === state.scenario; })[0];
+
+    /* Remember what the values were, so the ones that changed can be marked. The
+       values are all digit soup; without this, clicking Randomize data looks like
+       it did nothing at all. */
+    var before = state.rows.map(function (item) { return item.value; });
+
     if (scenario && state.scenario !== 'custom') {
       state.rows = scenario.build();
     } else {
@@ -787,7 +947,16 @@
         return { ai: item.ai, value: entry ? entry.sample() : item.value };
       });
     }
-    analytics.action('randomize', { scenario: state.scenario });
+
+    state.highlight = [];
+    state.rows.forEach(function (item, index) {
+      if (before[index] !== item.value) state.highlight.push(index);
+    });
+
+    analytics.action('randomize', {
+      scenario: state.scenario,
+      changed: state.highlight.length
+    });
     updateEverything('randomize');
   }
 
@@ -796,6 +965,7 @@
     var entry = P.AI_BY_CODE[ai];
     if (!entry) return;
     state.rows.push({ ai: ai, value: entry.sample() });
+    state.highlight = [state.rows.length - 1];
     analytics.action('add_element', { ai: ai });
     updateEverything('add').then(function () {
       var inputs = els.elementList.querySelectorAll('input');
@@ -811,6 +981,7 @@
      re-encoded for the new frame rather than the old one being redrawn — the
      symbol-only view exists precisely to export an unresampled symbol. */
   function setPreviewMode(mode) {
+    if (state.previewMode === mode) return Promise.resolve();
     state.previewMode = mode;
     els.modeLabel.setAttribute('aria-pressed', String(mode === 'label'));
     els.modeSymbol.setAttribute('aria-pressed', String(mode === 'symbol'));
@@ -846,7 +1017,10 @@
       label.textContent = message;
       setTimeout(function () { label.textContent = reset; }, 1600);
     }
-    var text = lastRun ? lastRun.elementString : P.toElementString(state.rows);
+    /* Always the live payload, never lastRun's copy: after an edit those differ,
+       and copying a string that does not match what is on screen is the one
+       thing a payload generator must not do. */
+    var text = P.toElementString(state.rows);
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
       flash('Copy not supported');
       return;
