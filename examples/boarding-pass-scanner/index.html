@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+  <meta name="description"
+    content="Read the IATA BCBP barcode on a boarding pass with Dynamsoft Barcode Reader and parse it into passenger, flight, seat and baggage fields.">
+  <meta name="keywords" content="boarding pass scanner, IATA BCBP, PDF417 boarding pass, parse boarding pass barcode">
+  <title>Boarding Pass Scanner — Read and Parse IATA BCBP Barcodes</title>
+  <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/boarding-pass-scanner/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Boarding Pass Scanner — IATA BCBP">
+  <meta property="og:description"
+    content="Read the IATA BCBP barcode on a boarding pass and parse it into passenger, flight, seat and baggage fields.">
+  <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/boarding-pass-scanner/">
+  <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/boarding-pass-scanner/thumbnail.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="demo-shell">
+    <header class="demo-header">
+      <div class="demo-brand">
+        <img class="brand-logo" src="dynamsoft-logo-white.svg" width="202" height="50" alt="Dynamsoft">
+        <span class="brand-divider" aria-hidden="true"></span>
+        <h1>Boarding Pass Scanner</h1>
+      </div>
+      <p class="subtitle">
+        Read the IATA BCBP barcode on a boarding pass and parse it into passenger, flight, seat and
+        baggage fields, in the browser.
+      </p>
+    </header>
+
+    <main id="scanner-app">
+      <div id="tip-message">Point the camera at the barcode on a boarding pass.</div>
+
+      <div class="controls-row">
+        <div id="mode-switch-container" class="mode-switch" data-active="camera">
+          <div class="mode-options">
+            <label class="mode-option active" data-mode="camera">
+              <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                <path d="M2 6a2 2 0 0 1 2-2h3l1-1h6l1 1h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" />
+              </svg>
+              <span>Camera</span>
+            </label>
+            <label class="mode-option" data-mode="upload">
+              <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <path d="M14 2v6h6" />
+                <path d="M10 13l2 2 4-4" />
+              </svg>
+              <span>Upload</span>
+            </label>
+          </div>
+          <div class="mode-slider"></div>
+        </div>
+
+        <label class="scope-select" for="scope-select">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+          <span class="scope-label">Formats</span>
+          <select id="scope-select">
+            <option value="boarding" selected>Boarding pass symbologies</option>
+            <option value="all2d">All 2D formats</option>
+            <option value="all">All symbologies</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- The SDK mounts its own camera UI into this element -->
+      <div id="main-container">
+        <div id="camera-view"></div>
+      </div>
+
+      <!-- Upload zone: click, drag &amp; drop, or paste. Replaces the SDK's own
+           image picker so switching modes never opens a file dialog. -->
+      <div id="upload-zone" class="upload-zone" tabindex="0" role="button"
+        aria-label="Choose a boarding pass image to scan" hidden>
+        <svg class="upload-zone-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        <p class="upload-zone-title">Upload or paste a boarding pass image</p>
+        <p class="upload-zone-hint">
+          Click to browse, drop an image here, or paste one from the clipboard with
+          <kbd>Ctrl</kbd>&thinsp;+&thinsp;<kbd>V</kbd>
+        </p>
+        <div class="sample-row" id="sample-row">
+          <span class="sample-row-label">No boarding pass handy? Try a sample:</span>
+        </div>
+      </div>
+      <input type="file" id="upload-input" accept="image/*" hidden>
+    </main>
+
+    <footer class="demo-footer">
+      <p>
+        Built with
+        <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft Barcode Reader</a>.
+        The Reader locates and decodes the symbol; the IATA BCBP field layout is then read by
+        <code>bcbp.js</code>, the Resolution 792 parser shared with the generator.
+      </p>
+      <p class="demo-footer-note">
+        No pass to scan?
+        <a href="../boarding-pass-generator/">Generate a synthetic boarding pass</a>
+        and scan it with this demo.
+      </p>
+    </footer>
+  </div>
+
+  <!-- Scan results -->
+  <div id="results" class="results-container">
+    <div class="results-header">
+      <span id="results-title">Scan results</span>
+      <div class="results-header-actions">
+        <button id="copy-all-button" class="text-button" type="button">Copy JSON</button>
+        <button class="close-button" aria-label="Close results">
+          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+            <path
+              d="M512 456.310154L94.247385 38.557538a39.542154 39.542154 0 0 0-55.689847 0 39.266462 39.266462 0 0 0 0 55.689847L456.310154 512 38.557538 929.752615a39.542154 39.542154 0 0 0 0 55.689847 39.266462 39.266462 0 0 0 55.689847 0L512 567.689846l417.752615 417.752616c15.163077 15.163077 40.290462 15.36 55.689847 0a39.266462 39.266462 0 0 0 0-55.689847L567.689846 512 985.442462 94.247385a39.542154 39.542154 0 0 0 0-55.689847 39.266462 39.266462 0 0 0-55.689847 0L512 456.310154z"
+              fill="#ffffff" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="results-body" id="results-content"></div>
+  </div>
+
+  <!-- License setup. Deliberately the last overlay so it sits above the shell:
+       this example asks for your own key, while the hosted Codepool copy of this
+       page activates a domain-bound license automatically and has no such
+       screen. -->
+  <div id="license-setup" class="license-setup">
+    <div class="license-container">
+      <h2>Dynamsoft License Setup</h2>
+      <p>Enter your Dynamsoft Barcode Reader license key to continue</p>
+
+      <div class="license-input-group">
+        <label for="license-key">License key</label>
+        <textarea id="license-key" placeholder="Paste your license key here…" rows="3"></textarea>
+      </div>
+
+      <div class="license-actions">
+        <button id="license-submit" class="license-btn primary" type="button">Initialize Scanner</button>
+        <button id="use-trial" class="license-btn secondary" type="button">Use Trial License</button>
+      </div>
+
+      <div class="license-info">
+        <p><strong>Need a license?</strong></p>
+        <p>Get a free trial license at
+          <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+            target="_blank" rel="noopener">Dynamsoft Trial License</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamsoft Barcode Reader bundle: DBR (decoding) + DCE (camera) + CVR.
+       The Reader decodes the symbol; the IATA BCBP layout is then read by
+       bcbp.js. -->
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+  <!-- IATA BCBP codec — the same file the boarding pass generator encodes with,
+       so the generator's "expected scanner output" is a prediction rather than
+       a second implementation of the same spec. -->
+  <script src="../boarding-pass-generator/bcbp.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>

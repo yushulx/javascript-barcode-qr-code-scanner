@@ -1,0 +1,711 @@
+/*
+ * Boarding Pass Generator — Codepool demo styles.
+ *
+ * Visual language follows the Dynamsoft style guide
+ * (https://dynamsoft.github.io/styleguide/style-guide.html):
+ *   - brand orange  #FE8E14  (CTA / accent only)
+ *   - brand gray    #323234  (headings, body copy)
+ *   - grays         #606060 #999999 #CCCCCC #DDDDDD #F5F5F5
+ *   - headings      Oswald        body copy  Open Sans
+ *
+ * This is a tool-style page rather than a live-camera page, so it keeps the
+ * white surface and the corporate header, unlike the scanner demos.
+ * Self-contained: each Codepool demo carries its own stylesheet.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@300;400;500&display=swap');
+
+:root {
+    /* Brand */
+    --dy-orange: #fe8e14;
+    --dy-orange-hover: #e07d0b;
+    --dy-orange-tint: #fff8ee;
+    --dy-orange-edge: #f6c893;
+
+    /* Neutrals */
+    --ink: #323234;
+    --muted: #606060;
+    --rule: #dddddd;
+    --page: #ffffff;
+
+    /* Brand orange drives the primary CTA, so it is the "brand" accent here. */
+    --brand: #fe8e14;
+    --brand-dark: #e07d0b;
+    --orange: #fe8e14;
+    --accent: #b3261e;
+
+    --ok: #1e7a4b;
+    --warn-bg: var(--dy-orange-tint);
+    --warn-border: var(--dy-orange-edge);
+    --error: #b3261e;
+
+    --shell: 1200px;
+
+    --font-heading: 'Oswald', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --mono: 'Courier New', Courier, monospace;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Headings use the style guide's Oswald; body copy stays Open Sans. */
+.page-intro h1,
+.card-header h2,
+.leg-editor-head h3 {
+    font-family: var(--font-heading);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+/* ---------------------------------------------------------------------------
+   Brand header
+   --------------------------------------------------------------------------- */
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: #fff;
+    border-bottom: 1px solid var(--rule);
+}
+
+.site-header-inner {
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    min-height: 68px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    text-decoration: none;
+}
+
+.brand-logo {
+    display: block;
+    height: 26px;
+    width: auto;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 26px;
+    background: var(--rule);
+}
+
+.brand-product {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #606060;
+    white-space: nowrap;
+}
+
+/* The "Free" tag scopes to the hosted page, not to the source on GitHub. */
+.brand-tag {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 1px 7px 2px;
+    border: 1px solid rgba(254, 142, 20, 0.55);
+    border-radius: 4px;
+    background: rgba(254, 142, 20, 0.14);
+    color: var(--orange);
+    font-family: var(--font-heading);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: 0.1em;
+}
+
+.header-nav {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.header-nav .nav-link {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #606060;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.header-nav .nav-link:hover {
+    color: var(--orange);
+}
+
+/* ---------------------------------------------------------------------------
+   Page intro and notice
+   --------------------------------------------------------------------------- */
+
+.page-intro {
+    width: 100%;
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 2.75rem 1.5rem 2rem;
+}
+
+.page-intro h1 {
+    font-family: var(--font-heading);
+    font-size: clamp(1.9rem, 4vw, 2.5rem);
+    font-weight: 400;
+    line-height: 1.2;
+    margin: 0 0 0.75rem;
+}
+
+.page-intro p {
+    font-size: 1.0625rem;
+    color: #606060;
+    max-width: 62ch;
+    margin: 0;
+}
+
+.notice-banner {
+    width: 100%;
+    max-width: var(--shell);
+    margin: 0 auto 2rem;
+    padding: 1rem 1.25rem;
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    border-left: 4px solid var(--dy-orange);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #7a4b00;
+}
+
+.notice-banner svg {
+    float: left;
+    width: 18px;
+    height: 18px;
+    margin: 3px 10px 0 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Cards and forms
+   --------------------------------------------------------------------------- */
+
+.container {
+    width: 100%;
+    max-width: var(--shell);
+    margin: 0 auto 40px;
+    padding: 0 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(50, 50, 52, 0.05);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--rule);
+    background: #f5f5f5;
+}
+
+.card-header h2 {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: 1.08rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+}
+
+.card-body {
+    padding: 20px 22px 22px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.form-row:last-child {
+    margin-bottom: 0;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.form-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+}
+
+.form-control {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--ink);
+    background: #fff;
+}
+
+.form-control:focus {
+    outline: 2px solid rgba(254, 142, 20, 0.45);
+    outline-offset: 1px;
+    border-color: var(--orange);
+}
+
+.hint {
+    margin: 12px 0 0;
+    font-size: 0.86rem;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.hint code,
+.card-body code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: #f0f0f0;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+/* --- "just changed" flash ------------------------------------------------- */
+
+/* Randomise rewrites many controls at once; this wash marks the ones whose
+   value actually moved, so the click reads as an edit rather than a silent
+   rewrite. `forwards` settles the control back to its normal look, so the
+   marker is informational and not a persistent state. */
+.form-control.just-changed {
+    animation: bp-changed 1.4s ease-out forwards;
+}
+
+@keyframes bp-changed {
+    0% {
+        background-color: #fff3e2;
+        border-color: var(--dy-orange);
+        box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.22);
+    }
+
+    60% {
+        background-color: #fff8ee;
+        border-color: var(--dy-orange-edge);
+        box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.12);
+    }
+
+    100% {
+        background-color: #fff;
+        border-color: #cccccc;
+        box-shadow: none;
+    }
+}
+
+/* No motion, but the colour still changes — the information is the point. */
+@media (prefers-reduced-motion: reduce) {
+    .form-control.just-changed {
+        animation: none;
+        background-color: #fff3e2;
+        border-color: var(--dy-orange);
+    }
+}
+
+/* --- buttons ------------------------------------------------------------ */
+
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.btn {
+    padding: 9px 16px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    font-size: 0.92rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: var(--brand);
+    color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--brand-dark);
+}
+
+.btn-secondary {
+    background: #fff;
+    color: var(--ink);
+    border-color: #cccccc;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #f5f5f5;
+}
+
+.btn-quiet {
+    background: transparent;
+    color: var(--accent);
+    border-color: transparent;
+    padding: 4px 8px;
+}
+
+.btn-quiet:hover:not(:disabled) {
+    background: #fdf2f1;
+}
+
+.btn-small {
+    font-size: 0.84rem;
+}
+
+.btn-block {
+    width: 100%;
+}
+
+/* --- leg editors -------------------------------------------------------- */
+
+#legs_container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.leg-editor {
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 16px 18px 8px;
+    background: #f5f5f5;
+}
+
+.leg-editor-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.leg-editor-head h3 {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.validate-box {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #fdf2f1;
+    border: 1px solid #f0c9c6;
+    border-left: 4px solid var(--error);
+    border-radius: 6px;
+    color: #7a1c16;
+    font-size: 0.88rem;
+}
+
+.validate-box ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.validate-box li + li {
+    margin-top: 4px;
+}
+
+/* --- preview ------------------------------------------------------------ */
+
+.canvas-wrapper {
+    display: flex;
+    justify-content: center;
+    background: #fafafa;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 14px;
+    overflow: auto;
+}
+
+#preview {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+.code-output {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    background: #f5f5f5;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--ink);
+    resize: vertical;
+    word-break: break-all;
+}
+
+/* --- oracle table ------------------------------------------------------- */
+
+.oracle {
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    overflow-x: auto;
+    margin-top: 12px;
+}
+
+.oracle-row {
+    display: grid;
+    grid-template-columns: 62px minmax(230px, 1.5fr) 62px minmax(150px, 1fr) minmax(200px, 1.4fr);
+    gap: 10px;
+    padding: 7px 14px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #eeeeee;
+    align-items: baseline;
+    min-width: 760px;
+}
+
+.oracle-row:last-child {
+    border-bottom: none;
+}
+
+.oracle-row span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.oracle-row span:nth-child(1),
+.oracle-row span:nth-child(3) {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.oracle-row span:nth-child(4) {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: #7a4b00;
+}
+
+.oracle-value {
+    font-weight: 600;
+}
+
+.oracle-head {
+    background: #f5f5f5;
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+}
+
+.oracle-head span {
+    font-family: inherit !important;
+    font-size: 0.72rem !important;
+    color: var(--muted) !important;
+    font-weight: 500;
+}
+
+.oracle-empty {
+    opacity: 0.45;
+}
+
+/* --- checks ------------------------------------------------------------- */
+
+.checks {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.check-row {
+    display: grid;
+    grid-template-columns: 22px minmax(240px, 1fr) minmax(160px, 1.2fr);
+    gap: 10px;
+    align-items: baseline;
+    padding: 7px 13px;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    background: #f5f5f5;
+}
+
+.check-mark {
+    font-weight: 700;
+    text-align: center;
+}
+
+.check-label {
+    font-weight: 600;
+}
+
+.check-detail {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
+}
+
+.check-ok {
+    background: #eef8f2;
+}
+
+.check-ok .check-mark {
+    color: var(--ok);
+}
+
+.check-bad {
+    background: #fdf2f1;
+}
+
+.check-bad .check-mark {
+    color: var(--error);
+}
+
+.check-warn {
+    background: var(--warn-bg);
+}
+
+.check-warn .check-mark {
+    color: #b07800;
+}
+
+/* ---------------------------------------------------------------------------
+   Footer
+   --------------------------------------------------------------------------- */
+
+.demo-footer {
+    flex: 0 0 auto;
+    margin-top: 3rem;
+    background: #f5f5f5;
+    border-top: 1px solid var(--rule);
+    padding: 2rem 1.5rem;
+}
+
+.demo-footer-inner {
+    max-width: var(--shell);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.demo-footer .disclaimer {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.85rem;
+    color: #606060;
+    margin: 0;
+    max-width: 90ch;
+}
+
+.demo-footer .disclaimer svg {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    color: var(--muted);
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    color: #606060;
+}
+
+.footer-links a {
+    color: var(--dy-link, #306877);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.footer-links a:hover {
+    text-decoration: underline;
+}
+
+.footer-links .footer-cta {
+    margin-left: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Narrow screens
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 860px) {
+    .header-nav .nav-link {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .site-header-inner,
+    .page-intro,
+    .container,
+    .demo-footer {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .brand-product {
+        font-size: 0.85rem;
+    }
+
+    .canvas-wrapper {
+        padding: 8px;
+    }
+
+    .footer-links .footer-cta {
+        margin-left: 0;
+    }
+}

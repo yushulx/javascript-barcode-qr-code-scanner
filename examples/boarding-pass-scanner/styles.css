@@ -1,0 +1,1238 @@
+/* Boarding Pass Scanner — styles.
+
+   Visual language follows the Dynamsoft style guide
+   (https://dynamsoft.github.io/styleguide/style-guide.html):
+     - brand orange  #FE8E14  (CTA / accent only)
+     - brand gray    #323234  (headings, body copy)
+     - grays         #606060 #999999 #CCCCCC #DDDDDD #F5F5F5
+     - headings      Oswald        body copy  Open Sans
+
+   This is a live-camera page, so the surface stays DARK on purpose — the
+   viewfinder needs a neutral surround, which is why it uses the brand gray
+   #323234 rather than the white page the tool-style demos use. Branding comes
+   from the orange accents and the logo in the header. The results overlay is
+   the one white surface, because it carries dense structured text. */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@300;400;500&display=swap');
+
+:root {
+    --dy-orange: #fe8e14;
+    --dy-orange-hover: #e07d0b;
+    --dy-gray-900: #323234;
+    --dy-gray-800: #3a3a3d;
+    --dy-gray-700: #606060;
+    --dy-gray-500: #999999;
+    --dy-gray-300: #cccccc;
+    --dy-gray-200: #dddddd;
+    --dy-gray-100: #eeeeee;
+    --dy-gray-50: #f5f5f5;
+    --white: #ffffff;
+
+    --font-heading: 'Oswald', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+
+    /* Hairlines and translucent fills that read on the dark surface. */
+    --line-dark: rgba(255, 255, 255, 0.14);
+    --fill-dark: rgba(255, 255, 255, 0.07);
+
+    /* Inline text links inside the white results panel. Brand orange stays
+       reserved for CTAs, so links use the style guide's Blumine. */
+    --dy-link: #306877;
+    --dy-link-hover: #27555f;
+
+    --dy-error: #b3261e;
+    --dy-error-tint: #fdf2f1;
+    --dy-ok: #1e7a4b;
+    --dy-ok-tint: #eef8f2;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    /* Fallback for browsers without dvh support. */
+    height: 100%;
+    /* 100dvh follows the visible viewport, so mobile browser chrome does not
+       push the camera out of view. */
+    height: 100dvh;
+}
+
+body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    /* Brand gray, very slightly lifted at the top so the flat surface still has
+       a sense of depth behind the viewfinder. */
+    background: linear-gradient(180deg, var(--dy-gray-800) 0%, var(--dy-gray-900) 55%);
+    color: var(--white);
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.demo-shell {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding: calc(8px + env(safe-area-inset-top)) 12px calc(8px + env(safe-area-inset-bottom));
+    gap: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Header — Dynamsoft logo lockup, top-left over the viewfinder
+   --------------------------------------------------------------------------- */
+
+.demo-header {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding-left: 2px;
+}
+
+.demo-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 100%;
+}
+
+.brand-logo {
+    display: block;
+    height: 34px;
+    width: auto;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--line-dark);
+}
+
+.demo-header h1 {
+    font-family: var(--font-heading);
+    font-size: 1.26rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--white);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+/* The "Free" tag scopes to the hosted page, not to the source on GitHub. */
+.brand-tag {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 2px 7px 3px;
+    border: 1px solid rgba(254, 142, 20, 0.8);
+    border-radius: 4px;
+    color: var(--dy-orange);
+    font-family: var(--font-heading);
+    font-size: 0.66rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: 0.12em;
+}
+
+.demo-header .subtitle {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.72);
+    text-align: left;
+    max-width: 92ch;
+}
+
+/* ---------------------------------------------------------------------------
+   Scanner shell
+   --------------------------------------------------------------------------- */
+
+#scanner-app {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    min-height: 0;
+    gap: 8px;
+}
+
+#tip-message {
+    flex: 0 0 auto;
+    max-width: 100%;
+    font-size: 0.9rem;
+    color: #fff;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 0.5rem 1.1rem;
+    border-radius: 25px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    z-index: 5;
+}
+
+#tip-message.is-error {
+    background: rgba(179, 38, 30, 0.92);
+}
+
+/* ---------------------------------------------------------------------------
+   Mode switch + format scope
+   --------------------------------------------------------------------------- */
+
+.controls-row {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+}
+
+.mode-switch {
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50px;
+    padding: 4px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.mode-options {
+    display: flex;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+}
+
+.mode-option {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 46px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+    font-size: 0.9rem;
+    -webkit-user-select: none;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.mode-option.active {
+    color: #fff;
+    font-weight: 600;
+}
+
+.mode-icon {
+    fill: currentColor;
+    stroke: currentColor;
+    stroke-width: 2;
+    transition: all 0.3s ease;
+    flex: 0 0 auto;
+}
+
+.mode-slider {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background: var(--dy-orange);
+    border-radius: 42px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 16px rgba(254, 142, 20, 0.3);
+}
+
+.mode-switch[data-active="upload"] .mode-slider {
+    transform: translateX(100%);
+}
+
+.mode-switch[data-active="upload"] .mode-option[data-mode="upload"] {
+    color: #fff;
+    font-weight: 600;
+}
+
+.mode-switch[data-active="upload"] .mode-option[data-mode="camera"] {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+/* The Formats control is a real setting, not decoration: it decides whether the
+   reader chases a PDF417 or any Aztec code in the frame. */
+.scope-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px 4px 12px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+.scope-select svg {
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    opacity: 0.85;
+}
+
+.scope-label {
+    font-weight: 600;
+}
+
+.scope-select select {
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.35);
+    border: none;
+    border-radius: 40px;
+    padding: 0.42rem 1.6rem 0.42rem 0.7rem;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.45rem center;
+    background-size: 1rem;
+}
+
+.scope-select select:focus-visible {
+    outline: 2px solid var(--dy-orange);
+    outline-offset: 2px;
+}
+
+.scope-select option {
+    color: #111;
+    background: #fff;
+}
+
+/* ---------------------------------------------------------------------------
+   Camera / image view
+
+   The SDK mounts its own UI inside #camera-view and sizes the video to the
+   element. The chain that makes that work is: body is exactly the viewport
+   tall, .demo-shell and #scanner-app are flex columns with min-height:0 so they
+   can shrink, and #main-container is the flex item that absorbs the leftover
+   height. A fixed min-height on the container instead leaves the video at its
+   intrinsic size in the corner.
+   --------------------------------------------------------------------------- */
+
+#main-container {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    /* min-height:0 lets the flex item shrink, keeping the view in the viewport. */
+    min-height: 0;
+    width: min(100%, 680px);
+    position: relative;
+}
+
+/* `display:flex` would otherwise beat the [hidden] attribute. */
+#main-container[hidden] {
+    display: none;
+}
+
+#camera-view {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------------------------------------------------------------------------
+   Upload drop zone
+   Replaces the SDK's own image picker so switching to Upload mode never opens
+   the OS file dialog on its own.
+   --------------------------------------------------------------------------- */
+
+.upload-zone {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: min(100%, 680px);
+    min-height: 0;
+    padding: 24px;
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.18);
+    color: #fff;
+    text-align: center;
+    cursor: pointer;
+    overflow-y: auto;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.upload-zone[hidden] {
+    display: none;
+}
+
+.upload-zone:hover,
+.upload-zone:focus-visible,
+.upload-zone.dragover {
+    border-color: var(--dy-orange);
+    background: rgba(254, 142, 20, 0.18);
+    outline: none;
+}
+
+.upload-zone-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.9;
+}
+
+.upload-zone-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.upload-zone-hint {
+    margin: 0;
+    max-width: 44ch;
+    font-size: 0.83rem;
+    line-height: 1.5;
+    opacity: 0.9;
+}
+
+.upload-zone kbd {
+    padding: 1px 5px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.85em;
+}
+
+/* Bundled sample passes, so the page is usable with no camera and no file. */
+.sample-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 6px;
+    max-width: 60ch;
+}
+
+.sample-row[hidden] {
+    display: none;
+}
+
+.sample-row-label {
+    width: 100%;
+    font-size: 0.78rem;
+    opacity: 0.8;
+}
+
+.sample-chip {
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 40px;
+    padding: 0.42rem 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.sample-chip:hover,
+.sample-chip:focus-visible {
+    background: rgba(254, 142, 20, 0.25);
+    border-color: var(--dy-orange);
+    outline: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Footer
+   --------------------------------------------------------------------------- */
+
+.demo-footer {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    background-color: var(--fill-dark);
+    border: 1px solid var(--line-dark);
+    border-radius: 6px;
+    font-size: 0.8em;
+    text-align: center;
+}
+
+.demo-footer p {
+    margin: 0;
+}
+
+.demo-footer-note {
+    margin-top: 4px !important;
+    opacity: 0.85;
+}
+
+.demo-footer a,
+.demo-footer-note a {
+    color: var(--dy-gray-200);
+    text-decoration: none;
+    margin: 0 3px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.demo-footer a:hover,
+.demo-footer-note a:hover {
+    color: var(--dy-orange);
+    border-bottom-color: var(--dy-orange);
+}
+
+.demo-footer code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    color: var(--dy-gray-200);
+}
+
+.demo-footer-cta {
+    color: var(--dy-orange) !important;
+    border-bottom-color: rgba(254, 142, 20, 0.6) !important;
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   License setup (this example only)
+
+   The hosted Codepool copy activates a domain-bound license and has no such
+   screen; here it is an opaque overlay above the shell, so the shell is already
+   laid out when the camera opens and the viewfinder gets the right size.
+   --------------------------------------------------------------------------- */
+
+.license-setup {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+    background: linear-gradient(180deg, var(--dy-gray-800) 0%, var(--dy-gray-900) 55%);
+}
+
+.license-container {
+    width: 100%;
+    max-width: 520px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.75rem 1.9rem 1.6rem;
+    color: var(--dy-gray-900);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.license-container h2 {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.35rem;
+}
+
+.license-container > p {
+    margin-bottom: 1.1rem;
+    font-size: 0.88rem;
+    color: var(--dy-gray-700);
+}
+
+.license-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 1.1rem;
+}
+
+.license-input-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--dy-gray-700);
+}
+
+.license-input-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--dy-gray-300);
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    resize: vertical;
+}
+
+.license-input-group textarea:focus {
+    outline: 2px solid rgba(254, 142, 20, 0.45);
+    outline-offset: 1px;
+    border-color: var(--dy-orange);
+}
+
+.license-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1.1rem;
+}
+
+.license-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.license-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.license-btn.primary {
+    background: var(--dy-orange);
+    color: #fff;
+}
+
+.license-btn.primary:hover:not(:disabled) {
+    background: var(--dy-orange-hover);
+}
+
+.license-btn.secondary {
+    background: #fff;
+    color: var(--dy-gray-900);
+    border-color: var(--dy-gray-300);
+}
+
+.license-btn.secondary:hover:not(:disabled) {
+    background: var(--dy-gray-50);
+}
+
+.license-info {
+    padding-top: 1rem;
+    border-top: 1px solid var(--dy-gray-200);
+    font-size: 0.84rem;
+    color: var(--dy-gray-700);
+}
+
+.license-info p {
+    margin: 0 0 3px;
+}
+
+.license-info a {
+    color: var(--dy-link);
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Loading overlay
+   --------------------------------------------------------------------------- */
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    background: rgba(50, 50, 52, 0.96);
+    text-align: center;
+}
+
+.loading-overlay.hidden {
+    display: none;
+}
+
+.loading-overlay p {
+    margin: 0;
+    max-width: 520px;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.9rem;
+    white-space: pre-line;
+}
+
+.spinner {
+    width: 34px;
+    height: 34px;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: var(--dy-orange);
+    border-radius: 50%;
+    animation: dy-spin 0.9s linear infinite;
+}
+
+@keyframes dy-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spinner {
+        animation-duration: 2.4s;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Results overlay — a centred white panel with its own scroll, so the parsed
+   fields never push the close button off screen.
+   --------------------------------------------------------------------------- */
+
+.results-container {
+    display: none;
+    flex-direction: column;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(94vw, 860px);
+    max-height: min(88vh, 88dvh);
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.results-container.is-open {
+    display: flex;
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    padding: 0.75rem 1.25rem;
+    background: var(--dy-gray-900);
+    color: var(--white);
+    font-family: var(--font-heading);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    font-size: 15px;
+}
+
+.results-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.text-button {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--white);
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 4px;
+    padding: 0.32rem 0.7rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.text-button:hover {
+    background: rgba(255, 255, 255, 0.26);
+}
+
+.close-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.results-header .close-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.results-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 1.25rem;
+    color: var(--dy-gray-900);
+}
+
+.result-section {
+    margin-top: 1.35rem;
+}
+
+.result-section:first-child {
+    margin-top: 0;
+}
+
+.result-section h3 {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    margin-bottom: 0.6rem;
+}
+
+.note {
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    background: var(--dy-gray-50);
+    border-left: 3px solid var(--dy-gray-300);
+    color: var(--dy-gray-900);
+}
+
+.note.warn {
+    background: #fff8ee;
+    border-left-color: var(--dy-orange);
+    color: #7a4b00;
+}
+
+/* ---------------------------------------------------------------------------
+   Scanned image — the frame or file the barcode was read from, so the parse can
+   be checked against what the source actually showed.
+   --------------------------------------------------------------------------- */
+
+.scan-figure {
+    margin: 0;
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--dy-gray-50);
+}
+
+.scan-image {
+    display: block;
+    /* Sized by its own aspect ratio up to these bounds, then centred, so a tall
+       pass and a wide symbol both read well and neither gets cropped. */
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 220px;
+    margin: 0 auto;
+    padding: 10px;
+    background: #fff;
+    cursor: zoom-in;
+}
+
+.scan-figure.is-zoomed .scan-image {
+    max-height: none;
+    cursor: zoom-out;
+}
+
+.scan-figure figcaption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0.4rem 0.85rem;
+    background: #fff;
+    border-top: 1px solid var(--dy-gray-200);
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+}
+
+.scan-meta {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+}
+
+/* A text button that reads on the white panel, unlike .text-button in the
+   dark results header. */
+.link-button {
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--dy-link);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    white-space: nowrap;
+}
+
+.link-button:hover {
+    color: var(--dy-link-hover);
+}
+
+/* ---------------------------------------------------------------------------
+   Pass summary card — the dark band mirrors what a boarding pass looks like,
+   which is why it is the one place the brand gray is used as a fill inside the
+   white panel.
+   --------------------------------------------------------------------------- */
+
+.pass-card {
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.pass-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0.7rem 1.1rem;
+    background: var(--dy-gray-900);
+    color: #fff;
+}
+
+.pass-airline {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+}
+
+.pass-class {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.pass-route {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    padding: 1.1rem 1rem 0.9rem;
+}
+
+.pass-end {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.pass-code {
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    line-height: 1.1;
+    color: var(--dy-gray-900);
+}
+
+.pass-city {
+    font-size: 0.72rem;
+    color: var(--dy-gray-700);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.pass-arrow {
+    color: var(--dy-orange);
+    font-size: 1.4rem;
+}
+
+.pass-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.8rem 1.2rem;
+    margin: 0 1.1rem;
+    padding: 1rem 0 1.1rem;
+    border-top: 1px dashed var(--dy-gray-200);
+}
+
+.pass-fact {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.pass-fact-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--dy-gray-700);
+}
+
+.pass-fact-value {
+    font-size: 0.98rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.pass-legs {
+    margin: 0 1.1rem 1.1rem;
+    padding: 0.7rem 0.85rem;
+    background: var(--dy-gray-50);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.pass-leg {
+    font-size: 0.84rem;
+    color: var(--dy-gray-900);
+}
+
+/* ---------------------------------------------------------------------------
+   Structural checks
+   --------------------------------------------------------------------------- */
+
+.check-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.check-row {
+    display: grid;
+    grid-template-columns: 20px minmax(200px, 1fr) minmax(140px, 1.2fr);
+    gap: 10px;
+    align-items: baseline;
+    padding: 0.45rem 0.8rem;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    background: var(--dy-gray-50);
+}
+
+.check-mark {
+    font-weight: 700;
+    text-align: center;
+}
+
+.check-label {
+    font-weight: 600;
+}
+
+.check-detail {
+    color: var(--dy-gray-700);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
+}
+
+.check-ok {
+    background: var(--dy-ok-tint);
+}
+
+.check-ok .check-mark {
+    color: var(--dy-ok);
+}
+
+.check-bad {
+    background: var(--dy-error-tint);
+}
+
+.check-bad .check-mark {
+    color: var(--dy-error);
+}
+
+/* ---------------------------------------------------------------------------
+   Parsed field table
+   --------------------------------------------------------------------------- */
+
+.field-table {
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.field-row {
+    display: grid;
+    grid-template-columns: 52px minmax(180px, 1.3fr) minmax(130px, 1fr) minmax(140px, 1.2fr);
+    gap: 10px;
+    padding: 0.42rem 0.85rem;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--dy-gray-100);
+    align-items: baseline;
+}
+
+.field-row:last-child {
+    border-bottom: none;
+}
+
+.field-row span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.field-item {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+}
+
+.field-value {
+    font-weight: 600;
+}
+
+.field-meaning {
+    color: var(--dy-gray-700);
+    font-size: 0.8rem;
+}
+
+.field-head {
+    background: var(--dy-gray-50);
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+}
+
+.field-head span {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+}
+
+.field-group-row {
+    padding: 0.45rem 0.85rem;
+    background: #fbfbfb;
+    border-bottom: 1px solid var(--dy-gray-100);
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+}
+
+/* ---------------------------------------------------------------------------
+   Raw payload
+   --------------------------------------------------------------------------- */
+
+.raw-block {
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.raw-meta {
+    padding: 0.4rem 0.85rem;
+    background: var(--dy-gray-50);
+    border-bottom: 1px solid var(--dy-gray-200);
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+}
+
+.raw-payload {
+    margin: 0;
+    padding: 0.8rem 0.85rem;
+    font-family: var(--font-mono);
+    font-size: 0.79rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--dy-gray-900);
+}
+
+/* ---------------------------------------------------------------------------
+   Narrow / short screens
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 720px) {
+    .demo-header .subtitle {
+        display: none;
+    }
+
+    .demo-header h1 {
+        font-size: 1.05rem;
+        white-space: normal;
+    }
+
+    .brand-logo {
+        height: 26px;
+    }
+
+    .mode-option {
+        padding: 0.55rem 0.9rem;
+        font-size: 0.82rem;
+    }
+
+    .scope-select {
+        font-size: 0.78rem;
+    }
+
+    .results-container {
+        width: 96vw;
+        max-height: 90dvh;
+    }
+
+    .results-body {
+        padding: 1rem;
+    }
+
+    .pass-code {
+        font-size: 1.7rem;
+    }
+
+    .field-row,
+    .check-row {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
+
+    .field-head {
+        display: none;
+    }
+}
+
+/* Landscape phones: the header and footer are the first things that can go. */
+@media (max-height: 560px) {
+    .demo-header .subtitle {
+        display: none;
+    }
+
+    .demo-footer-note {
+        display: none;
+    }
+}

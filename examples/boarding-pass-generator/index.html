@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boarding Pass Generator | IATA BCBP PDF417, Aztec &amp; QR Code</title>
+    <meta name="description"
+        content="Build a synthetic IATA BCBP boarding pass barcode in the browser. Choose the carrier, route, flight, seat and baggage, render it as PDF417, Aztec Code, QR Code or Data Matrix on a printed or mobile pass, and download a PNG with the exact fields a conformant scanner should return.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/boarding-pass-generator/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Boarding Pass Generator | IATA BCBP Barcode">
+    <meta property="og:description"
+        content="Build a synthetic IATA BCBP boarding pass barcode and download a realistic pass image to test a boarding pass scanner.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/boarding-pass-generator/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/boarding-pass-generator/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Barcode encoder (bwip-js / BWIPP) — the only third-party dependency -->
+    <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js.min.js"></script>
+    <!-- BCBP codec: IATA Resolution 792 encode + parse, with no dependencies.
+         The boarding pass scanner loads this same file, so the generator's
+         "expected scanner output" is a prediction rather than a second
+         implementation of the same spec. -->
+    <script src="bcbp.js"></script>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/" aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product">Boarding Pass Generator</span>
+            <nav class="header-nav" aria-label="Dynamsoft">
+                <a class="nav-link" href="../boarding-pass-scanner/">Scanner</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/">Documentation</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">30-Day
+                    Free Trial</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>Boarding pass generator</h1>
+        <p>
+            Build a synthetic IATA BCBP barcode and download a boarding pass image to test a
+            boarding pass scanner.
+        </p>
+    </div>
+
+    <div class="notice-banner" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <div>
+            <strong>For testing only.</strong>
+            Every value on this page is randomly generated sample data and each pass is stamped
+            <em>SPECIMEN</em>. No live reservation system is involved. The output is not a valid travel
+            document, will not pass an airport check, and must not be used to travel or to impersonate
+            anyone. Use it to test a scanner.
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>Pass setup</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="airline">Operating carrier</label>
+                        <select id="airline" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pass_style">Pass style</label>
+                        <select id="pass_style" class="form-control">
+                            <option value="printed">Printed pass (paper stock)</option>
+                            <option value="mobile">Mobile pass (phone wallet)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="barcode_format">Symbology</label>
+                        <select id="barcode_format" class="form-control">
+                            <option value="pdf417">PDF417 — printed passes</option>
+                            <option value="azteccode">Aztec Code — requires BCBP v7+</option>
+                            <option value="qrcode">QR Code — requires BCBP v7+</option>
+                            <option value="datamatrix">Data Matrix — requires BCBP v7+</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="version">BCBP version</label>
+                        <select id="version" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="leg_count">Flight legs</label>
+                        <select id="leg_count" class="form-control">
+                            <option value="1">1 leg</option>
+                            <option value="2">2 legs</option>
+                            <option value="3">3 legs</option>
+                            <option value="4">4 legs</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="randomise">Sample data</label>
+                        <button id="randomise" class="btn btn-secondary btn-block" type="button">🎲 Randomise
+                            everything</button>
+                    </div>
+                </div>
+
+                <p class="hint">
+                    A printed pass uses PDF417, which is what Resolution 792 originally specified.
+                    Version 7 opened the same payload up to Aztec Code, QR Code and Data Matrix for
+                    mobile and 2D printed passes, so choosing one of those raises the version to 7.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Passenger</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="passenger_name">Passenger name (item 11)</label>
+                        <input type="text" id="passenger_name" class="form-control" placeholder="DOE/JOHN">
+                    </div>
+                    <div class="form-group">
+                        <label for="pnr">PNR locator (item 7)</label>
+                        <input type="text" id="pnr" class="form-control" maxlength="7" placeholder="ABC123">
+                    </div>
+                    <div class="form-group">
+                        <label for="passenger_status">Passenger status (item 113)</label>
+                        <select id="passenger_status" class="form-control"></select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="passenger_description">Passenger description (item 15)</label>
+                        <select id="passenger_description" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="issue_date">Date of issue (item 22)</label>
+                        <input type="text" id="issue_date" class="form-control" maxlength="4"
+                            placeholder="6261 = 2026 day 261">
+                    </div>
+                    <div class="form-group">
+                        <label for="bag_tags">Baggage tags (items 23, 31, 32)</label>
+                        <input type="text" id="bag_tags" class="form-control"
+                            placeholder="Comma separated, 13 digits each">
+                    </div>
+                </div>
+
+                <p class="hint">
+                    The passenger name is written as <code>SURNAME/GIVEN NAME</code> and left-justified in
+                    20 characters. A baggage tag is 13 digits: a 10-digit licence plate followed by a
+                    3-digit count of consecutive bags. The first three tags fill item 23; a fourth and
+                    fifth become the non-consecutive items 31 and 32.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Optional data (the conditional sections)</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="checkin_source">Source of check-in (item 12)</label>
+                        <select id="checkin_source" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="issuance_source">Source of issuance (item 14)</label>
+                        <select id="issuance_source" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="document_type">Document type (item 16)</label>
+                        <select id="document_type" class="form-control"></select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="issuer_airline">Issuing airline designator (item 21)</label>
+                        <input type="text" id="issuer_airline" class="form-control" maxlength="3" placeholder="UA">
+                    </div>
+                    <div class="form-group">
+                        <label for="security_type">Security data type (item 28)</label>
+                        <input type="text" id="security_type" class="form-control" maxlength="1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="security_data">Security data (item 30)</label>
+                        <input type="text" id="security_data" class="form-control" placeholder="Leave empty to omit">
+                    </div>
+                </div>
+
+                <p class="hint">
+                    BCBP has no field tags: the optional items are written in a fixed order and only the
+                    trailing ones may be dropped. Leaving an early field empty while filling a later one is
+                    therefore not expressible, and the validator reports it instead of quietly padding a
+                    gap with filler. Leave <em>security data</em> empty to omit the whole security section —
+                    the official examples do include one, so it is worth trying.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Flight legs</h2>
+            </div>
+            <div class="card-body">
+                <div id="legs_container"></div>
+                <div class="button-group">
+                    <button id="add_leg" class="btn btn-secondary" type="button">+ Add a leg</button>
+                </div>
+                <div id="validate_box" class="validate-box" hidden></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Pass preview</h2>
+            </div>
+            <div class="card-body">
+                <div class="canvas-wrapper">
+                    <canvas id="preview" width="1100" height="700"></canvas>
+                </div>
+                <p class="hint" id="preview_caption"></p>
+                <p class="hint" id="decode_status">Generating…</p>
+                <div class="button-group">
+                    <button id="generate" class="btn btn-primary" type="button">✨ Generate barcode</button>
+                    <button id="download" class="btn btn-secondary" type="button">⬇️ Download pass PNG</button>
+                    <button id="copy_payload" class="btn btn-secondary" type="button">📋 Copy payload</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Encoded BCBP payload</h2>
+            </div>
+            <div class="card-body">
+                <textarea id="payload" class="code-output" rows="6" readonly
+                    placeholder="The BCBP payload will appear here…"></textarea>
+                <p class="hint">
+                    This is the exact string the barcode encodes. Positions 1–23 are the unique mandatory
+                    section, 24–58 the repeated section, then the two hexadecimal characters of item 6 and
+                    the leg's variable field. Every leg repeats the 35-character block plus its own size
+                    field, so a two-leg pass is longer than twice a one-leg pass.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Expected scanner output</h2>
+            </div>
+            <div class="card-body">
+                <p class="hint" id="oracle_summary"></p>
+                <div class="oracle" id="oracle"></div>
+                <div class="checks" id="checks"></div>
+                <p class="hint">
+                    Read this table back as the test oracle: it is produced by parsing the payload that was
+                    just generated, so it states what the bytes contain, not what the form says. The
+                    <em>offset</em> column is the 1-based position of the field in the payload, which is what
+                    makes a mismatch with a scanner easy to localise.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Scope and limitations</h2>
+            </div>
+            <div class="card-body">
+                <p>
+                    This generator implements the <strong>linear data layout</strong> of IATA Resolution 792
+                    — the payload a scanner reads out of the symbol. It does not sign anything: a BCBP
+                    payload is plain text, so a valid-looking pass proves only that the data is well formed.
+                    Real airlines protect a pass with their own digital signature, verified against a public
+                    key, and nothing on this page reproduces that. A parseable boarding pass is therefore
+                    never evidence that a passenger holds a real reservation.
+                </p>
+                <p>
+                    <strong>Aztec, QR Code and Data Matrix are only standard for a printed pass from version 7
+                    onwards.</strong> Older readers may accept the symbol but expect PDF417, which is why
+                    PDF417 remains the safe choice for a printed pass and the default here.
+                </p>
+                <p>
+                    <strong>The flight date carries no year.</strong> BCBP stores a Julian day of the year, so
+                    a scanner has to infer the year from the issue date or from the current date. A pass
+                    issued at the turn of the year can therefore be ambiguous through no fault of the data.
+                </p>
+                <p class="hint">
+                    Airline names, numeric codes and airport cities come from a short built-in reference
+                    table so that sample data reads realistically. It is not an authoritative IATA dataset,
+                    and the decoded labels are for readability only.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="demo-footer">
+        <div class="demo-footer-inner">
+            <p class="disclaimer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                Generated locally on an HTML5 canvas — synthetic sample data only, nothing is uploaded and no
+                licence key is required.
+            </p>
+            <div class="footer-links">
+                <span>
+                    Built with plain JavaScript and
+                    <a href="https://github.com/metafloor/bwip-js">bwip-js</a>. Read the
+                    symbols back with
+                    <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft Barcode Reader</a>.
+                </span>
+                <a href="../boarding-pass-scanner/">Open the boarding pass scanner</a>
+                <a href="https://www.dynamsoft.com/codepool/generate-boarding-pass-barcode-javascript.html">Read
+                    the tutorial</a>
+                <a class="btn btn-primary footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">Get
+                    a 30-day free trial license</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- UI, canvas rendering and PNG export -->
+    <script src="app.js"></script>
+</body>
+
+</html>
