@@ -67,7 +67,7 @@
       'checkin_source', 'issuance_source', 'issue_date', 'document_type',
       'issuer_airline', 'bag_tags', 'security_type', 'security_data',
       'legs_container', 'add_leg',
-      'randomise', 'generate', 'download', 'copy_payload',
+      'randomise', 'download', 'copy_payload',
       'preview', 'preview_caption', 'payload', 'oracle', 'oracle_summary',
       'checks', 'validate_box', 'decode_status'
     ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -1103,7 +1103,6 @@
       timer = setTimeout(function () { generate('internal'); }, 320);
     }
 
-    els.generate.addEventListener('click', function () { generate('button'); });
     els.randomise.addEventListener('click', function () { randomise(false); });
     els.download.addEventListener('click', download);
     els.copy_payload.addEventListener('click', copyPayload);

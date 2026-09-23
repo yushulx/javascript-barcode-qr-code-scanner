@@ -241,6 +241,13 @@ body {
     letter-spacing: 0.03em;
 }
 
+.card-header .card-subtitle {
+    margin: 6px 0 0;
+    font-size: 0.84rem;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
 .card-body {
     padding: 20px 22px 22px;
 }
