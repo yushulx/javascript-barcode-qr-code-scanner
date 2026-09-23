@@ -301,6 +301,20 @@ body {
     line-height: 1.6;
 }
 
+/* Signature verdict under the security fields: green only when item 30 is a
+   signature that actually verifies against what is in the payload right now. */
+.hint.is-ok {
+    color: #2e7d32;
+}
+
+.hint.is-bad {
+    color: #c62828;
+}
+
+.hint.is-none {
+    color: var(--muted);
+}
+
 .hint code,
 .card-body code {
     font-family: var(--mono);

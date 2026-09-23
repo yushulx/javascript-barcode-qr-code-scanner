@@ -303,6 +303,36 @@ body {
     opacity: 0.85;
 }
 
+/* The "Require signature" pill — same chrome as .scope-select, with a
+   checkbox instead of a dropdown. */
+.signature-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 13px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+.signature-toggle input {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: var(--dy-orange);
+    cursor: pointer;
+}
+
+.signature-toggle:focus-within {
+    outline: 2px solid var(--dy-orange);
+    outline-offset: 2px;
+}
+
 .scope-label {
     font-weight: 600;
 }
@@ -833,6 +863,20 @@ body {
     color: #7a4b00;
 }
 
+/* Signature verdict: green only for a signature that verified, red for one
+   that did not or for a pass refused by the "require signature" policy. */
+.note.ok {
+    background: #eefaf1;
+    border-left-color: #2e9e5b;
+    color: #1c6b3d;
+}
+
+.note.error {
+    background: #fdeeee;
+    border-left-color: #d64545;
+    color: #8a1f1f;
+}
+
 /* ---------------------------------------------------------------------------
    Scanned image — the frame or file the barcode was read from, so the parse can
    be checked against what the source actually showed.
@@ -1198,7 +1242,8 @@ body {
         font-size: 0.82rem;
     }
 
-    .scope-select {
+    .scope-select,
+    .signature-toggle {
         font-size: 0.78rem;
     }
 

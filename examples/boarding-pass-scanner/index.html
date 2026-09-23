@@ -70,6 +70,14 @@
             <option value="all">All symbologies</option>
           </select>
         </label>
+
+        <!-- Refusing unsigned passes is the reader's policy: BCBP lets the
+             security section be absent, so the format alone never says no. -->
+        <label class="signature-toggle" for="require-signature"
+          title="Refuse passes that carry no valid signature (items 25–30)">
+          <input type="checkbox" id="require-signature">
+          <span class="scope-label">Require signature</span>
+        </label>
       </div>
 
       <!-- The SDK mounts its own camera UI into this element -->

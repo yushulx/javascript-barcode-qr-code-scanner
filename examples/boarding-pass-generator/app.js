@@ -53,8 +53,27 @@
     lastPayload: '',
     lastDecoded: null,
     lastRecordPnr: '',
-    renderSeq: 0
+    renderSeq: 0,
+    /* Latched by a hand edit of item 28/30: signing then stays off until
+       Re-sign or Randomise, so a pass that fails verification can be built
+       on purpose. */
+    securityManual: false
   };
+
+  /* ---------------------------------------------------------------------------
+     Demo signing key — ECDSA P-256 / SHA-256.
+
+     The private key is baked into this page ONLY so the demo can sign a pass
+     in the browser. A real issuer must never do that: the key stays on the
+     issuing server, only the signature travels, and readers get the matching
+     public key (see the scanner example, which carries just that).
+     --------------------------------------------------------------------------- */
+  var DEMO_PRIVATE_KEY = 'MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg9TNzmb8HKjpq/p8y81h4EYssECbpbQTIVvF8V9sWSY+hRANCAAQ6+5kTls9F7/BtjQ/WXeNef6Y1xGPUVR9eFbYpF2mmSmxMIpnhDzSn9vJZplASexOylkRHkQTqDQ/gsb80kTEO';
+  var DEMO_PUBLIC_KEY = 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOvuZE5bPRe/wbY0P1l3jXn+mNcRj1FUfXhW2KRdppkpsTCKZ4Q80p/byWaZQEnsTspZER5EE6g0P4LG/NJExDg==';
+  /* Item 28: one character naming the algorithm. '1' matches the official
+     Resolution 792 sample; the algorithm actually used here is ECDSA P-256,
+     which the field has no standard code for in this demo. */
+  var SECURITY_TYPE = '1';
 
   /* ---------------------------------------------------------------------------
      Boot
@@ -67,7 +86,7 @@
       'checkin_source', 'issuance_source', 'issue_date', 'document_type',
       'issuer_airline', 'bag_tags', 'security_type', 'security_data',
       'legs_container', 'add_leg',
-      'randomise', 'download', 'copy_payload',
+      'randomise', 'download', 'copy_payload', 'resign', 'security_hint',
       'preview', 'preview_caption', 'payload', 'oracle', 'oracle_summary',
       'checks', 'validate_box', 'decode_status'
     ].forEach(function (id) { els[id] = document.getElementById(id); });
@@ -448,6 +467,44 @@
     var problems = window.Bcbp.validate(record);
     showValidation(problems);
 
+    /* Items 25–30 are not typed out by hand: they are produced here, after
+       every other field has settled, so the signature always covers exactly
+       the payload that is about to be rendered. A hand edit latches
+       state.securityManual and switches signing off until Re-sign — that
+       latch is what makes a deliberately broken pass possible. */
+    var signing = (problems.length || state.securityManual)
+      ? Promise.resolve(null)
+      : autoSign(record);
+
+    return signing.then(function () {
+      /* Re-read the form: item 30 may just have been rewritten by autoSign(). */
+      record = collectRecord();
+      state.lastRecord = record;
+      return renderPayload(source, record);
+    });
+  }
+
+  /* Sign everything up to the end of the last leg with the demo key and write
+     the base64 result into item 30. Resolves with the signature, or null when
+     there was nothing to sign (the record is invalid, or WebCrypto is off) —
+     in both cases the caller simply carries on with what the field holds. */
+  function autoSign(record) {
+    var base;
+    try {
+      base = window.Bcbp.encode(Object.assign({}, record, { security: null }));
+    } catch (error) {
+      return Promise.resolve(null); /* renderPayload() reports the real error */
+    }
+    return window.Bcbp.signSecurityData(base, DEMO_PRIVATE_KEY).then(function (signature) {
+      if (!signature) return null;
+      els.security_type.value = SECURITY_TYPE;
+      els.security_data.value = signature;
+      return signature;
+    });
+  }
+
+  /* The rest of generate(): encode, parse our own output, draw it. */
+  function renderPayload(source, record) {
     var payload;
     try {
       payload = window.Bcbp.encode(record);
@@ -467,6 +524,7 @@
     var decoded = window.Bcbp.decode(payload);
     state.lastDecoded = decoded;
     renderOracle(decoded);
+    updateSecurityHint(payload, decoded);
 
     if (!decoded.ok) {
       els.decode_status.textContent = 'The generated payload did not parse back: ' + decoded.error;
@@ -504,6 +562,50 @@
       clearPreview('Rendering failed.');
       analytics.error('render_failed', String(error.message).slice(0, 120));
       return false;
+    });
+  }
+
+  /* Report what item 30 currently is. It runs on every render because the
+     verdict depends on the bytes as they are right now, not on what the form
+     says: a signature that was valid a moment ago is worthless the moment any
+     other field moves. */
+  function updateSecurityHint(payload, decoded) {
+    var hint = els.security_hint;
+    if (!hint) return;
+
+    function put(kind, text) {
+      hint.className = 'hint ' + kind;
+      hint.textContent = text;
+    }
+
+    if (!decoded || !decoded.ok) {
+      put('is-bad', '\u2717 The payload did not parse, so there is no signature to check.');
+      return;
+    }
+    if (!(window.crypto && window.crypto.subtle)) {
+      put('is-bad', '\u26a0 WebCrypto is unavailable — this page has to be served over '
+        + 'http://localhost or https. The pass is left unsigned as typed.');
+      return;
+    }
+
+    window.Bcbp.verifySecurityData(payload, DEMO_PUBLIC_KEY).then(function (result) {
+      if (result.state === 'ok') {
+        put('is-ok', '\u2713 Auto-signed \u00b7 ECDSA P-256 \u00b7 item 30 holds a signature of '
+          + decoded.security.data.length + ' characters over this exact payload. '
+          + 'It is rewritten every time a field changes — you are not expected to type it.');
+      } else if (result.state === 'none') {
+        put(state.securityManual ? 'is-none' : 'is-ok',
+          state.securityManual
+            ? '\u2014 You cleared item 30, so items 25\u201330 are omitted. An unsigned pass is '
+              + 'legal and still reads; a reader set to require a signature would refuse it.'
+            : '\u2014 Unsigned: no security section in this pass. Press Re-sign to add one.');
+      } else {
+        put('is-bad', '\u2717 ' + result.message
+          + (state.securityManual ? ' Item 30 was edited by hand.' : '')
+          + ' Press \u{1F512} Re-sign to sign the pass again.');
+      }
+    }).catch(function (error) {
+      put('is-bad', '\u26a0 Could not verify the signature: ' + error.message);
     });
   }
 
@@ -1047,7 +1149,9 @@
     var airline = window.Bcbp.airline(record.legs[0].carrier);
     if (airline) els.airline.value = airline.iata;
     els.version.value = String(window.Bcbp.CURRENT_VERSION);
-    els.security_type.value = '1';
+    /* A fresh sample is a fresh pass, so a hand-edited item 30 goes away too. */
+    state.securityManual = false;
+    els.security_type.value = SECURITY_TYPE;
     els.security_data.value = '';
     writeForm(record);
 
@@ -1104,6 +1208,11 @@
     }
 
     els.randomise.addEventListener('click', function () { randomise(false); });
+    /* Re-sign unlatches a hand edit and lets autoSign() fill item 30 again. */
+    els.resign.addEventListener('click', function () {
+      state.securityManual = false;
+      generate('resign');
+    });
     els.download.addEventListener('click', download);
     els.copy_payload.addEventListener('click', copyPayload);
 
@@ -1174,10 +1283,22 @@
 
     ['passenger_name', 'passenger_status', 'passenger_description',
       'checkin_source', 'issuance_source', 'issue_date', 'document_type',
-      'issuer_airline', 'bag_tags', 'security_type', 'security_data'].forEach(function (id) {
+      'issuer_airline', 'bag_tags'].forEach(function (id) {
         els[id].addEventListener('input', schedule);
         els[id].addEventListener('change', schedule);
       });
+
+    /* Item 30 is machine-filled, so a keystroke in either security field is a
+       deliberate hand edit: latch manual mode, keep the value as typed (even
+       if it is empty) and stop re-signing until Re-sign or Randomise. */
+    function securityEdited() {
+      state.securityManual = true;
+      schedule();
+    }
+    els.security_type.addEventListener('input', securityEdited);
+    els.security_type.addEventListener('change', securityEdited);
+    els.security_data.addEventListener('input', securityEdited);
+    els.security_data.addEventListener('change', securityEdited);
   }
 
   function newLegFrom(previous) {

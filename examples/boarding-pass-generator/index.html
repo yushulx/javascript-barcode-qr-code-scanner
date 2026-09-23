@@ -200,22 +200,48 @@
                         <label for="issuer_airline">Issuing airline designator (item 21)</label>
                         <input type="text" id="issuer_airline" class="form-control" maxlength="3" placeholder="UA">
                     </div>
-                    <div class="form-group">
-                        <label for="security_type">Security data type (item 28)</label>
-                        <input type="text" id="security_type" class="form-control" maxlength="1" value="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="security_data">Security data (item 30)</label>
-                        <input type="text" id="security_data" class="form-control" placeholder="Leave empty to omit">
-                    </div>
                 </div>
 
                 <p class="hint">
                     BCBP has no field tags: the optional items are written in a fixed order and only the
                     trailing ones may be dropped. Leaving an early field empty while filling a later one is
                     therefore not expressible, and the validator reports it instead of quietly padding a
-                    gap with filler. Leave <em>security data</em> empty to omit the whole security section —
-                    the official examples do include one, so it is worth trying.
+                    gap with filler. The last optional block — the security section — sits in its own card
+                    below, because you never fill it in yourself.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Security data (items 25–30) — optional, signed for you</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="security_type">Security data type (item 28)</label>
+                        <input type="text" id="security_type" class="form-control" maxlength="1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="security_data">Security data (item 30)</label>
+                        <input type="text" id="security_data" class="form-control"
+                            placeholder="Filled automatically — the signature">
+                    </div>
+                </div>
+
+                <p class="hint" id="security_hint">Signing… item 30 is filled in for you after every change.</p>
+
+                <div class="button-group">
+                    <button id="resign" class="btn btn-secondary" type="button">🔏 Re-sign</button>
+                </div>
+
+                <p class="hint">
+                    You are not meant to work this value out — it is a <strong>signature</strong> over the
+                    payload, produced automatically whenever any other field changes. It is written once,
+                    after the last leg: <code>^</code> (item 25), the type (item 28), the length in two
+                    hexadecimal characters (item 29), then the base64 signature itself. Edit the field by
+                    hand to build a pass that fails verification, clear it to omit the section entirely, or
+                    press <em>Re-sign</em> to put a valid signature back.
                 </p>
             </div>
         </div>
@@ -293,11 +319,23 @@
             <div class="card-body">
                 <p>
                     This generator implements the <strong>linear data layout</strong> of IATA Resolution 792
-                    — the payload a scanner reads out of the symbol. It does not sign anything: a BCBP
-                    payload is plain text, so a valid-looking pass proves only that the data is well formed.
-                    Real airlines protect a pass with their own digital signature, verified against a public
-                    key, and nothing on this page reproduces that. A parseable boarding pass is therefore
+                    — the payload a scanner reads out of the symbol. A BCBP payload is plain text, so a
+                    well-formed pass proves only that the data is well formed. This page does sign its
+                    output with a demo key so you can watch items 25–30 being written and checked, but that
+                    proves only that <em>this page</em> produced the bytes: a parseable boarding pass is
                     never evidence that a passenger holds a real reservation.
+                </p>
+                <p>
+                    <strong>The security section is signed for you, not typed.</strong> Items 25–30 are
+                    written once, after the last leg: <code>^</code> (item 25), one character of type
+                    (item 28), two hexadecimal characters of length (item 29), then the data. Whenever a
+                    field changes, the whole payload up to the end of the last leg is signed with ECDSA
+                    P-256 and the 88-character base64 signature lands in item 30. The private key is baked
+                    into this page so the demo can sign in the browser — something a real issuer must never
+                    do: that key stays on the issuing server, only the signature travels, and readers get
+                    the matching public key, which is what the scanner example carries. Clear the field to
+                    see the other case: an unsigned pass is legal and still reads, and is only refused by a
+                    reader that has been told to require a signature.
                 </p>
                 <p>
                     <strong>Aztec, QR Code and Data Matrix are only standard for a printed pass from version 7

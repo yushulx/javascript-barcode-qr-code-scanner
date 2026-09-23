@@ -1084,6 +1084,17 @@
       sizesOk ? result.legs.map(function (l) { return l.blockSize + ' bytes'; }).join(', ')
         : 'see the warnings below');
 
+    /* The security section is the only variable-length block outside the legs,
+       so it gets its own size check rather than hiding inside the length one. */
+    if (result.security) {
+      add('security', 'Security data length matches the size in item 29', !result.security.truncated,
+        'type ' + result.security.type + ' \u00b7 item 29 says ' + result.security.size
+        + ' \u00b7 ' + result.security.data.length + ' characters present');
+    } else {
+      add('security', 'Security data length matches the size in item 29', true,
+        'no security section — item 30 was left empty');
+    }
+
     return checks;
   }
 
@@ -1168,6 +1179,143 @@
   }
 
   /* =========================================================================
+     Security signature — WebCrypto (ECDSA P-256, SHA-256)
+     ========================================================================= */
+
+  /* The signature covers the payload WITHOUT items 25–30: a signature cannot
+     cover itself, so the issuer signs everything up to the end of the last leg
+     and appends the security section afterwards. securityBase() computes that
+     prefix and both sign and verify go through it, so the two can never
+     disagree about what was signed.
+
+     No key material lives in this file: the scanner loads this same bcbp.js,
+     and a reader must only ever hold the public key. Each page passes its own
+     key in — the generator the demo private key, the scanner the matching
+     public key — which is how a real issuer/reader pair is built as well. */
+
+  var SIGN_ALGORITHM = { name: 'ECDSA', namedCurve: 'P-256' };
+  var SIGN_PARAMS = { name: 'ECDSA', hash: 'SHA-256' };
+  var importedKeys = {};
+
+  function subtleCrypto() {
+    var root = typeof globalThis !== 'undefined' ? globalThis
+      : (typeof window !== 'undefined' ? window : null);
+    return root && root.crypto && root.crypto.subtle ? root.crypto.subtle : null;
+  }
+
+  function bytesFromBase64(text) {
+    var binary = atob(str(text).replace(/\s+/g, ''));
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  function base64FromBytes(bytes) {
+    var binary = '';
+    for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+
+  function importSigningKey(format, base64, usages) {
+    var subtle = subtleCrypto();
+    if (!subtle) return Promise.reject(new Error('WebCrypto is not available in this context.'));
+    var cacheKey = format + ':' + base64;
+    if (!importedKeys[cacheKey]) {
+      importedKeys[cacheKey] = subtle.importKey(format, bytesFromBase64(base64),
+        SIGN_ALGORITHM, false, usages);
+    }
+    return importedKeys[cacheKey];
+  }
+
+  /** The payload with its security section removed — the bytes that get signed. */
+  function securityBase(payload) {
+    var text = str(payload);
+    var parsed = decode(text);
+    if (!parsed.ok || !parsed.security) return text;
+    /* decoded.security.offset points at the type character (item 28); the '^'
+       marking item 25 sits immediately before it. */
+    return text.slice(0, parsed.security.offset - 1);
+  }
+
+  /**
+   * Sign a payload and return the item 30 value: base64 of the raw 64-byte
+   * r||s signature, 88 characters — inside the 100-character limit validate()
+   * puts on item 30 (hex would be 128 and is rejected). Resolves to null when
+   * WebCrypto is unavailable, so a caller can degrade to an unsigned pass
+   * instead of breaking.
+   */
+  function signSecurityData(payload, privateKeyBase64) {
+    var subtle = subtleCrypto();
+    if (!subtle) return Promise.resolve(null);
+    var data = new TextEncoder().encode(securityBase(payload));
+    return importSigningKey('pkcs8', privateKeyBase64, ['sign'])
+      .then(function (key) { return subtle.sign(SIGN_PARAMS, key, data); })
+      .then(function (signature) { return base64FromBytes(new Uint8Array(signature)); })
+      .catch(function () { return null; });
+  }
+
+  /**
+   * Verify a payload's security section against a public key:
+   *   'none'        items 25–30 absent — nothing to verify, not an error
+   *   'ok'          the signature matches this payload
+   *   'bad'         present but does not verify: edited, truncated, other key
+   *   'unsupported' WebCrypto unavailable
+   *   'error'       the payload did not decode at all
+   * Returns a Promise of { state, ok, message }.
+   */
+  function verifySecurityData(payload, publicKeyBase64) {
+    var text = str(payload);
+    var parsed = decode(text);
+    if (!parsed.ok) {
+      return Promise.resolve({ state: 'error', ok: false, message: parsed.error });
+    }
+    if (!parsed.security) {
+      return Promise.resolve({
+        state: 'none', ok: false,
+        message: 'No security section \u2014 items 25\u201330 are absent.'
+      });
+    }
+    if (parsed.security.truncated) {
+      return Promise.resolve({
+        state: 'bad', ok: false,
+        message: 'Item 29 declares ' + parsed.security.size + ' bytes but only '
+          + parsed.security.data.length + ' are present.'
+      });
+    }
+    var subtle = subtleCrypto();
+    if (!subtle) {
+      return Promise.resolve({
+        state: 'unsupported', ok: false,
+        message: 'WebCrypto is not available in this context, so nothing can be verified.'
+      });
+    }
+    var signature;
+    try {
+      signature = bytesFromBase64(parsed.security.data);
+    } catch (error) {
+      return Promise.resolve({
+        state: 'bad', ok: false,
+        message: 'Item 30 is not valid base64, so it is not a signature this reader understands.'
+      });
+    }
+    var data = new TextEncoder().encode(securityBase(text));
+    return importSigningKey('spki', publicKeyBase64, ['verify'])
+      .then(function (key) { return subtle.verify(SIGN_PARAMS, key, signature, data); })
+      .then(function (valid) {
+        return valid
+          ? { state: 'ok', ok: true, message: 'Signature matches this payload (ECDSA P-256).' }
+          : {
+            state: 'bad', ok: false,
+            message: 'The signature does not match this payload \u2014 it was changed '
+              + 'after signing, or it was signed with a different key.'
+          };
+      })
+      .catch(function (error) {
+        return { state: 'error', ok: false, message: error.message };
+      });
+  }
+
+  /* =========================================================================
      Random sample data
      ========================================================================= */
 
@@ -1185,6 +1333,21 @@
     var out = '';
     for (var i = 0; i < n; i++) out += Math.floor(Math.random() * 10);
     return out;
+  }
+
+  /**
+   * A stand-in for item 30. Real carriers put a digital signature of the payload
+   * there: item 28 names the algorithm used, item 29 is the byte count written in
+   * hexadecimal, item 30 the signature bytes themselves. This produces the same
+   * shape — 20 random bytes spelled out as 40 hexadecimal characters, the length a
+   * SHA-1 signature has — so the section encodes, parses back and passes the length
+   * check, but it was not signed by anything and verifies against nothing.
+   */
+  function randomSecurity() {
+    var hex = '0123456789ABCDEF';
+    var data = '';
+    for (var i = 0; i < 40; i++) data += hex.charAt(Math.floor(Math.random() * 16));
+    return { type: '1', data: data };
   }
 
   var SAMPLE_SURNAMES = ['NAKAMURA', 'OKAFOR', 'LINDQVIST', 'MOREAU', 'HERNANDEZ',
@@ -1268,6 +1431,7 @@
         : [],
       nonConsecutiveTags: [],
       airlineUse: '',
+      security: opts.security === false ? null : randomSecurity(),
       version: CURRENT_VERSION,
       legs: legs
     };
@@ -1368,6 +1532,9 @@
     normaliseRecord: normaliseRecord,
     randomRecord: randomRecord,
     randomPnr: randomPnr,
+    signSecurityData: signSecurityData,
+    verifySecurityData: verifySecurityData,
+    securityBase: securityBase,
     buildBagTag: buildBagTag,
     describeBagTag: describeBagTag,
     dateFromJulian: dateFromJulian,

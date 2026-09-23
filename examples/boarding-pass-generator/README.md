@@ -24,9 +24,13 @@ python -m http.server 8000
 
 ## Scope and limitations
 
-- **Nothing is signed.** A BCBP payload is plain text. A pass that parses proves the
-  data is well formed and nothing more; real carriers add a digital signature of their
-  own, which this generator does not reproduce.
+- **Item 30 is signed for you.** Every field change re-signs the payload (ECDSA P-256)
+  with a demo private key baked into the page, and the 88-character base64 signature lands
+  in the security section (items 25–30). That key exists only so the demo can sign in the
+  browser — a real issuer keeps its private key on the issuing server and publishes the
+  matching public key, which is what the scanner example carries. Editing the field by
+  hand latches a deliberately wrong value so verification fails, clearing it omits the
+  section entirely, and *Re-sign* restores a valid signature.
 - **Aztec, QR Code and Data Matrix are standards-compliant for a printed pass only from
   version 7.** Older readers may accept the symbol but expect PDF417.
 - **The flight date has no year.** A scanner infers it from the issue date or the
