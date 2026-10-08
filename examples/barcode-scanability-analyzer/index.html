@@ -6,27 +6,25 @@
   <title>Free Online Barcode Scanability Analyzer | Dynamsoft Codepool</title>
   <meta name="description" content="Investigate barcode scanning problems. Inspect a selected region and compare controlled decoding tests to find useful clues, then continue in Barcode Parameter Tuner.">
   <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/barcode-scanability-analyzer/">
-  <meta property="og:title" content="Barcode Scanability Analyzer â€” Investigate Barcode Scanning Problems">
+  <meta property="og:title" content="Barcode Scanability Analyzer — Investigate Barcode Scanning Problems">
   <meta property="og:description" content="A free software-based barcode diagnostic and quality preflight tool. Images are processed in your browser.">
   <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/barcode-scanability-analyzer/thumbnail.png">
   <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/barcode-scanability-analyzer/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="styles.css?v=20261008e">
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-538F83');</script>
-  <script src="shared/analytics.js?v=20260920c" defer></script>
-  <script src="diagnostics.js?v=20261008e" defer></script>
-  <script src="experiments.js?v=20261008e" defer></script>
-  <script src="shared/image-handoff.js?v=20261008a" defer></script>
-  <script src="app.js?v=20261008e" defer></script>
+  <link rel="stylesheet" href="styles.css?v=20261008f">
+  <script src="diagnostics.js?v=20261008f" defer></script>
+  <script src="experiments.js?v=20261008f" defer></script>
+  <script src="image-handoff.js?v=20261008a" defer></script>
+  <script src="app.js?v=20261008f" defer></script>
 </head>
 <body>
   <noscript>This analyzer requires JavaScript.</noscript>
   <header class="site-header"><div class="site-header-inner">
     <a class="brand" href="https://www.dynamsoft.com/" aria-label="Dynamsoft"><img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft"></a>
     <span class="brand-divider" aria-hidden="true"></span><span class="brand-product"><span class="brand-tag">Free</span>Barcode Scanability Analyzer</span>
-    <nav class="header-nav" aria-label="Dynamsoft"><a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/docs/" data-demo-cta="docs">Documentation</a><a class="btn btn-primary" href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform" data-demo-cta="trial">30-Day Free Trial</a></nav>
+    <nav class="header-nav" aria-label="Dynamsoft"><a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/docs/">Documentation</a><a class="btn btn-primary" href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">30-Day Free Trial</a></nav>
   </div></header>
   <div class="page-intro">
     <h1>Investigate barcode scanning problems</h1>
@@ -35,11 +33,11 @@
   </div>
   <main class="container">
     <section class="card"><div class="card-body toolbar">
-      <div class="form-group"><label for="sample">Sample image</label><select id="sample" class="form-select"><option value="multiple-symbologies-multiple-barcodes-9.jpg">Product label â€” mixed formats</option><option value="barcodes-in-low-lights-1.jpg">Dim light</option><option value="barcodes-in-strong-light-1.jpg">Harsh light</option><option value="tiny-barcodes-1.jpg">Tiny barcode</option><option value="off-screen-2.jpg">Partly out of frame</option><option value="poorly-printed-1.jpg">Print defects</option><option value="crumpled-barcodes-1.jpg">Crumpled label</option><option value="single-symbology-multiple-barcodes-2.jpg">Multiple barcodes</option></select></div>
+      <div class="form-group"><label for="sample">Sample image</label><select id="sample" class="form-select"><option value="multiple-symbologies-multiple-barcodes-9.jpg">Product label — mixed formats</option><option value="barcodes-in-low-lights-1.jpg">Dim light</option><option value="barcodes-in-strong-light-1.jpg">Harsh light</option><option value="tiny-barcodes-1.jpg">Tiny barcode</option><option value="off-screen-2.jpg">Partly out of frame</option><option value="poorly-printed-1.jpg">Print defects</option><option value="crumpled-barcodes-1.jpg">Crumpled label</option><option value="single-symbology-multiple-barcodes-2.jpg">Multiple barcodes</option></select></div>
       <div class="form-group"><label for="upload">Your image (PNG, JPEG, WebP or BMP)</label><input id="upload" type="file" accept="image/png,image/jpeg,image/webp,image/bmp"></div>
       <button class="btn btn-outline" id="camera">Use camera</button><button class="btn btn-primary" id="shoot" hidden>Capture frame</button><button class="btn btn-primary" id="analyze" disabled>Analyze image</button>
     </div></section>
-    <p id="status" class="status-line" role="status" aria-live="polite">Loading a sampleâ€¦</p>
+    <p id="status" class="status-line" role="status" aria-live="polite">Loading a sample…</p>
     <div class="workspace">
       <section class="card"><div class="card-header"><h2>Image &amp; barcode regions</h2><span id="meta" class="hint"></span></div><div class="card-body">
         <div class="selection-tools"><button id="manual_toggle" class="btn btn-primary" aria-pressed="false" disabled>Draw a region</button><button id="manual_clear" class="btn btn-outline" disabled>Clear selection</button></div>
@@ -64,7 +62,7 @@
         <div class="report-legend" aria-label="Report status definitions">
           <p class="legend-heading">What the statuses mean</p>
           <div class="legend-items">
-            <div><span class="check-badge warn"><span aria-hidden="true">âš  </span>Potential issue</span><p>A possible scanning risk. Review the evidence and recommended actions.</p></div>
+            <div><span class="check-badge warn"><span aria-hidden="true">⚠ </span>Potential issue</span><p>A possible scanning risk. Review the evidence and recommended actions.</p></div>
             <div><span class="check-badge measured">Measurement only</span><p>A measured value, without a pass or fail verdict.</p></div>
             <div><span class="check-badge inconclusive">Inconclusive</span><p>Not enough evidence to judge this issue. This does not count as a pass.</p></div>
           </div>
@@ -75,8 +73,8 @@
         <div class="report-actions"><button id="tuner" class="btn btn-primary" disabled>Open this image in Parameter Tuner</button><button id="export" class="btn btn-outline" disabled>Download report</button></div>
       </div></section>
     </div>
-    <details class="card methodology"><summary>How to read this report</summary><p>This is a software-based scanability diagnostic, not an ISO-certified barcode verifier or a print-quality grade. Decode success applies to this image and this reader's default settings; it does not guarantee other scanners will read it.</p><p>Manual selections are analyzed directly from image pixels, even if the reader fails. Contrast measures grayscale differences; broad brightness transitions can suggest soft edges, while dim lighter pixels can suggest poor lighting. These are possible contributing factors, not proof of why decoding failed. A rectangular box does not establish barcode format, module size, orientation or perspective. Include the complete symbol and a small clear margin; avoid large areas of unrelated background.</p><p>For detected symbols, the SDK supplies location, module size and rotation. Selection-border and quiet-zone estimates are separate: a manual box checks its inner border, while a localized symbol checks surrounding pixels. Neither verifies format-specific quiet-zone compliance. White paper can resemble glare, and valid patterns can resemble damage. Unknown values are never counted as passes.</p><p>The optional selected-area decode test uses an unmodified crop at original resolution. If it succeeds after a full-image failure, restricting the area changed the result; this does not prove the original cause. Image evidence remains available when crop decoding fails or the SDK cannot activate.</p><p>No images or decoded text are sent to analytics. The SDK downloads its engine and contacts Dynamsoft for license activation. The hosted demo uses the CodePool domain license; local and self-hosted previews use the SDK trial license.</p><p><a href="https://www.dynamsoft.com/barcode-reader/docs/web/programming/javascript/api-reference/interfaces/localized-barcode-element.html">SDK localization measurements</a> Â· <a href="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/">Generate a barcode test image</a> Â· <a href="parameter-tuner/">Barcode Parameter Tuner</a></p></details>
+    <details class="card methodology"><summary>How to read this report</summary><p>This is a software-based scanability diagnostic, not an ISO-certified barcode verifier or a print-quality grade. Decode success applies to this image and this reader's default settings; it does not guarantee other scanners will read it.</p><p>Manual selections are analyzed directly from image pixels, even if the reader fails. Contrast measures grayscale differences; broad brightness transitions can suggest soft edges, while dim lighter pixels can suggest poor lighting. These are possible contributing factors, not proof of why decoding failed. A rectangular box does not establish barcode format, module size, orientation or perspective. Include the complete symbol and a small clear margin; avoid large areas of unrelated background.</p><p>For detected symbols, the SDK supplies location, module size and rotation. Selection-border and quiet-zone estimates are separate: a manual box checks its inner border, while a localized symbol checks surrounding pixels. Neither verifies format-specific quiet-zone compliance. White paper can resemble glare, and valid patterns can resemble damage. Unknown values are never counted as passes.</p><p>The optional selected-area decode test uses an unmodified crop at original resolution. If it succeeds after a full-image failure, restricting the area changed the result; this does not prove the original cause. Image evidence remains available when crop decoding fails or the SDK cannot activate.</p><p>Images are processed in your browser. The SDK downloads its engine and contacts Dynamsoft for license activation. The hosted demo uses the CodePool domain license; local and self-hosted previews use the SDK trial license.</p><p><a href="https://www.dynamsoft.com/barcode-reader/docs/web/programming/javascript/api-reference/interfaces/localized-barcode-element.html">SDK localization measurements</a> · <a href="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/">Generate a barcode test image</a> · <a href="parameter-tuner/">Barcode Parameter Tuner</a></p></details>
   </main>
-  <footer><a href="https://www.dynamsoft.com/codepool/demos/">All online demos</a> Â· Powered by <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft Barcode Reader</a></footer>
+  <footer><a href="https://www.dynamsoft.com/codepool/demos/">All online demos</a> · Powered by <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft Barcode Reader</a></footer>
 </body>
 </html>
