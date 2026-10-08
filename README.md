@@ -12,6 +12,7 @@ This repository contains **JavaScript** examples demonstrating how to use [Dynam
 - [qr-code-scanner.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/qr-code-scanner.html)
 - [ui-customization.html](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/ui-customization.html)
 - [WebGL](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/webgl/)
+- [Barcode Scanability Analyzer](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode-scanability-analyzer/) — manual image-region analysis, controlled decoding comparisons and a bundled Parameter Tuner: [examples/barcode-scanability-analyzer](examples/barcode-scanability-analyzer)
 - [Driver License PDF417 Scanner](https://www.dynamsoft.com/codepool/demos/driver-license-scanner/)
 - [MRZ & Passport Scanner](https://www.dynamsoft.com/codepool/demos/mrz-scanner/)
 - [Barcode Scanner (camera, image and video)](https://www.dynamsoft.com/codepool/demos/barcode-scanner/)

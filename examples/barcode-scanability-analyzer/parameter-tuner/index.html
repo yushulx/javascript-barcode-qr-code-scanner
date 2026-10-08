@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Online Barcode Reader Parameter Tuner | Dynamsoft Codepool Demo</title>
+    <meta name="description"
+        content="Free online parameter tuner for Dynamsoft Barcode Reader. Edit every barcode template parameter — localization modes, deblur modes, binarization, format list, ROI — on your own image, and watch the intermediate result of each pipeline stage to find the setting that brings the barcode back.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/barcode-parameter-tuner/">
+    <link rel="icon" href="data:,">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Free Online Barcode Reader Parameter Tuner | Dynamsoft Codepool Demo">
+    <meta property="og:description"
+        content="Free online barcode reader parameter tuner — edit every Dynamsoft Barcode Reader template parameter on a real image and inspect the intermediate result of each pipeline stage to find why a barcode was missed.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/barcode-parameter-tuner/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/barcode-parameter-tuner/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- Google Tag Manager -->
+    <script>(function (w, d, s, l, i) {
+            w[l] = w[l] || []; w[l].push({
+                'gtm.start':
+                    new Date().getTime(), event: 'gtm.js'
+            }); var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-538F83');</script>
+    <!-- End Google Tag Manager -->
+
+    <!--
+      ASSET VERSION (?v=): the site serves these files with
+      Cache-Control: max-age=86400, so browsers trust their cached copy for a
+      full day. Bump the ?v= value on EVERY change to styles.css, app.js,
+      parameters.js, dynamsoft-logo.svg or shared/analytics.js, otherwise
+      returning visitors keep the stale copy for up to 24h.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css?v=20260921W">
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+    <script src="../shared/image-handoff.js?v=20261008a"></script>
+    <script>
+        /* When this directory is served directly at `/`, the repository's shared
+           helpers are outside the web root. app.js has self-contained fallbacks
+           for that layout; regular Codepool routes still load the shared helpers. */
+        if (/\/barcode-parameter-tuner\//.test(window.location.pathname)) {
+            document.write('<script src="../shared/analytics.js?v=20260920c"><\/script>');
+            document.write('<script src="../shared/scanner-feedback.js?v=20260920c"><\/script>');
+        }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Free Online Barcode Reader Parameter Tuner",
+      "url": "https://www.dynamsoft.com/codepool/demos/barcode-parameter-tuner/",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Any (web browser)",
+      "description": "Browser-side parameter workbench for Dynamsoft Barcode Reader. It reads the SDK's own scan template back, exposes every parameter in the barcode pipeline as an editable control, and renders the intermediate result of each pipeline stage so a failing decode can be traced to the stage that lost it. Nothing is uploaded.",
+      "featureList": [
+        "Every parameter of the loaded scan template, grouped in pipeline order",
+        "Intermediate results per stage: pre-processed images, contours, candidate zones, localized barcodes, decoded barcodes",
+        "Ten annotated photographs of genuinely difficult codes — glare, shadow, a crumpled surface, print defects, a symbol out of frame, and sheets of ten and ninety-six symbols",
+        "Expected-vs-found comparison against the dataset's annotations, with missed symbols outlined on the image",
+        "Editable barcode format list, mirror mode and confidence rules",
+        "Localization, deblur, binarization, deformation-resistance and scale mode lists with reordering",
+        "Region of interest editing with a live overlay",
+        "One-click starting-point recipes for inverted, low contrast, damaged and undersized symbols",
+        "Import, edit and export the template JSON",
+        "Runs entirely client side — nothing you scan leaves your device"
+      ],
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free to use on dynamsoft.com/codepool — the hosted demo carries a domain-bound license, so no account, no key and no installation are needed. Self-hosting the code requires your own Dynamsoft license. Nothing you scan or upload leaves your device."
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Dynamsoft",
+        "url": "https://www.dynamsoft.com/"
+      }
+    }
+    </script>
+</head>
+
+<body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-538F83" height="0" width="0"
+            style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
+                aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg?v=20260920c" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product"><span class="brand-tag">Free</span>Barcode Reader Parameter Tuner</span>
+            <nav class="header-nav" aria-label="Dynamsoft">
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
+                    data-demo-cta="barcode-reader">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/docs/"
+                    data-demo-cta="docs">Documentation</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">30-Day Free Trial</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>Free barcode reader parameter tuner</h1>
+        <p class="page-intro-lead">Find the first pipeline stage that loses a barcode, change one parameter
+            family, and measure the next run. The SDK executes entirely in your browser; uploaded images never
+            leave the device.</p>
+        <ol class="learning-workflow" aria-label="Recommended tuning workflow">
+            <li><strong>Run a baseline.</strong><span>Use a bundled case or upload your own difficult image.</span></li>
+            <li><strong>Locate the bottleneck.</strong><span>Compare binary, candidate, localized and decoded evidence.</span></li>
+            <li><strong>Test one hypothesis.</strong><span>Change one parameter family and keep only measured gains.</span></li>
+            <li><strong>Take the template away.</strong><span>Download the tuned template — or only the
+                    parameters you moved — from the panel at the bottom of the page.</span></li>
+        </ol>
+        <details class="dataset-note">
+            <summary>About the ten bundled test images and ground truth</summary>
+            <p>Ten verified real-world photographs, one per failure mode: a multi-format baseline, dim light, harsh
+                light with glare, a hard shadow, a crumpled surface, an undersized symbol, print defects, a symbol
+                partly out of frame, and two dense sheets holding ten and ninety-six symbols. Each carries the
+                dataset's own annotations for the symbols it contains, which is what lets the workbench tell a
+                real missed symbol from a localization false positive and outline the expected symbols that were
+                not decoded.</p>
+        </details>
+    </div>
+
+    <div class="container">
+
+        <!-- ------------------------------------------------------------------ -->
+        <!-- Toolbar                                                            -->
+        <!-- ------------------------------------------------------------------ -->
+        <div class="card">
+            <div class="card-body">
+                <div class="toolbar">
+                    <div class="form-group">
+                        <label for="sample_select">Image to tune on</label>
+                        <select id="sample_select" class="form-select">
+                            <optgroup label="Baseline">
+                                <option value="multiple-symbologies-multiple-barcodes-9.jpg">Product label — six
+                                    symbols, four symbologies, in colour</option>
+                            </optgroup>
+                            <optgroup label="One hard symbol">
+                                <option value="barcodes-in-low-lights-1.jpg">Dim light — one Code 128 at low
+                                    contrast</option>
+                                <option value="barcodes-in-strong-light-1.jpg">Harsh light — one EAN-13, glare
+                                    across the bars</option>
+                                <option value="barcode-with-shadow-4.jpg">Hard shadow — three QR codes under one
+                                    shadow</option>
+                                <option value="crumpled-barcodes-1.jpg">Crumpled surface — one EAN-13, no longer
+                                    planar</option>
+                                <option value="tiny-barcodes-1.jpg">Undersized — one small Data Matrix</option>
+                                <option value="poorly-printed-1.jpg">Print defects — one EAN-13 with broken and
+                                    merged bars</option>
+                                <option value="off-screen-2.jpg">Partly out of frame — one QR code at the
+                                    edge</option>
+                            </optgroup>
+                            <optgroup label="Many symbols">
+                                <option value="healthcare-2.jpg">Label sheet — ten Data Matrix symbols</option>
+                                <option value="single-symbology-multiple-barcodes-2.jpg">Dense sheet — 96 QR codes
+                                    on one page</option>
+                            </optgroup>
+                            <option value="">— your own image, or a camera photo —</option>
+                        </select>
+                        <div class="source-actions">
+                            <label class="btn btn-secondary" for="pick_file">Upload your own image</label>
+                            <input id="pick_file" type="file" accept="image/*" class="file-input">
+                            <button id="camera_toggle" class="btn btn-secondary" type="button">Use the camera</button>
+                            <button id="camera_shoot" class="btn btn-primary" type="button" hidden>Take the
+                                photo</button>
+                        </div>
+                        <p class="source-meta"><span id="source_title">loading…</span> <span id="source_meta"></span></p>
+                        <p id="camera_note" class="hint" hidden>Live frames are not decoded — this is a
+                            viewfinder, so the strip and the numbers stay on one still image until you press
+                            <strong>Take the photo</strong>.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="template_select">Base template</label>
+                        <select id="template_select" class="form-select"></select>
+                        <div class="source-actions">
+                            <button id="reload_button" class="btn btn-secondary" type="button"
+                                title="Re-apply this template as the SDK shipped it, throwing away your edits">Discard my
+                                changes</button>
+                            <span id="sdk_badge" class="sdk-badge badge-inactive"><span
+                                    id="sdk_badge_text">Initialising…</span></span>
+                        </div>
+                    </div>
+
+                    <div class="toolbar-actions">
+                        <span class="label-text toolbar-label-spacer" aria-hidden="true">Actions</span>
+                        <div class="toolbar-actions-row">
+                            <button id="run_button" class="btn btn-primary" type="button">Run</button>
+                            <button id="reset_button" class="btn btn-secondary" type="button">Reset all</button>
+                            <button id="export_jump" class="btn btn-secondary" type="button"
+                                title="Jump to the JSON panel at the bottom of the page, where the tuned template is ready to download">Take
+                                this template away ↓</button>
+                        </div>
+                        <label class="auto-run" title="On: the engine re-runs by itself ~0.3s after the last edit, so the results and the stage strip always reflect the current template. Off: edits wait until you press Run — useful on slow images or to batch several changes.">
+                            <input type="checkbox" id="auto_run" checked>
+                            <span>Re-run on every change</span>
+                        </label>
+                        <span id="auto_run_hint" class="auto-run-hint"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ------------------------------------------------------------------ -->
+        <!-- Recipes                                                            -->
+        <!-- ------------------------------------------------------------------ -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Quick starting points</h2>
+                <span class="card-note">One-click sets of changes, applied to the template below</span>
+            </div>
+            <div class="card-body">
+                <div id="recipe_list" class="recipe-list"></div>
+                <p id="recipe_help" class="recipe-help"></p>
+                <hr class="card-rule">
+                <div class="compare-row">
+                    <button id="compare_button" class="btn btn-secondary" type="button" disabled>Compare all built-in
+                        templates</button>
+                    <span class="hint">Runs every template the SDK ships on the current image and reports how
+                        many barcodes each one found, so a recommendation is a measurement on your picture
+                        rather than a guess. Your own template is put back afterwards.</span>
+                </div>
+                <p id="compare_status" class="hint"></p>
+            </div>
+        </div>
+
+        <!-- ------------------------------------------------------------------ -->
+        <!-- Workbench                                                          -->
+        <!-- ------------------------------------------------------------------ -->
+        <!-- The two-column row is only the pipeline and the parameters: the preview and the
+             controls belong next to each other, and both are read while tuning. Everything the
+             run produces — intermediate results, final results, the log — is a full-width band
+             below, the same width as the comparison and export cards, because those panels are
+             wide on purpose: the stage strip and the candidate galleries want the room. -->
+        <div class="workbench">
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Pipeline</h2>
+                    <label class="roi-toggle">
+                        <input type="checkbox" id="roi_toggle"> show the region of interest
+                    </label>
+                    <span id="roi_hint" class="hint"></span>
+                    <span class="spacer"></span>
+                    <span id="preview_status" class="hint" role="status" aria-live="polite"></span>
+                </div>
+                <div class="panel-body">
+                    <div id="preview_wrap" class="imageview">
+                        <canvas id="preview_base"></canvas>
+                        <canvas id="preview_overlay" class="overlay"></canvas>
+                        <video id="camera_video" class="camera-video" playsinline muted></video>
+                    </div>
+                    <p id="preview_caption" class="preview-caption"></p>
+                </div>
+            </div>
+
+            <!-- `panel-params` lets its body fill whatever height this row ends up with, so the
+                 parameter list is as tall as the pipeline panel beside it instead of stopping
+                 at a viewport-relative cap and leaving a gap. -->
+            <div class="panel panel-params">
+                <div class="panel-header">
+                    <h2>Parameters</h2>
+                    <span class="card-note">Every parameter of the loaded template</span>
+                </div>
+                <div class="panel-body panel-body-fill">
+                    <div class="param-toolbar">
+                        <input id="param_search" class="form-input" type="search"
+                            placeholder="Filter by name or value…" aria-label="Filter parameters">
+                        <label><input type="checkbox" id="only_changed"> Only changed</label>
+                    </div>
+                    <p id="param_count" class="param-count"></p>
+                    <p id="param_filter_status" class="hint" role="status" aria-live="polite"></p>
+                    <div id="param_groups" class="param-groups"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="panel panel-wide">
+            <div class="panel-header">
+                <h2>Intermediate results</h2>
+                <span class="card-note">Straight from the SDK's intermediate results, in pipeline
+                    order — the code under a title is that stage's id in the template. The number on a
+                    thumbnail is the pipeline step: 1–16 are the image stages in order, 17 localizes, 18
+                    is the decode section's image work on a candidate, and 19 is the read that turns
+                    those into barcodes. A step the template switches off has no card at all. A stage
+                    that produced nothing is the finding.</span>
+            </div>
+            <div class="panel-body">
+                <div id="diagnosis_summary" class="diagnosis-summary" role="status" aria-live="polite"></div>
+                <div id="stage_strip" class="stage-strip"></div>
+                <div id="stage_missing" class="stage-missing-wrap"></div>
+                <p id="stage_empty" class="hint"></p>
+                <div id="stage_detail" class="stage-detail"></div>
+            </div>
+        </div>
+
+        <div class="panel panel-wide">
+            <div class="panel-header">
+                <h2>Final results</h2>
+                <span class="spacer"></span>
+                <span id="result_summary" class="hint"></span>
+            </div>
+            <div class="panel-body">
+                <div id="result_body"></div>
+            </div>
+        </div>
+
+        <div class="panel panel-wide">
+            <div class="panel-header">
+                <h2>Run log</h2>
+                <span class="card-note">Errors from the SDK appear here — a rejected parameter
+                    combination is a result too</span>
+            </div>
+            <div class="panel-body">
+                <div id="run_log" class="run-log" role="log" aria-live="polite"></div>
+            </div>
+        </div>
+
+        <!-- ------------------------------------------------------------------ -->
+        <!-- Template comparison                                                -->
+        <!-- ------------------------------------------------------------------ -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Template comparison</h2>
+                <span class="card-note">Measured on the current image — press “Compare all built-in
+                    templates” above</span>
+            </div>
+            <div class="card-body">
+                <div id="compare_body">
+                    <p class="hint">Nothing has been compared yet. The table reports barcodes found, the formats
+                        returned, and the time each template took on the image currently loaded.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ------------------------------------------------------------------ -->
+        <!-- Template JSON                                                      -->
+        <!-- ------------------------------------------------------------------ -->
+        <div class="card" id="json_card">
+            <div class="card-header">
+                <h2>The template being applied</h2>
+                <span class="card-note">This is the file to take away: <strong>Download the template</strong> gives the
+                    exact document handed to <code>initSettings()</code>, <strong>Download just my changes</strong> gives
+                    only the parameters you moved, with their values before and after. The editor below is live — change
+                    it and press <strong>Apply this JSON</strong>.</span>
+            </div>
+            <div class="card-body">
+                <div class="json-actions">
+                    <button id="json_download" class="btn btn-primary btn-sm" type="button">Download the
+                        template</button>
+                    <button id="changes_download" class="btn btn-secondary btn-sm" type="button">Download just my
+                        changes</button>
+                    <button id="json_copy" class="btn btn-secondary btn-sm" type="button">Copy the template</button>
+                    <button id="changes_copy" class="btn btn-secondary btn-sm" type="button">Copy just my
+                        changes</button>
+                </div>
+                <div class="json-actions json-actions-editor">
+                    <span class="json-actions-label">Working in the editor:</span>
+                    <button id="json_apply" class="btn btn-secondary btn-sm" type="button">Apply this JSON</button>
+                    <button id="json_revert" class="btn btn-secondary btn-sm" type="button">Revert the editor</button>
+                </div>
+                <textarea id="json_editor" class="json-editor" spellcheck="false"
+                    aria-label="Template JSON"></textarea>
+                <p id="json_status" class="hint"></p>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="demo-footer">
+        <div class="demo-footer-inner">
+            <p class="disclaimer">
+                The template this page edits is read back from the SDK with
+                <code>CaptureVisionRouter.outputSettings()</code>, changed, and written back with
+                <code>initSettings()</code>. Running the page is free because it activates a Codepool license bound to
+                dynamsoft.com; the source on GitHub is a separate thing and self-hosting it needs your own Dynamsoft
+                license. Nothing you scan or upload leaves your device.
+            </p>
+            <div class="footer-links">
+                <span>
+                    Built with
+                    <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
+                        Barcode Reader</a> — the same engine and the same templates as a shipped scanner, exposed
+                    parameter by parameter.
+                </span>
+                <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/" data-demo-cta="scanner">Open the barcode scanner</a>
+                <a href="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/" data-demo-cta="generator">Build a stress-test dataset</a>
+                <a class="btn btn-primary footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
+            </div>
+        </div>
+    </footer>
+
+    <div id="loading-overlay" class="loading-indicator">
+        <div class="spinner"></div>
+        <p id="loading-text">Loading…</p>
+    </div>
+
+    <!-- Parameter metadata: enums, labels, help text and the pipeline table -->
+    <script src="parameters.js?v=20260921W"></script>
+    <!-- Template reading, the editors, the run loop and the stage strip -->
+    <script src="app.js?v=20261008a"></script>
+</body>
+
+</html>
