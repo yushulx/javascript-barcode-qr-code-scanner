@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Online VIN Barcode Scanner | Dynamsoft</title>
+    <meta name="description"
+        content="Online VIN barcode scanner. Decode VIN barcodes — Code 39, Code 128, QR Code or Data Matrix — from a camera or an image, strip the 18-character import prefix, verify the North American check digit and parse the WMI, model year and plant code. Barcodes only: the SDK does not OCR the stamped VIN characters.">
+
+    <!--
+      ASSET VERSION (?v=): the site serves these files with
+      Cache-Control: max-age=86400, so browsers trust their cached copy for a
+      full day. Bump the ?v= value on EVERY change to styles.css, app.js,
+      vin-model.js or sample-images/, otherwise returning visitors keep the
+      stale copy for up to 24h.
+    -->
+    <link rel="icon" href="favicon.svg?v=20261010a" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css?v=20261010a">
+    <!-- Dynamsoft Barcode Reader bundle (decoding; camera module used by live scan) -->
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+    <!-- Shared VIN model: import-prefix strip, check digit, structure parse -->
+    <script src="vin-model.js?v=20261010a"></script>
+</head>
+
+<body>
+    <div class="demo-shell">
+        <!-- Header -->
+        <header class="demo-header">
+            <div class="demo-brand">
+                <img class="brand-logo" src="dynamsoft-logo-white.svg?v=20261010a" width="202" height="50"
+                    alt="Dynamsoft">
+                <span class="brand-divider" aria-hidden="true"></span>
+                <h1>VIN Barcode Scanner</h1>
+            </div>
+            <nav class="demo-nav" aria-label="Dynamsoft">
+                <a href="https://www.dynamsoft.com/barcode-reader/overview/">Barcode Reader</a>
+                <a href="https://www.dynamsoft.com/docs/">Documentation</a>
+            </nav>
+            <p class="subtitle">Scan a VIN barcode from a label, windshield sticker or paperwork — and see the
+                check digit verified, the WMI, model year and plant code decoded</p>
+        </header>
+
+        <main id="vin-app">
+            <div id="tip-message">Loading the barcode reader…</div>
+
+            <!-- Always-on notice: barcodes only, no OCR -->
+            <aside class="notice-banner" role="note">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                <p>
+                    <strong>This scanner reads barcodes, not OCR.</strong> Dynamsoft decodes the VIN from a
+                    barcode symbol — Code 39, Code 128, QR Code or Data Matrix. The stamped, engraved or plain
+                    printed VIN characters themselves are <em>not</em> recognized: if a VIN label carries no
+                    barcode, a barcode scanner has nothing to read.
+                </p>
+            </aside>
+
+            <!-- Camera / upload mode switch -->
+            <div class="controls-row">
+                <div id="scan-mode-switch" class="mode-switch" data-active="upload">
+                    <div class="mode-options">
+                        <label class="mode-option" data-mode="camera">
+                            <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                                <path
+                                    d="M2 6a2 2 0 0 1 2-2h3l1-1h6l1 1h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" />
+                            </svg>
+                            <span>Camera</span>
+                        </label>
+                        <label class="mode-option active" data-mode="upload">
+                            <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <path d="M14 2v6h6" />
+                                <path d="M10 13l2 2 4-4" />
+                            </svg>
+                            <span>Upload</span>
+                        </label>
+                    </div>
+                    <div class="mode-slider"></div>
+                </div>
+            </div>
+
+            <!-- Live camera: the SDK mounts its own viewfinder UI here -->
+            <div id="camera-section" hidden>
+                <div id="camera-view"></div>
+            </div>
+
+            <div id="scan-workbench" class="workbench">
+                <!-- Image column -->
+                <section class="panel" aria-label="Scan an image">
+                    <div id="upload-zone" class="upload-zone" tabindex="0" role="button"
+                        aria-label="Choose a VIN barcode image to scan">
+                        <svg class="upload-zone-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        <p class="upload-zone-title">Upload a VIN barcode image</p>
+                        <p class="upload-zone-hint">
+                            Click to browse, drop an image here, or paste one from the clipboard with
+                            <kbd>Ctrl</kbd>&thinsp;+&thinsp;<kbd>V</kbd>
+                        </p>
+                    </div>
+                    <input type="file" id="upload-input" accept="image/*" hidden>
+
+                    <div class="sample-row" id="sample-row">
+                        <span class="sample-row-label">No label handy? Try a sample:</span>
+                    </div>
+                </section>
+
+                <!-- Manual entry column -->
+                <section class="panel" aria-label="Enter a VIN">
+                    <form id="manual-form" class="manual-form">
+                        <label class="manual-label" for="manual-input">Or type the VIN</label>
+                        <input id="manual-input" class="manual-input" type="text" maxlength="17"
+                            autocomplete="off" spellcheck="false" placeholder="e.g. 1HGCM82633A004352" />
+                        <p class="manual-hint">17 characters — the same validation pipeline a scan goes through.
+                            An 18-character code with a leading I (import marker) is accepted too.</p>
+                        <button id="manual-button" class="manual-button" type="submit">Parse</button>
+                    </form>
+                </section>
+            </div>
+
+            <!-- Results -->
+            <section id="results" class="results" hidden>
+                <div class="results-header">
+                    <span id="results-title">Results</span>
+                    <button id="copy-all-button" class="text-button" type="button">Copy JSON</button>
+                </div>
+                <div id="results-content" class="results-body"></div>
+            </section>
+
+            <!-- Cross-links -->
+            <aside class="crosslink-banner" role="note">
+                <p>
+                    <strong>No VIN barcode at hand?</strong> The
+                    <a href="https://www.dynamsoft.com/codepool/demos/vin-barcode-generator/">online VIN barcode
+                        generator</a> renders a valid VIN — check digit included — as Code 39, Code 128, QR
+                    Code or Data Matrix, ready to download and scan.
+                </p>
+            </aside>
+        </main>
+
+        <footer class="demo-footer">
+            <p>
+                Built with
+                <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft
+                    Barcode Reader</a>. Running this example needs your own Dynamsoft license — on any other
+                host the page falls back to the SDK trial key.
+                <a class="demo-footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">Get
+                    a 30-day free trial license</a>
+            </p>
+            <p class="demo-footer-note">
+                Decoding runs entirely in your browser. Remember it reads barcodes only, not OCR.
+            </p>
+        </footer>
+    </div>
+
+    <!-- Loading / error overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-text">Initializing Dynamsoft Barcode Reader…</p>
+    </div>
+
+    <!-- UI, scan pipeline and VIN parse -->
+    <script src="app.js?v=20261010a"></script>
+</body>
+
+</html>

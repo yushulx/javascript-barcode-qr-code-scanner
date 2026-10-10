@@ -1,0 +1,952 @@
+/* ===========================================================================
+   Online VIN Barcode Generator + Scanner — styles
+
+   Brand: Dynamsoft style guide (https://dynamsoft.github.io/styleguide/style-guide.html).
+   Adapted from the Codepool lookup demos: dark brand-gray surface, orange
+   reserved for CTAs and accents, white result cards. The generator shares the
+   scanner's card language so the two tabs read as one tool.
+   =========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@300;400;500&display=swap');
+
+:root {
+    --dy-orange: #fe8e14;
+    --dy-orange-hover: #e07d0b;
+    --dy-gray-900: #323234;
+    --dy-gray-800: #3a3a3d;
+    --dy-gray-700: #606060;
+    --dy-gray-300: #cccccc;
+    --dy-gray-200: #dddddd;
+    --dy-gray-50: #f5f5f5;
+    --white: #ffffff;
+
+    --font-heading: 'Oswald', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+
+    /* Hairlines and translucent fills that read on the dark surface. */
+    --line-dark: rgba(255, 255, 255, 0.14);
+    --fill-dark: rgba(255, 255, 255, 0.07);
+
+    /* Inline text links inside the white cards. Brand orange stays reserved
+       for CTAs, so links use the style guide's Blumine. */
+    --dy-link: #306877;
+    --dy-link-hover: #27555f;
+
+    /* A red that reads on white for the failed state. */
+    --dy-error: #b3261e;
+    --dy-error-tint: #fdf2f1;
+    --dy-ok: #1e7a4b;
+    --dy-ok-tint: #eef8f2;
+    --dy-warn: #9a5b00;
+    --dy-warn-tint: #fff8ee;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-body);
+    /* Brand gray, very slightly lifted at the top so the flat surface still has
+       a sense of depth. */
+    background: linear-gradient(180deg, var(--dy-gray-800) 0%, var(--dy-gray-900) 55%);
+    color: var(--white);
+    min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.demo-shell {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: calc(14px + env(safe-area-inset-top)) 16px calc(14px + env(safe-area-inset-bottom));
+    gap: 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   Header — Dynamsoft logo lockup, top-left, matching every Codepool demo
+   --------------------------------------------------------------------------- */
+
+.demo-header {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding-left: 2px;
+}
+
+.demo-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 100%;
+}
+
+.brand-logo {
+    display: block;
+    height: 22px;
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--line-dark);
+    flex: 0 0 auto;
+}
+
+/* "Free" tag in the page heading. The orange is the brand accent — never used
+   for body copy — and the label is decorative repetition of adjacent text, so
+   it is not announced twice. */
+.brand-tag {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 1px 7px 2px;
+    border: 1px solid rgba(254, 142, 20, 0.55);
+    border-radius: 4px;
+    background: rgba(254, 142, 20, 0.15);
+    color: var(--dy-orange, #fe8e14);
+    font-family: var(--font-heading);
+    font-size: 0.62em;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: 0.1em;
+}
+
+.demo-nav {
+    display: flex;
+    gap: 18px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+}
+
+.demo-nav a {
+    color: rgba(255, 255, 255, 0.72);
+    text-decoration: none;
+}
+
+.demo-nav a:hover {
+    color: var(--dy-orange);
+}
+
+.demo-header h1 {
+    font-family: var(--font-heading);
+    font-size: 1.26rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--white);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.demo-header .subtitle {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.72);
+    text-align: left;
+}
+
+/* ---------------------------------------------------------------------------
+   Tab switch (Generate / Scan) and scan input switch (Camera / Upload)
+   --------------------------------------------------------------------------- */
+
+#vin-app {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.controls-row {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: center;
+    width: 100%;
+}
+
+.mode-switch {
+    position: relative;
+    display: flex;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50px;
+    padding: 4px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mode-options {
+    display: flex;
+    position: relative;
+    z-index: 2;
+}
+
+.mode-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.6rem;
+    border-radius: 46px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+    font-size: 0.9rem;
+    -webkit-user-select: none;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.mode-option.active {
+    color: #fff;
+    font-weight: 600;
+}
+
+.mode-icon {
+    fill: currentColor;
+    stroke: currentColor;
+    stroke-width: 2;
+    flex: 0 0 auto;
+}
+
+.mode-slider {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background: var(--dy-orange);
+    border-radius: 42px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 16px rgba(254, 142, 20, 0.3);
+}
+
+/* Top-level tabs use generate/scan; the compact scan switch uses the
+   camera/upload pair — both second options slide right. */
+.mode-switch[data-active="scan"] .mode-slider,
+.mode-switch[data-active="upload"] .mode-slider {
+    transform: translateX(100%);
+}
+
+/* The scan input switch is a second-level control: slightly smaller. */
+.mode-switch.compact .mode-option {
+    padding: 0.45rem 1.2rem;
+    font-size: 0.84rem;
+}
+
+/* `display:flex` would otherwise beat the [hidden] attribute. */
+#generate-section[hidden],
+#scan-section[hidden],
+#camera-section[hidden],
+#scan-workbench[hidden] {
+    display: none;
+}
+
+#camera-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#camera-view {
+    width: 100%;
+    height: 420px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------------------------------------------------------------------------
+   Notice banner — barcodes only, no OCR. Always visible, both tabs.
+   --------------------------------------------------------------------------- */
+
+.notice-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 0.8rem 1rem;
+    border: 1px solid rgba(254, 142, 20, 0.45);
+    border-left: 4px solid var(--dy-orange);
+    border-radius: 8px;
+    background: rgba(254, 142, 20, 0.1);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.86rem;
+    line-height: 1.55;
+}
+
+.notice-banner svg {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    margin-top: 1px;
+    stroke: var(--dy-orange);
+}
+
+.notice-banner strong {
+    color: #fff;
+}
+
+/* ---------------------------------------------------------------------------
+   Workbench: generator form + preview, upload zone + manual entry
+   --------------------------------------------------------------------------- */
+
+#tip-message {
+    flex: 0 0 auto;
+    align-self: center;
+    max-width: 100%;
+    font-size: 0.9rem;
+    color: #fff;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 0.5rem 1.1rem;
+    border-radius: 25px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+#tip-message.is-error {
+    background: rgba(179, 38, 30, 0.92);
+}
+
+.workbench {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+/* Upload drop zone: click, drag & drop, or paste. */
+.upload-zone {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 190px;
+    padding: 24px;
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.18);
+    color: #fff;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.upload-zone:hover,
+.upload-zone:focus-visible,
+.upload-zone.dragover {
+    border-color: var(--dy-orange);
+    background: rgba(254, 142, 20, 0.18);
+    outline: none;
+}
+
+.upload-zone-icon {
+    width: 42px;
+    height: 42px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.9;
+}
+
+.upload-zone-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.upload-zone-hint {
+    margin: 0;
+    max-width: 34ch;
+    font-size: 0.83rem;
+    line-height: 1.5;
+    opacity: 0.9;
+}
+
+.upload-zone kbd {
+    padding: 1px 5px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.85em;
+}
+
+/* Bundled sample symbols, so the page is usable with no file at hand. */
+.sample-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.sample-row-label {
+    width: 100%;
+    font-size: 0.78rem;
+    opacity: 0.8;
+}
+
+.sample-chip {
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 40px;
+    padding: 0.42rem 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.sample-chip:hover,
+.sample-chip:focus-visible {
+    background: rgba(254, 142, 20, 0.25);
+    border-color: var(--dy-orange);
+    outline: none;
+}
+
+/* The active symbology chip in the generator. */
+.sample-chip.active {
+    background: var(--dy-orange);
+    border-color: var(--dy-orange);
+    color: #fff;
+}
+
+/* Manual entry / VIN form */
+.manual-form {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px;
+    border: 1px solid var(--line-dark);
+    border-radius: 12px;
+    background: var(--fill-dark);
+}
+
+.manual-label {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+.manual-input {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    letter-spacing: 0.04em;
+    color: var(--white);
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    width: 100%;
+}
+
+.manual-input:focus-visible {
+    outline: 2px solid var(--dy-orange);
+    outline-offset: 1px;
+    border-color: transparent;
+}
+
+.manual-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.manual-hint {
+    font-size: 0.76rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.button-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.button-row.center {
+    justify-content: center;
+}
+
+.manual-button {
+    align-self: flex-start;
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--white);
+    background: var(--dy-orange);
+    border: none;
+    border-radius: 40px;
+    padding: 0.55rem 1.6rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.button-row .manual-button {
+    align-self: auto;
+}
+
+.manual-button:hover,
+.manual-button:focus-visible {
+    background: var(--dy-orange-hover);
+    outline: none;
+}
+
+.ghost-button {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+    color: var(--white);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 40px;
+    padding: 0.5rem 1.3rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.ghost-button:hover,
+.ghost-button:focus-visible {
+    border-color: var(--dy-orange);
+    background: rgba(254, 142, 20, 0.15);
+    outline: none;
+}
+
+/* The fix button is a corrective action: it stays quiet until needed, then
+   reads as the remedy the card below points at. */
+.ghost-button.is-fix {
+    border-color: rgba(254, 142, 20, 0.65);
+    color: var(--dy-orange);
+}
+
+/* Generator: symbology picker under the form */
+.symbology-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 20px;
+    border: 1px solid var(--line-dark);
+    border-radius: 12px;
+    background: var(--fill-dark);
+}
+
+.symbology-label {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+/* Generator: the rendered symbol sits on a white card so the exported PNG
+   matches what the visitor sees. */
+.barcode-stage {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: #fff;
+    border-radius: 12px;
+    min-height: 190px;
+    overflow: auto;
+}
+
+.barcode-stage canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Results — inline section under the workbench
+   --------------------------------------------------------------------------- */
+
+.results {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    color: var(--dy-gray-900);
+}
+
+.results[hidden] {
+    display: none;
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    padding: 0.75rem 1.25rem;
+    background: var(--dy-gray-900);
+    color: var(--white);
+    font-family: var(--font-heading);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    font-size: 15px;
+}
+
+.text-button {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--white);
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 4px;
+    padding: 0.32rem 0.7rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.text-button:hover {
+    background: rgba(255, 255, 255, 0.26);
+}
+
+.results-body {
+    flex: 1 1 auto;
+    padding: 1.25rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Result card
+   --------------------------------------------------------------------------- */
+
+.barcode-card {
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 8px;
+    padding: 1rem 1.1rem 1.1rem;
+}
+
+.barcode-card + .barcode-card {
+    margin-top: 1.25rem;
+}
+
+.barcode-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 0.7rem;
+    margin-bottom: 0.9rem;
+    border-bottom: 1px solid var(--dy-gray-200);
+}
+
+.format-chip {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--dy-gray-900);
+}
+
+.card-note {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--dy-gray-700);
+}
+
+/* Facts list and diagnostics */
+.facts {
+    display: grid;
+    grid-template-columns: minmax(180px, max-content) 1fr;
+    gap: 0.3rem 1rem;
+    font-size: 0.84rem;
+    margin-bottom: 0.2rem;
+}
+
+.facts dt {
+    font-weight: 600;
+    color: var(--dy-gray-700);
+}
+
+.facts dd {
+    color: var(--dy-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.facts dd.mono {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+}
+
+.tag-ok,
+.tag-bad,
+.tag-warn {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+
+.tag-ok {
+    color: var(--dy-ok);
+    background: var(--dy-ok-tint);
+    border: 1px solid #bfe3d0;
+}
+
+.tag-bad {
+    color: var(--dy-error);
+    background: var(--dy-error-tint);
+    border: 1px solid #f0c9c6;
+}
+
+.tag-warn {
+    color: var(--dy-warn);
+    background: var(--dy-warn-tint);
+    border: 1px solid #f6d3a3;
+}
+
+.note-list {
+    list-style: none;
+    margin: 0.8rem 0 0;
+    padding: 0.6rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.83rem;
+    line-height: 1.55;
+}
+
+.note-list li {
+    padding-left: 1rem;
+    position: relative;
+}
+
+.note-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+}
+
+.note-list.is-warn {
+    color: var(--dy-warn);
+    background: var(--dy-warn-tint);
+    border: 1px solid #f6d3a3;
+}
+
+.note-list.is-error {
+    color: var(--dy-error);
+    background: var(--dy-error-tint);
+    border: 1px solid #f0c9c6;
+}
+
+/* The scanned image, so the result can be checked against what was read. */
+.source-preview {
+    margin: 0 0 1.25rem;
+    text-align: center;
+}
+
+.source-preview img {
+    max-width: 100%;
+    max-height: 180px;
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 6px;
+    background: #fff;
+}
+
+.source-preview figcaption {
+    margin-top: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+}
+
+/* ---------------------------------------------------------------------------
+   Footer
+   --------------------------------------------------------------------------- */
+
+.demo-footer {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    background-color: var(--fill-dark);
+    border: 1px solid var(--line-dark);
+    border-radius: 6px;
+    font-size: 0.8em;
+    text-align: center;
+}
+
+.demo-footer p {
+    margin: 0;
+}
+
+.demo-footer p + p {
+    margin-top: 4px;
+}
+
+.demo-footer a {
+    color: var(--dy-gray-200);
+    text-decoration: none;
+    margin: 0 3px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.demo-footer a:hover {
+    color: var(--dy-orange);
+    border-bottom-color: var(--dy-orange);
+}
+
+/* ---------------------------------------------------------------------------
+   Loading / error overlay
+   --------------------------------------------------------------------------- */
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.loading-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.loading-overlay p {
+    max-width: 520px;
+    text-align: center;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--white);
+    white-space: pre-line;
+}
+
+.spinner {
+    width: 46px;
+    height: 46px;
+    border: 5px solid rgba(255, 255, 255, 0.25);
+    border-top-color: var(--dy-orange);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
+
+@media only screen and (max-width: 768px) {
+    .demo-header h1 {
+        font-size: 1.2rem;
+    }
+
+    .brand-tag {
+        display: none;
+    }
+
+    .demo-header .subtitle {
+        font-size: 0.78rem;
+    }
+
+    /* The two input paths stack one per row. */
+    .workbench {
+        grid-template-columns: 1fr;
+    }
+
+    #camera-view {
+        height: 300px;
+    }
+
+    .facts {
+        grid-template-columns: 1fr;
+        gap: 0.15rem;
+    }
+
+    .facts dt {
+        margin-top: 0.5rem;
+    }
+}
+
+@media only screen and (max-width: 480px) {
+    .demo-shell {
+        padding: calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom));
+    }
+
+    .demo-header .subtitle {
+        display: none;
+    }
+
+    .demo-header h1 {
+        font-size: 1.05rem;
+    }
+
+    .upload-zone {
+        min-height: 150px;
+        padding: 18px;
+    }
+
+    .demo-footer {
+        font-size: 0.72em;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Scanner addition — crosslink banner to the generator
+   --------------------------------------------------------------------------- */
+
+.crosslink-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--line-dark);
+    border-left: 4px solid var(--dy-link);
+    border-radius: 8px;
+    background: var(--fill-dark);
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 0.86rem;
+    line-height: 1.55;
+}
+
+.crosslink-banner p {
+    margin: 0;
+}
+
+.crosslink-banner strong {
+    color: #fff;
+}
+
+.crosslink-banner a {
+    color: #7db8c9;
+}
