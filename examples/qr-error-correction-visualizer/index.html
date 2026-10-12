@@ -247,6 +247,21 @@
             </div>
         </div>
 
+        <section class="card anatomy-card">
+            <div class="card-header">
+                <h2>QR anatomy: what every part is called</h2>
+                <span class="card-note">Rendered from the symbol above — switch level or version and it redraws.
+                    Hover a term to light it up.</span>
+            </div>
+            <div class="card-body anatomy-body">
+                <div class="anatomy-stage">
+                    <canvas id="anatomy-canvas" width="440" height="440"
+                        aria-label="Anatomy view: every region of the QR symbol in its own color"></canvas>
+                </div>
+                <dl id="anatomy-legend" class="anatomy-legend"></dl>
+            </div>
+        </section>
+
         <details class="card methodology">
             <summary>How to read these numbers</summary>
             <p>The symbol is encoded by a QR Code (ISO/IEC 18004) encoder that runs in this page: byte mode, any
