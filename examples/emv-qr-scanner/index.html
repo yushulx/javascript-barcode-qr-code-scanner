@@ -3,308 +3,137 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Free Online EMV QR Code Scanner | Dynamsoft Codepool Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Free Online EMV QR Code Scanner</title>
     <meta name="description"
-        content="Free online EMV QR code scanner. Decode an EMVCo merchant-presented payment QR from an image, screenshot or pasted payload string — every TLV field parsed and named, the CRC-16 checksum verified, the currency and merchant category decoded. Powered by Dynamsoft Barcode Reader.">
-    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/emv-qr-scanner/">
-    <meta name="robots" content="index, follow">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Free Online EMV QR Code Scanner | Dynamsoft Codepool Demo">
-    <meta property="og:description"
-        content="Free online EMV QR code scanner — decode an EMVCo merchant-presented payment QR field by field, verify its CRC-16 checksum, and see exactly what a wallet reads. Powered by Dynamsoft Barcode Reader.">
-    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/emv-qr-scanner/">
-    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/emv-qr-scanner/thumbnail.png">
-    <meta name="twitter:card" content="summary_large_image">
+        content="Free online EMV QR code scanner. Scan an EMVCo merchant-presented payment QR with your camera, or from an image, screenshot or pasted payload string — the CRC-16 checksum is verified before anything else, then every TLV field is parsed and named: currency, merchant category code, static vs dynamic, and the nested merchant account template. Powered by Dynamsoft Barcode Reader.">
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
-    <!-- Dynamsoft Barcode Reader — decodes the QR; everything after that is local -->
+    <!-- Dynamsoft Barcode Reader bundle: DBR (decoding) + DCE (camera viewfinder) -->
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
     <!-- Shared EMV TLV + CRC model, also loaded by the companion generator -->
     <script src="emv-model.js"></script>
-
 </head>
 
 <body>
-    <header class="site-header">
-        <div class="site-header-inner">
-            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
-                aria-label="Dynamsoft — back to dynamsoft.com">
-                <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
-            </a>
-            <span class="brand-divider" aria-hidden="true"></span>
-            <span class="brand-product"><span class="brand-tag">Free</span>EMV QR Scanner</span>
-            <nav class="header-nav" aria-label="Dynamsoft">
-                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
-                    data-demo-cta="barcode-reader">Barcode Reader</a>
-                <a class="nav-link" href="https://www.dynamsoft.com/docs/" data-demo-cta="docs">Documentation</a>
-                <a class="btn btn-primary"
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
-                    data-demo-cta="trial">30-Day Free Trial</a>
-            </nav>
-        </div>
-    </header>
-
-    <div class="page-intro">
-        <h1>Free EMV QR code scanner</h1>
-        <p>
-            Decode an EMVCo merchant-presented payment QR and see exactly what a wallet reads: every TLV
-            field parsed and named, the CRC-16 checksum verified before anything else, and the currency and
-            merchant category resolved to their standard names.
-        </p>
-    </div>
-
-    <div class="notice-banner" role="note">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-            stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="16" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12.01" y2="8" />
-        </svg>
-        <div>
-            <strong>Decoding happens in your browser.</strong> Images are read locally by Dynamsoft Barcode
-            Reader — nothing is uploaded. To make your own test codes, use the
-            <a href="../emv-qr-generator/" data-demo-cta="emv-generator">online EMV QR generator</a>; the
-            tampered sample below shows what a modified amount looks like to the checksum.
-        </div>
-    </div>
-
-    <div class="container">
-        <div class="card">
-            <div class="card-header">
-                <h2>Scan</h2>
+    <div class="demo-shell">
+        <!-- Header -->
+        <header class="demo-header">
+            <div class="demo-brand">
+                <img class="brand-logo" src="dynamsoft-logo-white.svg" width="202" height="50" alt="Dynamsoft">
+                <span class="brand-divider" aria-hidden="true"></span>
+                <h1><span class="brand-tag">Free</span>EMV QR Scanner</h1>
             </div>
-            <div class="card-body">
-                <div class="drop-zone" id="drop-zone" tabindex="0" role="button"
-                    aria-label="Drop, paste or choose a QR image">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21 15 16 10 5 21" />
-                    </svg>
-                    <p><strong>Drop a QR image here</strong> — or click to choose a file, or paste one from the
-                        clipboard.</p>
-                    <p class="hint">A payment QR screenshot, a photo of a counter sticker, or a PNG from the
-                        generator all work.</p>
-                    <label class="btn btn-secondary" for="file-input">Choose an image</label>
-                    <input type="file" id="file-input" accept="image/*" hidden>
-                </div>
+            <p class="subtitle">A free online EMV QR code scanner powered by Dynamsoft Barcode Reader — verify the
+                checksum and read a payment QR the way a wallet does</p>
+        </header>
 
-                <div class="sample-row" id="sample-row">
-                    <span class="sample-row-label">Samples:</span>
-                </div>
+        <main id="scanner-app">
+            <div id="tip-message">Point the camera at a payment QR code.</div>
 
-                <div class="scan-stage" id="scan-stage" hidden>
-                    <canvas id="scan-canvas"></canvas>
+            <div class="controls-row">
+                <!-- Camera / upload -->
+                <div id="mode-switch-container" class="mode-switch" data-active="camera">
+                    <div class="mode-options">
+                        <label class="mode-option active" data-mode="camera">
+                            <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                                <path
+                                    d="M2 6a2 2 0 0 1 2-2h3l1-1h6l1 1h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" />
+                            </svg>
+                            <span>Camera</span>
+                        </label>
+                        <label class="mode-option" data-mode="upload">
+                            <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <path d="M14 2v6h6" />
+                                <path d="M10 13l2 2 4-4" />
+                            </svg>
+                            <span>Upload</span>
+                        </label>
+                    </div>
+                    <div class="mode-slider"></div>
                 </div>
             </div>
-        </div>
 
-        <div class="card">
-            <div class="card-header">
-                <h2>Result</h2>
-                <span class="card-badge" id="result-badge"></span>
+            <!-- The SDK mounts its own camera UI into this element -->
+            <div id="main-container">
+                <div id="camera-view"></div>
             </div>
-            <div class="card-body">
-                <div class="verify-strip" id="verdict" hidden>
-                    <span class="verify-badge" id="verdict-badge"></span>
-                    <span class="verify-detail" id="verdict-detail"></span>
-                </div>
 
-                <table class="tag-table" id="tag-table" hidden>
-                    <thead>
-                        <tr>
-                            <th scope="col">Tag</th>
-                            <th scope="col">Field</th>
-                            <th scope="col">Value</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tag-table-body"></tbody>
-                </table>
-
-                <p class="hint" id="result-note"></p>
-            </div>
-        </div>
-
-        <div class="card" id="wallet-card" hidden>
-            <div class="card-header">
-                <h2>What a wallet does with this</h2>
-                <span class="card-badge">Simulated — no money moves</span>
-            </div>
-            <div class="card-body">
-                <p class="hint">
-                    A field table explains the payload; this is what an app builds from it. This is the
-                    screen a payer's wallet would show, driven by the very fields parsed above. Nothing
-                    contacts a payment provider — the confirmation is a local mock.
-                </p>
-                <div class="wallet-mock">
-                    <div class="wallet-screen" id="wallet-screen"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h2>From pixels to a payment</h2>
-            </div>
-            <div class="card-body">
-                <p class="hint">
-                    Where this page sits in a real payment flow. Steps 1 to 5 run on this page; step 6 is
-                    what the simulated wallet above stands in for.
-                </p>
-                <ol class="pipeline">
-                    <li>
-                        <span class="step-title">QR image</span>
-                        <span class="step-note">A printed sticker, a POS screen, a screenshot — dropped, chosen
-                        or pasted above.</span>
-                    </li>
-                    <li>
-                        <span class="step-title">Decode</span>
-                        <span class="step-note">Dynamsoft Barcode Reader turns the pixels into one text string,
-                        in your browser.</span>
-                    </li>
-                    <li>
-                        <span class="step-title">Raw TLV payload</span>
-                        <span class="step-note">A flat run of tag-length-value triples ending in a CRC trailer —
-                        meaningless until parsed.</span>
-                    </li>
-                    <li>
-                        <span class="step-title">Parse and verify</span>
-                        <span class="step-note">The checksum runs first, then every field is named. The table
-                        above.</span>
-                    </li>
-                    <li>
-                        <span class="step-title">Structured payment data</span>
-                        <span class="step-note">Merchant, amount, currency, reference — machine-readable, ready
-                        to act on.</span>
-                    </li>
-                    <li>
-                        <span class="step-title">Wallet, POS and settlement</span>
-                        <span class="step-note">The payer confirms; the reference travels back so the merchant
-                        can reconcile the payment. Simulated in the wallet above.</span>
-                    </li>
-                </ol>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h2>Who actually runs on this format</h2>
-            </div>
-            <div class="card-body">
-                <ul class="note-list">
-                    <li>
-                        <strong>Counter stickers and hawker stalls.</strong> A static code printed once and
-                        taped to a counter — the customer types the amount. Pix in Brazil, PromptPay in
-                        Thailand, UPI in India, SGQR in Singapore and DuitNow in Malaysia are all this same
-                        TLV envelope, each with its own merchant account template inside tag 26 to 51.
-                    </li>
-                    <li>
-                        <strong>POS screens and checkout apps.</strong> A dynamic code minted per transaction
-                        carries the amount and a fresh reference, so the payer confirms an exact figure
-                        instead of typing one and the merchant knows which sale settled.
-                    </li>
-                    <li>
-                        <strong>Invoices and billing.</strong> The bill number sub-tag binds a printed QR to
-                        one account or invoice — utility bills, school fees, tax payments.
-                    </li>
-                    <li>
-                        <strong>Acquirers, PSPs and risk teams.</strong> The CRC detects a scanned or
-                        photographed code that was altered in transit — the classic attack is swapping the
-                        merchant's sticker for a fraudster's. The merchant category code feeds interchange
-                        categories and reporting.
-                    </li>
-                    <li>
-                        <strong>Developers.</strong> A decoded, named field list is what you need to test your
-                        own wallet or POS parser, check a CRC implementation, or generate sample payloads for
-                        demos and CI — which is what the paired
-                        <a href="../emv-qr-generator/" data-demo-cta="emv-generator">EMV QR generator</a> is for.
-                    </li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h2>Inspect a payload string</h2>
-            </div>
-            <div class="card-body">
-                <p class="hint">
-                    Already have the decoded text — from this scanner, from a wallet's log, from a unit
-                    test? Parse it directly without an image. The same CRC check runs first.
-                </p>
-                <div class="manual-row">
-                    <input id="manual-input" class="form-control payload-text" type="text" autocomplete="off"
-                        spellcheck="false"
-                        placeholder="00020101021126390018com.dynamsoft.demo…">
-                    <button id="manual-button" class="btn btn-primary" type="button">Parse</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h2>How the parse works</h2>
-            </div>
-            <div class="card-body">
-                <ul class="note-list">
-                    <li>
-                        <strong>The checksum runs first.</strong> CRC-16/CCITT-FALSE over the payload up to
-                        and including the <code>6304</code> header. A payload that fails is reported as
-                        altered or not an EMV QR at all — its fields are never shown as if trustworthy.
-                    </li>
-                    <li>
-                        <strong>Structure before meaning.</strong> A payload qualifies as EMV only if it
-                        starts with tag 00 carrying value 01. Everything else that decodes as a QR — a URL,
-                        a Wi-Fi login, a vCard — is reported for what it is instead of parsed into nonsense.
-                    </li>
-                    <li>
-                        <strong>Nested templates are walked, not dumped.</strong> Merchant account
-                        information (tags 26-51) and the additional data field (62) contain sub-TLVs; the
-                        table indents them under their parent.
-                    </li>
-                    <li>
-                        <strong>Real-world variation exists.</strong> Published scheme examples do not
-                        always use the sub-tag numbers the specification names. The scanner shows what is
-                        literally present rather than silently renumbering it.
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <footer class="demo-footer">
-        <div class="demo-footer-inner">
-            <p class="disclaimer">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
+            <!-- Upload zone: click, drag & drop, or paste. Replaces the SDK's own
+                 image picker so switching modes never opens a file dialog. -->
+            <div id="upload-zone" class="upload-zone" tabindex="0" role="button"
+                aria-label="Choose a payment QR image to scan" hidden>
+                <svg class="upload-zone-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                Decoded in your browser with
-                <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
-                    Barcode Reader</a> — images never leave your device. Pair it with the
-                <a href="../emv-qr-generator/" data-demo-cta="emv-generator">online EMV QR generator</a> to make
-                your own test codes.
+                <p class="upload-zone-title">Upload or paste a payment QR image</p>
+                <p class="upload-zone-hint">
+                    Click to browse, drop an image here, or paste one from the clipboard with
+                    <kbd>Ctrl</kbd>&thinsp;+&thinsp;<kbd>V</kbd>
+                </p>
+                <div class="sample-row" id="sample-row">
+                    <span class="sample-row-label">No code handy? Try a sample:</span>
+                </div>
+                <div class="payload-row">
+                    <label class="payload-row-label" for="manual-input">Or parse a payload string:</label>
+                    <div class="manual-row">
+                        <input id="manual-input" class="payload-text" type="text" autocomplete="off" spellcheck="false"
+                            placeholder="00020101021126390018com.dynamsoft.demo…">
+                        <button id="manual-button" class="payload-parse-button" type="button">Parse</button>
+                    </div>
+                </div>
+            </div>
+            <input type="file" id="upload-input" accept="image/*" hidden>
+        </main>
+
+        <footer class="demo-footer">
+            <p>
+                <a href="https://www.dynamsoft.com/codepool/demos/">All online demos</a> · Powered by
+                <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft Barcode Reader</a>.
+                Pair it with the
+                <a href="../emv-qr-generator/">online EMV QR generator</a> to make your own test codes.
             </p>
-            <div class="footer-links">
-                <span>
-                    Read the
-                    <a href="https://www.emvco.com/" target="_blank" rel="noopener noreferrer">EMVCo QR
-                        specifications</a> for the full field reference.
-                </span>
-                <a class="btn btn-primary footer-cta"
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
-                    data-demo-cta="trial">Get a 30-day free trial license</a>
+            <p class="demo-footer-note">
+                Decoding runs in your browser — images never leave your device. The
+                <a href="https://www.emvco.com/" target="_blank" rel="noopener noreferrer">EMVCo QR
+                    specifications</a> carry the full field reference.
+            </p>
+        </footer>
+    </div>
+
+    <!-- Scan results -->
+    <div id="results" class="results-container">
+        <div class="results-header">
+            <span id="results-title">Scan results</span>
+            <div class="results-header-actions">
+                <button id="copy-payload-button" class="text-button" type="button">Copy payload</button>
+                <button class="close-button" id="close-results-button" aria-label="Close results">
+                    <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                        aria-hidden="true">
+                        <path
+                            d="M512 456.310154L94.247385 38.557538a39.542154 39.542154 0 0 0-55.689847 0 39.266462 39.266462 0 0 0 0 55.689847L456.310154 512 38.557538 929.752615a39.542154 39.542154 0 0 0 0 55.689847 39.266462 39.266462 0 0 0 55.689847 0L512 567.689846l417.752615 417.752616c15.163077 15.163077 40.290462 15.36 55.689847 0a39.266462 39.266462 0 0 0 0-55.689847L567.689846 512 985.442462 94.247385a39.542154 39.542154 0 0 0 0-55.689847 39.266462 39.266462 0 0 0-55.689847 0L512 456.310154z"
+                            fill="#ffffff" />
+                    </svg>
+                </button>
             </div>
         </div>
-    </footer>
+        <div class="results-body" id="results-content"></div>
+    </div>
 
+    <!-- Loading / error overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-text">Initializing Dynamsoft Barcode Reader…</p>
+    </div>
+
+    <!-- UI, camera control, EMV parse and wallet simulation -->
     <script src="app.js"></script>
 </body>
 
