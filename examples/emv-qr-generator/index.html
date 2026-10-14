@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Online EMV QR Code Generator | Dynamsoft Codepool Demo</title>
+    <meta name="description"
+        content="Free online EMV QR code generator. Build an EMVCo merchant-presented payment QR from a form — static or dynamic, any currency, with the TLV payload and its CRC-16 checksum assembled for you — then decode the rendered symbol with Dynamsoft Barcode Reader to prove it scans.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/emv-qr-generator/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Free Online EMV QR Code Generator | Dynamsoft Codepool Demo">
+    <meta property="og:description"
+        content="Free online EMV QR code generator — build an EMVCo merchant-presented payment QR, with the TLV payload and CRC-16 checksum handled for you, then decode the result with Dynamsoft Barcode Reader to confirm it scans.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/emv-qr-generator/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/emv-qr-generator/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Barcode encoder (bwip-js / BWIPP) — the only third-party dependency -->
+    <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js.min.js"></script>
+    <!-- Dynamsoft Barcode Reader. Only the round-trip check needs it: bwip-js
+         draws the symbol, and this reads the drawn image back to prove the
+         payload survives the trip. The page still works if it fails to load —
+         the QR and the payload are already on screen. -->
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+    <!-- Shared EMV TLV + CRC model, also loaded by the companion scanner -->
+    <script src="emv-model.js"></script>
+
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
+                aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product"><span class="brand-tag">Free</span>EMV QR Generator</span>
+            <nav class="header-nav" aria-label="Dynamsoft">
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
+                    data-demo-cta="barcode-reader">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/" data-demo-cta="docs">Documentation</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">30-Day Free Trial</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>Free EMV QR code generator</h1>
+        <p>
+            Build an EMVCo merchant-presented payment QR from a form. The TLV payload and its CRC-16
+            checksum are assembled in the order the specification requires, the symbol is rendered at
+            error-correction level M, and Dynamsoft Barcode Reader reads the result back.
+        </p>
+    </div>
+
+    <div class="notice-banner" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <div>
+            <strong>Test symbols, not real payments.</strong> The merchant identifiers and GUIDs here are
+            illustrative and resolve to nobody, so a wallet will decline these codes — Randomize invents
+            valid-but-fictional data, never an account. This generator covers merchant-presented mode only —
+            consumer-presented mode, where the payer's phone shows the QR, is a different structure. Feed the
+            downloaded PNG to the <a href="../emv-qr-scanner/" data-demo-cta="emv-scanner">online EMV QR
+            scanner</a> to test the round trip.
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>Merchant and transaction</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-row">
+                    <div class="field-pair">
+                        <div class="form-group">
+                            <label for="preset-select">Preset</label>
+                            <select id="preset-select" class="form-control"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="poi-select">Code type</label>
+                            <select id="poi-select" class="form-control">
+                                <option value="12">Dynamic — carries the amount (01 = 12)</option>
+                                <option value="11">Static — amount typed by the customer (01 = 11)</option>
+                            </select>
+                        </div>
+                        <div class="form-group random-group">
+                            <label class="field-label">&nbsp;</label>
+                            <button id="random-button" class="btn btn-primary" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
+                                    <circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
+                                    <circle cx="15.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
+                                    <circle cx="8.5" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
+                                    <path d="M9 9l6 6" />
+                                </svg>
+                                <span class="btn-label">Randomize</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="guid-input">Scheme identifier (62.26 sub-tag 00)</label>
+                            <input id="guid-input" class="form-control" type="text" autocomplete="off"
+                                spellcheck="false" placeholder="com.example.merchant">
+                            <span class="field-hint" id="guid-hint">Shown verbatim — an unknown GUID is not an error.</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="merchant-id-input">Merchant identifier (sub-tag 04)</label>
+                            <input id="merchant-id-input" class="form-control" type="text" autocomplete="off"
+                                spellcheck="false" placeholder="MERCHANT-0001">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="merchant-name-input">Merchant name (59) — max 25</label>
+                            <input id="merchant-name-input" class="form-control" type="text" maxlength="40"
+                                autocomplete="off" placeholder="DYNAMSOFT DEMO STORE">
+                            <span class="field-hint" id="merchant-name-hint"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="merchant-city-input">Merchant city (60) — max 15</label>
+                            <input id="merchant-city-input" class="form-control" type="text" maxlength="30"
+                                autocomplete="off" placeholder="NEW YORK">
+                            <span class="field-hint" id="merchant-city-hint"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="mcc-input">Merchant category code (52)</label>
+                            <input id="mcc-input" class="form-control" type="text" maxlength="4" inputmode="numeric"
+                                autocomplete="off" placeholder="5411">
+                            <span class="field-hint" id="mcc-hint">ISO 18245, four digits.</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="currency-input">Currency (53) — ISO 4217 numeric</label>
+                            <input id="currency-input" class="form-control" type="text" maxlength="3" inputmode="numeric"
+                                autocomplete="off" placeholder="840">
+                            <span class="field-hint" id="currency-hint"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="country-input">Country (58) — ISO 3166 alpha-2</label>
+                            <input id="country-input" class="form-control" type="text" maxlength="2"
+                                autocomplete="off" spellcheck="false" placeholder="US">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row" id="amount-row">
+                    <div class="field-grid">
+                        <div class="field-pair">
+                            <div class="form-group">
+                                <label for="amount-input">Transaction amount (54)</label>
+                                <input id="amount-input" class="form-control" type="text" inputmode="decimal"
+                                    autocomplete="off" placeholder="12.50">
+                                <span class="field-hint">Two fraction digits. Omitted on a static code.</span>
+                            </div>
+                            <div class="form-group narrow">
+                                <label for="tip-input">Tip (55)</label>
+                                <input id="tip-input" class="form-control" type="text" maxlength="2" inputmode="numeric"
+                                    autocomplete="off" placeholder="01">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="postal-input">Postal code (61)</label>
+                            <input id="postal-input" class="form-control" type="text" autocomplete="off"
+                                placeholder="10001">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="field-grid">
+                        <div class="form-group">
+                            <label for="bill-input">Bill number (62 sub-tag 00)</label>
+                            <input id="bill-input" class="form-control" type="text" autocomplete="off"
+                                placeholder="INV-2026-0042">
+                        </div>
+                        <div class="form-group">
+                            <label for="reference-input">Reference label (62 sub-tag 05)</label>
+                            <input id="reference-input" class="form-control" type="text" autocomplete="off"
+                                placeholder="REF-8841-A1">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="validation-errors" class="validation-errors" hidden></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Payment QR</h2>
+                <span class="card-badge" id="version-badge">EMVCo MPM v1.1</span>
+            </div>
+            <div class="card-body">
+                <div class="qr-stage">
+                    <canvas id="qr-canvas" width="420" height="420"
+                        aria-label="Generated EMV payment QR code"></canvas>
+                    <p class="hint" id="render-hint"></p>
+                </div>
+
+                <div class="verify-strip" id="verify-strip">
+                    <span class="verify-badge" id="verify-badge">Not yet verified</span>
+                    <span class="verify-detail" id="verify-detail">
+                        The payload above is rendered as a QR Code. To prove it scans, the symbol is decoded
+                        back and compared byte for byte.
+                    </span>
+                    <button id="verify-button" class="btn btn-secondary btn-verify" type="button">
+                        Verify it scans
+                    </button>
+                </div>
+
+                <div class="button-group">
+                    <button id="download-button" class="btn btn-primary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span class="btn-label">Download PNG</span>
+                    </button>
+                    <button id="copy-payload-button" class="btn btn-secondary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                        <span class="btn-label">Copy payload</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Payload</h2>
+                <span class="card-badge" id="payload-length"></span>
+            </div>
+            <div class="card-body">
+                <p class="payload-text" id="payload-text"></p>
+
+                <h3 class="section-heading">Decoded field by field</h3>
+                <table class="tag-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Tag</th>
+                            <th scope="col">Field</th>
+                            <th scope="col">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tag-table-body"></tbody>
+                </table>
+                <p class="hint" id="crc-note"></p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>What this covers</h2>
+            </div>
+            <div class="card-body">
+                <ul class="note-list">
+                    <li>
+                        <strong>Merchant-presented mode.</strong> The merchant shows the QR and the customer
+                        scans it. This is the mode behind Pix, PromptPay, UPI, SGQR, DuitNow and most
+                        national schemes.
+                    </li>
+                    <li>
+                        <strong>CRC-16/CCITT-FALSE.</strong> Computed over the payload including the literal
+                        <code>6304</code> that introduces it, but not the four hex characters it protects.
+                        Getting that order wrong yields a code that looks perfect and is rejected everywhere.
+                    </li>
+                    <li>
+                        <strong>Ascending tag order.</strong> The specification requires top-level objects in
+                        ascending tag order, so the form does not choose the sequence — the model does.
+                    </li>
+                    <li>
+                        <strong>The 99-character limit.</strong> TLV lengths are written as two digits, so no
+                        single field value can exceed 99 characters. Long merchant names fail here rather than
+                        in a wallet.
+                    </li>
+                    <li>
+                        <strong>Error-correction level M.</strong> What EMVCo specifies for payment QR codes.
+                    </li>
+                </ul>
+                <p class="hint">
+                    To read a real payment QR rather than make one, use the
+                    <a href="../emv-qr-scanner/" data-demo-cta="emv-scanner">online EMV QR scanner</a>, which
+                    parses the TLV payload field by field and checks the checksum.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="demo-footer">
+        <div class="demo-footer-inner">
+            <p class="disclaimer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                The payload is assembled and rendered locally with
+                <a href="https://github.com/metafloor/bwip-js" data-demo-cta="bwip-js">bwip-js</a>; nothing you
+                type is uploaded. The round-trip check runs
+                <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
+                    Barcode Reader</a> in your browser.
+            </p>
+            <div class="footer-links">
+                <span>
+                    Pair it with the
+                    <a href="../emv-qr-scanner/" data-demo-cta="emv-scanner">online EMV QR scanner</a> — it
+                    parses a payment QR field by field and checks the checksum.
+                </span>
+                <a class="btn btn-primary footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
