@@ -1272,10 +1272,17 @@
                 els.analyzerReport.innerHTML = '<p class="analyzer-verdict bad">The analyzer script failed to load. Reload the page and try again.</p>';
                 return;
             }
-            var report = analyzer.analyze({ rgba: imageData.data, width: w, height: h, points: points });
+            /* The page still holds the symbol it generated. Offering it as a
+               reference lets the analyzer treat known-damaged cells as
+               erasures — one parity symbol each, double the error budget —
+               and repair symbols the reader cannot decode at all. */
+            var reference = (state.encoded && state.encoded.matrix)
+                ? { matrix: state.encoded.matrix, payload: els.payload.value.replace(/^\s+|\s+$/g, '') }
+                : null;
+            var report = analyzer.analyze({ rgba: imageData.data, width: w, height: h, points: points }, window.BarcodeQR, reference);
 
             drawAnalyzerOverlay(report, w, h);
-            renderAnalyzerReport(report, { text: text, readerNote: readerNote });
+            renderAnalyzerReport(report, { text: text, readerNote: readerNote, refPayload: reference ? reference.payload : null });
         } catch (e) {
             els.analyzerReport.innerHTML = '<p class="analyzer-verdict bad">'
                 + escapeHtml((e && e.message) || String(e)) + '</p>';
@@ -1371,6 +1378,26 @@
                     + '% — ' + r.damageModules + ' of ' + denom + ' modules, the sweep\'s own measure,'
                     + ' so the two numbers read side by side.';
             }
+        } else if (r.reason === 'repaired') {
+            /* Error decoding was out of budget; the reference original turned
+               the damaged cells into erasures, and erasure decoding rescued
+               every block. */
+            verdict = 'Repaired — ' + r.erasureCount + ' of ' + r.totalBudget * 2 + ' erasures used';
+            tone = 'warn';
+            meaning = 'Error decoding alone had run out of budget (the block allows ' + r.totalBudget
+                + ' blind repairs), but this page still held the original you generated. Knowing '
+                + 'where the damage is turns each corrupted codeword into an erasure, which costs '
+                + 'one parity symbol instead of two — so Reed-Solomon recovered the payload from '
+                + r.erasureCount + ' damaged codewords where a scanner on its own could not. '
+                + 'A stranger\'s image past its budget cannot be repaired this way: without a '
+                + 'reference there is nothing to tell the decoder where the damage is.';
+            if (r.damageModules !== null && r.damageModules !== undefined && r.size) {
+                var denom2 = r.size * r.size;
+                var dmg2 = r.damageModules / denom2 * 100;
+                verdict += ' · damage ' + (dmg2 >= 10 ? Math.round(dmg2) : dmg2.toFixed(1)) + '%';
+                meaning += ' The damage is ' + (dmg2 >= 10 ? Math.round(dmg2) : dmg2.toFixed(1))
+                    + '% — ' + r.damageModules + ' of ' + denom2 + ' modules, the sweep\'s own measure.';
+            }
         } else {
             /* beyond-repair */
             verdict = 'Beyond repair';
@@ -1381,7 +1408,13 @@
                 + (ctxInfo.text
                     ? 'The reader did still return a payload — luck, not headroom.'
                     : 'A reader could not decode it either.');
-            if (r.corruptedLowerBound && r.totalCodewords) {
+            if (r.damageModules !== null && r.damageModules !== undefined && r.size) {
+                var denom3 = r.size * r.size;
+                var dmg3 = r.damageModules / denom3 * 100;
+                meaning += ' Against the reference original the damage is exactly '
+                    + (dmg3 >= 10 ? Math.round(dmg3) : dmg3.toFixed(1)) + '% (' + r.damageModules + ' of '
+                    + denom3 + ' modules).';
+            } else if (r.corruptedLowerBound && r.totalCodewords) {
                 var lbPct = r.corruptedLowerBound / r.totalCodewords * 100;
                 meaning += ' The damage is at least ' + (lbPct >= 10 ? Math.round(lbPct) : lbPct.toFixed(1))
                     + '% of the encoding region (' + r.corruptedLowerBound + ' of ' + r.totalCodewords
@@ -1405,7 +1438,11 @@
                 + '; an exact number needs a decode']);
         }
         if (ctxInfo.text) facts.push(['Decoded payload', ctxInfo.text]);
-        else if (r.reason === 'decoded') facts.push(['Decoded payload', 'the reader returned no text']);
+        else if (r.reason === 'repaired') {
+            facts.push(['Recovered payload', r.payload
+                ? r.payload + '  (repaired, then parsed from the image)'
+                : (ctxInfo.refPayload || '(the data section is outside the damaged codewords\' reach)')]);
+        } else if (r.reason === 'decoded') facts.push(['Decoded payload', 'the reader returned no text']);
         if (r.version) facts.push(['Symbol', 'version ' + r.version + ' — ' + r.size + '×' + r.size + ' modules']);
         if (r.ecLevel) {
             facts.push(['Level & mask', r.ecLevel + ' · mask ' + r.mask
@@ -1437,16 +1474,23 @@
                 var fillPct = block.ok
                     ? Math.min(100, block.corrected / Math.max(1, block.ecCount) * 100)
                     : 100;
-                html += '<div class="budget-row' + (block.ok ? '' : ' over') + '">'
+                html += '<div class="budget-row' + (block.ok && !block.erased ? '' : ' over') + '">'
                     + '<span class="budget-label">Block ' + (b + 1) + '</span>'
                     + '<span class="budget-track"><span class="budget-fill" style="width:' + fillPct.toFixed(1) + '%"></span>'
                     + '<span class="budget-cap" style="left:' + (block.budget / Math.max(1, block.ecCount) * 100).toFixed(1) + '%"></span></span>'
                     + '<span class="budget-note">' + (block.ok
-                        ? block.corrected + ' / ' + block.budget + ' repairs used'
+                        ? (block.erased
+                            ? block.corrected + ' / ' + block.ecCount + ' erasures used — past the ' + block.budget + '-repair error budget'
+                            : block.corrected + ' / ' + block.budget + ' repairs used')
                         : 'more than ' + block.budget + ' — beyond budget')
                     + '</span></div>';
             }
             html += '</div>';
+        }
+        if (r.functionDamage > 0) {
+            html += '<p class="analyzer-note">' + r.functionDamage + ' function-pattern module'
+                + (r.functionDamage === 1 ? '' : 's') + ' also differ from the reference — parity cannot repair '
+                + 'those, and a scanner may still fail to find or orient the symbol.</p>';
         }
 
         if (ctxInfo.readerNote && r.reason !== 'no-grid') {
