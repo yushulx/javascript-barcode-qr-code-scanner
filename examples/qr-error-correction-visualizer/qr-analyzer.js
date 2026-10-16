@@ -978,7 +978,15 @@
             report.failedBlocks = attempt.failedBlocks;
             report.correctedCells = attempt.correctedCells;
             report.correctedStreamIndexes = attempt.correctedStreamIndexes;
+            report.totalCodewords = attempt.totalCodewords;
+            report.damageCells = attempt.damageCells;
+            report.damageModules = attempt.damageModules;
+            report.damageTotal = attempt.damageTotal;
+            report.corruptedLowerBound = attempt.corruptedLowerBound;
             report.cellQuads = attempt.correctedCells.map(function (cell) {
+                return cellQuad(report.H, cell[0], cell[1]);
+            });
+            report.damageQuads = attempt.damageCells.map(function (cell) {
                 return cellQuad(report.H, cell[0], cell[1]);
             });
             report.reason = verified ? 'decoded' : 'beyond-repair';
@@ -1013,6 +1021,17 @@
         var correctedCells = [];
         var correctedStreamIndexes = [];
 
+        /* The corrected stream: what the codewords should have been. With
+           every block decoded this is a complete reference, so the sampled
+           matrix can be diffed against it module by module — damaged
+           encoding-region modules, which over size × size is the same
+           measure the forward half of the page reports. A failed block has
+           no reference, so the diff only runs when everything decoded. */
+        var fixedStream = stream.bytes.slice();
+        var damageCells = [];
+        var damageModules = null;
+        var corruptedLowerBound = 0;
+
         for (var b = 0; b < st.numBlocks; b++) {
             var idx = perBlock[b];
             var blockBytes = idx.map(function (p) { return stream.bytes[p]; });
@@ -1022,15 +1041,51 @@
             if (!res.ok) {
                 failed.push(b);
                 blocks.push({ dataCount: st.dataCounts[b], ecCount: st.ecPerBlock, budget: budget, corrected: null, ok: false });
+                /* Decoding failed, so this block carries more corrupted
+                   codewords than its budget — at least budget + 1 of them. */
+                corruptedLowerBound += budget + 1;
                 continue;
             }
             totalCorrected += res.corrected;
+            corruptedLowerBound += res.corrected;
             blocks.push({ dataCount: st.dataCounts[b], ecCount: st.ecPerBlock, budget: budget, corrected: res.corrected, ok: true });
+            /* res.fixed is absent when the block was already clean — the
+               sampled bytes are then their own reference. */
+            if (res.fixed) {
+                for (var k2 = 0; k2 < idx.length; k2++) fixedStream[idx[k2]] = res.fixed[k2];
+            }
             for (var e = 0; e < res.positions.length; e++) {
                 var streamIndex = idx[res.positions[e]];
                 correctedStreamIndexes.push(streamIndex);
                 var cells = stream.cellsOf[streamIndex] || [];
                 for (var m = 0; m < cells.length; m++) correctedCells.push(cells[m]);
+            }
+        }
+
+        /* Modules whose sampled value differs from the recovered original.
+           Bit m2 of a codeword is its m2-th cell, most significant first —
+           the order readCodewords assembled the byte in. Remainder bits
+           belong to no codeword, so like the forward counter they are not
+           part of the total. */
+        var damageTotal = 0;
+        for (var si2 = 0; si2 < stream.bytes.length; si2++) damageTotal += (stream.cellsOf[si2] || []).length;
+        if (!failed.length) {
+            damageModules = 0;
+            for (var si = 0; si < stream.bytes.length; si++) {
+                var expect = fixedStream[si];
+                var got = stream.bytes[si];
+                if (expect === got) continue;
+                var cl = stream.cellsOf[si] || [];
+                for (var m2 = 0; m2 < cl.length; m2++) {
+                    var cr = cl[m2][0];
+                    var cc = cl[m2][1];
+                    var gotBit = matrix[cr][cc] ^ (masked(mask, cr, cc) ? 1 : 0);
+                    var expBit = (expect >> (7 - m2)) & 1;
+                    if (gotBit !== expBit) {
+                        damageCells.push(cl[m2]);
+                        damageModules++;
+                    }
+                }
             }
         }
 
@@ -1040,7 +1095,12 @@
             totalCorrected: totalCorrected,
             totalBudget: totalBudget,
             correctedCells: correctedCells,
-            correctedStreamIndexes: correctedStreamIndexes
+            correctedStreamIndexes: correctedStreamIndexes,
+            totalCodewords: stream.bytes.length,
+            damageCells: damageCells,
+            damageModules: damageModules,
+            damageTotal: damageTotal,
+            corruptedLowerBound: corruptedLowerBound
         };
     }
 
