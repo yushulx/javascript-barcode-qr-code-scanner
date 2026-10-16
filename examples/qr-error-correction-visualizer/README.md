@@ -29,7 +29,10 @@ meter tracks the Reed-Solomon repair budget.
   decode outcome — the point where each level stops recovering.
 - **Compare the levels.** The parity count and repair capacity of all four
   levels at the current version, one click to switch.
-- **Export.** Download the damaged render as a PNG to test another scanner.
+- **Export.** Download the damaged render as a PNG to test another scanner. The
+  scan log keeps one PNG per row — the exact render that was decoded — so after
+  a sweep the last step that still decoded can be downloaded and compared with
+  the first one that did not.
 
 The example is plain HTML, CSS and JavaScript with no build step.
 

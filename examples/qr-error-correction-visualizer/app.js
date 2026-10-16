@@ -839,7 +839,7 @@
         autoDecodeTimer = setTimeout(function () { decodeNow('live'); }, 450);
     }
 
-    function logRow(pct, verdict, ms, source, tone) {
+    function logRow(pct, verdict, ms, source, tone, image) {
         els.logEmpty.hidden = true;
         /* The log holds exactly one experiment. An interactive decode (auto,
            manual, reader error) replaces whatever is there — including a
@@ -852,11 +852,32 @@
         tr.className = 'result-' + tone;
         tr.innerHTML = '<td>' + pct + '</td><td class="result">' + escapeHtml(verdict) + '</td>'
             + '<td>' + (ms === null ? '—' : ms + ' ms') + '</td>'
-            + '<td class="source">' + escapeHtml(source) + '</td>';
+            + '<td class="source">' + escapeHtml(source) + '</td>'
+            + imageCell(image);
         els.logTbody.insertBefore(tr, els.logTbody.firstChild);
         while (els.logTbody.children.length > 12) {
             els.logTbody.removeChild(els.logTbody.lastChild);
         }
+    }
+
+    /* The image column: every row keeps the render it decoded as a PNG it can
+       hand back. Interactive decodes only ever show the latest render, but a
+       sweep leaves ten of them behind at once — frozen, so the last step that
+       passed can be put next to the first one that did not. */
+    function imageCell(image) {
+        if (!image) return '<td class="image"></td>';
+        return '<td class="image"><a class="row-download" href="' + escapeHtml(image.url)
+            + '" download="' + escapeHtml(image.name)
+            + '" title="Download the exact render this row decoded, as a PNG">Download</a></td>';
+    }
+
+    /* qr-M-v3-14-7-sweep-25.png — the export button's naming, with the row's
+       source standing in for "-damaged". */
+    function rowFilename(pct, source) {
+        var slug = String(source).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        return 'qr-' + state.encoded.ecLevel + '-v' + state.encoded.version
+            + '-' + String(pct).replace('%', '').replace('.', '-')
+            + (slug ? '-' + slug : '') + '.png';
     }
 
     function currentDamagePct() {
@@ -873,10 +894,19 @@
         if (!enc) return;
         setStatus('Decoding…');
         var startedAt = performance.now();
+        var snapshot = null;
         try {
             var cvr = await engine();
             var W = els.print.width;
             var image = els.print.getContext('2d').getImageData(0, 0, W, W);
+            var rowPct = currentDamagePct();
+            /* Freeze the exact render that is about to be decoded: the log row
+               keeps its own PNG, so once a sweep has moved the canvas on, any
+               step can still be downloaded and compared. */
+            snapshot = {
+                url: els.print.toDataURL('image/png'),
+                name: rowFilename(rowPct, sourceLabel)
+            };
             /* Canvas ImageData is RGBA in memory, which is the ABGR_8888 byte
                order the SDK wants. A fresh buffer per call: capture can detach
                the one it is given. */
@@ -896,21 +926,21 @@
 
             if (qr) {
                 var match = qr.text === state.text;
-                logRow(currentDamagePct(), match ? '✓ decoded — matches payload' : '✓ decoded — "' + shorten(qr.text, 24) + '"',
-                    ms, sourceLabel, match ? 'ok' : 'mismatch');
+                logRow(rowPct, match ? '✓ decoded — matches payload' : '✓ decoded — "' + shorten(qr.text, 24) + '"',
+                    ms, sourceLabel, match ? 'ok' : 'mismatch', snapshot);
                 setStatus(match
                     ? 'Decoded in ' + ms + ' ms — the payload came back intact.'
                     : 'Decoded in ' + ms + ' ms, but the text differs from the payload.', match ? 'ok' : 'bad');
-                analytics.action('decode_result', { source: sourceLabel, match: match, damaged_pct: Number(currentDamagePct().replace('%', '')) });
+                analytics.action('decode_result', { source: sourceLabel, match: match, damaged_pct: Number(rowPct.replace('%', '')) });
             } else {
-                logRow(currentDamagePct(), '✗ no decode', ms, sourceLabel, 'bad');
+                logRow(rowPct, '✗ no decode', ms, sourceLabel, 'bad', snapshot);
                 setStatus('No decode in ' + ms + ' ms — this much damage defeats the reader.', 'bad');
-                analytics.action('decode_result', { source: sourceLabel, match: false, damaged_pct: Number(currentDamagePct().replace('%', '')) });
+                analytics.action('decode_result', { source: sourceLabel, match: false, damaged_pct: Number(rowPct.replace('%', '')) });
             }
         } catch (e) {
             var message = (e && e.message) || String(e);
             setStatus('Reader unavailable: ' + message + ' Everything except decoding still works.', 'bad');
-            logRow(currentDamagePct(), '— reader error', null, sourceLabel, 'bad');
+            logRow(currentDamagePct(), '— reader error', null, sourceLabel, 'bad', snapshot);
         }
     }
 
@@ -925,7 +955,8 @@
            end because that is where the levels separate. Damage accumulates:
            each step adds its increment on top of the previous one, so the log
            reads as one clean run-up to the breaking point instead of ten
-           unrelated renders. */
+           unrelated renders. decodeNow freezes each step's render as a PNG, so
+           the ten rows stay comparable once the canvas has moved on. */
         var steps = [0, 2, 4, 6, 8, 10, 13, 16, 20, 25];
         var applied = 0;
         try {
@@ -943,7 +974,7 @@
                 await decodeNow('sweep ' + pct + '%');
             }
             setStatus('Sweep complete. Level ' + state.ecLevel + ' at version '
-                + state.encoded.version + ' — switch levels and sweep again to compare.');
+                + state.encoded.version + ' — download any row\'s PNG to compare them, or switch levels and sweep again.');
         } finally {
             state.sweeping = false;
             setControlsBusy(false);
