@@ -20,6 +20,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
     <script src="qr-encoder.js" defer></script>
+    <script src="qr-analyzer.js" defer></script>
     <script src="app.js" defer></script>
 </head>
 
@@ -249,6 +250,50 @@
             </div>
         </div>
 
+        <section class="card analyzer-card">
+            <div class="card-header">
+                <h2>How damaged is a QR image?</h2>
+                <span class="card-note">Someone sent you a code? The demo locates the grid, reads the
+                    format information and runs Reed-Solomon decoding to measure how much of the repair
+                    budget the image is using — no original file needed.</span>
+            </div>
+            <div class="card-body analyzer-body">
+                <div class="analyzer-stage">
+                    <div id="analyzer-drop" class="drop-zone" tabindex="0" role="button"
+                        aria-label="Drop a QR image here, paste one, or press Enter to choose a file">
+                        <p class="drop-zone-lead">Drop a QR image here — or paste one from the clipboard</p>
+                        <p class="drop-zone-sub">Press Enter or click to browse · PNG, JPG, a screenshot ·
+                            nothing is uploaded</p>
+                    </div>
+                    <input type="file" id="analyzer-file" accept="image/*" hidden>
+                    <div id="analyzer-preview" class="analyzer-preview" hidden>
+                        <div class="analyzer-shot">
+                            <img id="analyzer-img" alt="The QR image being analysed">
+                            <canvas id="analyzer-overlay" aria-hidden="true"></canvas>
+                        </div>
+                        <p class="analyzer-legend"><span class="swatch swatch-damaged"></span>Modules whose
+                            codewords Reed-Solomon had to repair<span id="analyzer-legend-count"></span></p>
+                    </div>
+                    <div class="analyzer-samples">
+                        <span class="label-text">Or try a generated sample</span>
+                        <div class="chip-row">
+                            <button type="button" class="btn btn-secondary btn-sm" data-sample="clean">A clean
+                                code</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-sample="scars">Damaged,
+                                still repairable</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-sample="dead">Beyond
+                                repair</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="analyzer-report" class="analyzer-report" role="status" aria-live="polite">
+                    <p class="analyzer-placeholder">The report appears here. For an image that still decodes
+                        the count is exact — Reed-Solomon knows how many codewords it had to repair — and for
+                        one that does not, the budget is what failed.</p>
+                </div>
+            </div>
+        </section>
+
         <section class="card anatomy-card">
             <div class="card-header">
                 <h2>QR anatomy: what every part is called</h2>
@@ -281,6 +326,16 @@
                 to Dynamsoft Barcode Reader at default settings on the damaged render; another reader, another
                 resolution or a print-and-scan round trip can shift the boundary, and a successful decode never
                 guarantees reliable scanning on every device.</p>
+            <p>The <em>How damaged is a QR image?</em> card runs the same story backwards. There is no
+                original to compare against, so the page first locates the symbol — Dynamsoft Barcode Reader's
+                corner points when it decodes, otherwise a finder-pattern locator that finds the 1:1:3:1:1
+                triplets and fits the grid itself. It then reads the format information for the level and mask,
+                samples every module through that grid, and hands the codeword stream to a Reed-Solomon decoder
+                that reports exactly which codewords it had to repair. When it succeeds the count is exact,
+                because the decoder knows; when it fails the page says so rather than guessing a percentage.
+                A symbol whose finder patterns, timing patterns or format bits are gone cannot be located or
+                unmasked at all, and for those the page reports that the grid could not be locked — which is the
+                honest answer, and the same reason a scanner in a shop would not read it either.</p>
             <p>The SDK downloads its engine and contacts Dynamsoft for license activation; the hosted demo uses
                 the CodePool domain license, and local or self-hosted previews use the SDK trial license. The
                 payload you type and the damaged image never leave the page.</p>
