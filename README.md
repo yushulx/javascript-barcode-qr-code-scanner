@@ -20,7 +20,7 @@ A web app which scans both NFC tags and barcodes in the browser, then uses the v
 Barcodes are scanned with [Dynamsoft Barcode Reader Bundle](https://www.dynamsoft.com/barcode-reader/overview/) (v11.x), which is loaded from the CDN:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.2100/dist/dbr.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
 ```
 
 The bundle exposes the Dynamsoft Capture Vision APIs (`Dynamsoft.License`, `Dynamsoft.Core`, `Dynamsoft.CVR`) used to initialize a `CaptureVisionRouter` and read barcodes from the camera:
