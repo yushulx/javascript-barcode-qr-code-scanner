@@ -57,7 +57,7 @@ https://github.com/user-attachments/assets/5a9a9a9d-df9e-4422-886a-eb52105e4b9b
 
 ## Dependencies (loaded via CDN)
 
-- [Dynamsoft Capture Vision Bundle v3.2.5000](https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.2.5000/)
+- [Dynamsoft Capture Vision Bundle v3.2.5000](https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.6.3200/)
 - [jsPDF v2.5.1](https://cdn.jsdelivr.net/npm/jspdf@2.5.1/)
 
 ## Blog
