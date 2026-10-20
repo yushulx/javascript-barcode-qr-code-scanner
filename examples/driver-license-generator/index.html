@@ -32,13 +32,14 @@
       ASSET VERSION (?v=): the site serves these files with
       Cache-Control: max-age=86400, so browsers trust their cached copy for a
       full day. Bump the ?v= value on EVERY change to styles.css,
-      aamva-generator.js, app.js or shared/analytics.js, otherwise returning
-      visitors keep the stale copy for up to 24h.
+      aamva-generator.js or app.js, otherwise returning visitors keep the
+      stale copy for up to 24h.
     -->
     <link rel="stylesheet" href="styles.css?v=20260910a">
     <!-- PDF417 encoder (bwip-js) — the only third-party dependency -->
     <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js.min.js"></script>
-    <script src="../shared/analytics.js?v=20260910a"></script>
+    <!-- No shared/analytics.js here: this sample stands alone, and app.js
+         falls back to a no-op analytics object when the script is absent. -->
 
     <script type="application/ld+json">
     {
