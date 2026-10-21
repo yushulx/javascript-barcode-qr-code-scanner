@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Online PDF417 Error Correction &amp; Damage Visualizer | Dynamsoft Codepool</title>
+    <meta name="description"
+        content="See how much damage a PDF417 barcode can take. Generate a symbol at error correction level 0 to 8, paint damage on codewords, scratch rows, cover row indicators, simulate noise, blur or low contrast, and watch Dynamsoft Barcode Reader decode it — with the Reed-Solomon repair budget counted as you go.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/pdf417-error-correction-visualizer/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Free Online PDF417 Error Correction &amp; Damage Visualizer">
+    <meta property="og:description"
+        content="Generate a PDF417 stack at any error correction level, damage codeword cells, row indicators or the guard patterns, and watch whether a reader still decodes it — with the Reed-Solomon repair budget counted live.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/pdf417-error-correction-visualizer/">
+    <meta property="og:image"
+        content="https://www.dynamsoft.com/codepool/demos/pdf417-error-correction-visualizer/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <script src="pdf417-encoder.js" defer></script>
+    <script src="app.js" defer></script>
+
+</head>
+
+<body>
+
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/"
+                aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product"><span class="brand-tag">Free</span>PDF417 Error Correction Visualizer</span>
+            <nav class="header-nav" aria-label="Codepool">
+                <a class="nav-link" href="https://www.dynamsoft.com/codepool/demos/">All Demos</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/codepool/">Blog</a>
+            </nav>
+            <nav class="header-nav" aria-label="Dynamsoft">
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/">Documentation</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">30-Day Free Trial</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>How much damage can a PDF417 barcode take?</h1>
+        <p class="page-intro-lead">
+            A PDF417 symbol is a stack of rows, and every row carries its own copy of what a scanner needs to find it:
+            a start pattern, row indicators, a stop pattern. Inside sits a single Reed-Solomon block whose parity
+            budget you choose — 2 codewords at level 0, 512 at level 8. Build a symbol, damage it on purpose, and
+            watch the budget and the reader disagree.
+        </p>
+        <ol class="learning-workflow">
+            <li><strong>Build the symbol.</strong><span>Type a payload, pick an error correction level, and see how
+                many codewords go to data, padding and parity.</span></li>
+            <li><strong>Damage it.</strong><span>Wipe codeword cells, scratch a row, cover the row indicators, or
+                simulate noise, blur, low contrast and more.</span></li>
+            <li><strong>Read it.</strong><span>Decode the result with Dynamsoft Barcode Reader and compare the
+                corrupted codewords against the repair budget.</span></li>
+        </ol>
+    </div>
+
+    <main class="container">
+        <div class="workspace">
+            <!-- ============================ symbol ============================ -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>The symbol</h2>
+                    <span id="symbol-note" class="card-note"></span>
+                </div>
+                <div class="card-body">
+                    <div class="symbol-toolbar">
+                        <div class="form-group">
+                            <label for="payload">Payload</label>
+                            <textarea id="payload" rows="2" spellcheck="false"
+                                aria-describedby="payload-hint">https://www.dynamsoft.com/codepool/</textarea>
+                            <p id="payload-hint" class="hint">Text compaction for the PDF417 text set, byte
+                                compaction (UTF-8) for anything else.</p>
+                        </div>
+                        <div class="form-group level-group">
+                            <span class="label-text" id="level-label">Error correction level</span>
+                            <div class="level-chips" id="level-chips" role="radiogroup" aria-labelledby="level-label">
+                            </div>
+                            <p class="hint" id="level-hint"></p>
+                        </div>
+                    </div>
+                    <p id="encode-error" class="error-line" role="alert" hidden></p>
+
+                    <div class="symbol-stage-row">
+                        <div id="symbol-stage" class="symbol-stage">
+                            <div class="symbol-frame">
+                                <canvas id="symbol-canvas"
+                                    aria-label="PDF417 preview. Drag on it to damage codeword cells."></canvas>
+                                <canvas id="symbol-overlay" class="symbol-overlay" aria-hidden="true"></canvas>
+                            </div>
+                            <p id="stage-hint" class="stage-hint">Drag on the symbol to wipe codeword cells</p>
+                        </div>
+                        <div class="symbol-side">
+                            <div class="legend" aria-label="Structure view legend">
+                                <label class="structure-toggle"><input type="checkbox" id="structure-toggle" checked>
+                                    Colour cells by role</label>
+                                <ul class="legend-items">
+                                    <li><span class="swatch swatch-data"></span>Payload codeword</li>
+                                    <li><span class="swatch swatch-pad"></span>Padding codeword</li>
+                                    <li><span class="swatch swatch-ec"></span>Error correction</li>
+                                    <li><span class="swatch swatch-function"></span>Indicators &amp; guards</li>
+                                    <li><span class="swatch swatch-damaged"></span>Damaged</li>
+                                </ul>
+                                <p id="codeword-info" class="codeword-info" role="status">Click a cell to see the
+                                    codeword it carries.</p>
+                            </div>
+                            <dl id="facts" class="facts"></dl>
+                            <div class="ec-compare">
+                                <p class="label-text">Parity share of the symbol, all nine levels</p>
+                                <div id="level-bars" class="ec-bars"></div>
+                                <p class="hint">A PDF417 level is an absolute codeword count, not a percentage:
+                                    level 2 always spends 8 codewords on parity, so the share falls as the payload
+                                    grows.</p>
+                            </div>
+                            <div class="symbol-actions">
+                                <button id="export-btn" class="btn btn-secondary btn-sm" type="button">Download
+                                    PNG</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================ damage + read ============================ -->
+            <div class="side-column">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>Damage it</h2>
+                        <span class="card-note">Codeword damage and capture defects are independent — combine
+                            them.</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="tool-row">
+                            <span class="label-text">Wipe codeword cells</span>
+                            <div class="chip-row" id="brush-sizes" role="radiogroup" aria-label="Brush size in codewords">
+                                <button type="button" class="chip" data-size="1" role="radio" aria-checked="true">1
+                                    cw</button>
+                                <button type="button" class="chip" data-size="2" role="radio" aria-checked="false">2
+                                    cw</button>
+                                <button type="button" class="chip" data-size="3" role="radio" aria-checked="false">3
+                                    cw</button>
+                            </div>
+                            <p class="hint">Drag across the symbol. A wipe fills the whole 17-module cell, so the
+                                codeword is destroyed, not merely nudged.</p>
+                        </div>
+                        <div class="tool-row">
+                            <span class="label-text">Target a region</span>
+                            <div class="chip-row">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-row">Scratch a
+                                    row</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-column">Scratch a
+                                    column</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-cover">Cover three
+                                    rows</button>
+                            </div>
+                            <div class="chip-row tool-row-sub">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-left">Wipe left row
+                                    indicators</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-right">Wipe right row
+                                    indicators</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-guard">Break the guard
+                                    patterns</button>
+                            </div>
+                            <p class="hint">Row indicators carry the row number, the row and column count and the
+                                level — no parity protects them. Neither do the start and stop patterns.</p>
+                        </div>
+                        <div class="tool-row">
+                            <label for="random-range" class="label-text">Random codeword damage</label>
+                            <div class="slider-row">
+                                <input type="range" id="random-range" min="1" max="60" step="1" value="20">
+                                <output id="random-value" for="random-range">20%</output>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-random">Apply</button>
+                            </div>
+                            <p class="hint">Seeded: the same percentage always wipes the same codeword cells.</p>
+                        </div>
+                        <div class="tool-row">
+                            <label for="pixel-preset" class="label-text">Simulate a capture defect</label>
+                            <div class="slider-row">
+                                <select id="pixel-preset" class="form-select">
+                                    <option value="none" selected>None — clean render</option>
+                                    <option value="noise">Sensor noise</option>
+                                    <option value="blur">Out of focus</option>
+                                    <option value="contrast">Low contrast</option>
+                                    <option value="resolution">Low resolution</option>
+                                    <option value="occlusion">Something in the way</option>
+                                    <option value="crop">Partly out of frame</option>
+                                    <option value="shadow">Shadow across the symbol</option>
+                                    <option value="rotate">Tilted capture</option>
+                                </select>
+                                <input type="range" id="pixel-amount" min="5" max="100" step="5" value="50"
+                                    aria-label="Defect strength">
+                                <output id="pixel-amount-value" for="pixel-amount">50%</output>
+                            </div>
+                        </div>
+                        <div class="tool-row">
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-undo">Undo</button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-clear">Clear all
+                                damage</button>
+                        </div>
+
+                        <div class="meter">
+                            <div class="meter-head">
+                                <span class="meter-pct"><span id="damage-pct">0</span> codewords corrupted</span>
+                                <span id="budget-text" class="budget-text">No damage yet</span>
+                            </div>
+                            <div class="budget-bar" aria-hidden="true">
+                                <div class="budget-track">
+                                    <span id="budget-fill" class="budget-fill"></span>
+                                    <span id="budget-cap-erasure" class="budget-cap-erasure"></span>
+                                    <span id="budget-cap" class="budget-cap"></span>
+                                </div>
+                            </div>
+                            <p id="budget-note" class="budget-note"></p>
+                            <p id="function-warn" class="function-warn" role="status" hidden></p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header">
+                        <h2>Can a reader still read it?</h2>
+                        <label class="auto-decode"><input type="checkbox" id="decode-auto" checked> Decode
+                            automatically</label>
+                    </div>
+                    <div class="card-body">
+                        <p id="decode-status" class="status-line" role="status" aria-live="polite">The reader loads
+                            on the first decode. Decoding uses the clean render plus your damage — never the
+                            structure colours.</p>
+                        <div class="decode-actions">
+                            <button type="button" class="btn btn-primary btn-sm" id="btn-decode">Decode now</button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-sweep">Run a codeword
+                                sweep</button>
+                        </div>
+                        <dl id="reader-facts" class="facts reader-facts" hidden></dl>
+                        <div class="log-wrap">
+                            <table class="log-table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Corrupted</th>
+                                        <th scope="col">Result</th>
+                                        <th scope="col">Time</th>
+                                        <th scope="col">Source</th>
+                                        <th scope="col">Image</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="log-tbody"></tbody>
+                            </table>
+                            <p id="log-empty" class="hint">Damage the symbol, or run the sweep, to fill this log. Every
+                                row keeps the exact image it decoded — download it from the Image column.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <section class="card anatomy-card">
+            <div class="card-header">
+                <h2>PDF417 anatomy: what every part is called</h2>
+                <span class="card-note">Rendered from the symbol above — switch level or edit the payload and it
+                    redraws. Hover a term to light it up.</span>
+            </div>
+            <div class="card-body anatomy-body">
+                <div class="anatomy-stage">
+                    <canvas id="anatomy-canvas" aria-label="Anatomy view: every region of the PDF417 symbol in its own color"></canvas>
+                </div>
+                <dl id="anatomy-legend" class="anatomy-legend"></dl>
+            </div>
+        </section>
+
+        <details class="card methodology">
+            <summary>How to read these numbers</summary>
+            <p>The symbol is encoded in this page by a PDF417 (ISO/IEC 15438) encoder: text compaction for the PDF417
+                text set, byte compaction (UTF-8) for anything else, Reed-Solomon parity over GF(929), and the standard
+                layout — start pattern, left row indicator, <code>n</code> data cells, right row indicator, stop
+                pattern, repeated for every row. Its output is bit-identical to a reference BWIPP encoder for payloads
+                inside the text set, which is how the encoder was checked. Numeric compaction, ECI and Macro PDF417 are
+                not implemented; digits ride the Mixed sub-mode.</p>
+            <p><em>Codeword damage is exact.</em> A PDF417 codeword is one 17-module cell, so the page compares every
+                cell against the clean symbol and counts the cells that changed. That count is what the budget meter
+                shows. A single Reed-Solomon block of <code>k = 2^(level+1)</code> parity codewords repairs up to
+                <code>⌊k/2⌋</code> corrupted codewords when the decoder has to find the errors itself, and up to
+                <code>k</code> when it knows <em>where</em> they are — Reed-Solomon calls those erasures, and a wiped
+                cell is unreadable by construction, so it is an erasure. The bar carries both marks: the solid tick is
+                ⌊k/2⌋, the dashed one is k. A corrupted parity codeword costs exactly as much as a corrupted data
+                codeword; the decoder cannot tell which one was hit until it tries.</p>
+            <p>Three failure modes are counted separately because they are not interchangeable. <em>Codeword
+                damage</em> is what parity repairs. <em>Row indicator damage</em> — the left and right cells beside
+                every row, which encode the row number, the symbol size and the level — is a detection failure: a
+                reader that cannot line the rows up never reaches Reed-Solomon. And damage to the <em>start or stop
+                pattern</em> can stop the symbol being found at all. The meter reports all three so a failed decode can
+                be read instead of guessed at.</p>
+            <p>The <em>capture defect</em> presets (noise, blur, low contrast, low resolution, occlusion, crop, shadow,
+                tilt) are rendered onto the same canvas a camera would have produced, and their codeword damage is
+                estimated by sampling each module's centre against its intended value. Decode outcomes apply to
+                Dynamsoft Barcode Reader at default settings on the damaged render; another reader, another resolution
+                or a print-and-scan round trip can shift the boundary, and a successful decode never guarantees
+                reliable scanning on every device.</p>
+            <p>The SDK downloads its engine and contacts Dynamsoft for license activation; the hosted demo uses the
+                CodePool domain license, and local or self-hosted previews use the SDK trial license. The payload you
+                type and the damaged image never leave the page.</p>
+        </details>
+    </main>
+
+    <footer>
+        <a href="https://www.dynamsoft.com/codepool/demos/">All online demos</a> ·
+        Powered by <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft Barcode
+            Reader</a> · Related: <a href="../qr-error-correction-visualizer/">QR Error Correction Visualizer</a>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+
+</html>
