@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Online File Viewer | Dynamsoft Codepool Demo</title>
+    <meta name="description"
+        content="Free online file viewer: drop a JPEG, PDF, TIFF, Word, Excel, PowerPoint, CSV, video or raw Android camera YUV frame and see what it really is — size, dimensions, EXIF, page count — then read the content page by page. Everything runs in your browser; nothing is uploaded.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/file-viewer/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Free Online File Viewer">
+    <meta property="og:description"
+        content="Open a file and see two things at once: what it is (size, type, dimensions, EXIF, pages) and what it contains — images, PDF, TIFF, Office, text, CSV, video and raw YUV frames. Local only.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/file-viewer/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/file-viewer/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css?v=20261021l">
+
+
+    <!--
+      ASSET VERSION (?v=): styles.css and app.js are served with a one-day
+      cache. Bump the value on EVERY change to either file, or returning
+      visitors keep the stale copy for up to 24 hours.
+
+      The heavy parsers are NOT loaded here. pdf.js (287 KB), UTIF (108 KB),
+      SheetJS (882 KB), JSZip (82 KB) and docx-preview (74 KB) are injected on
+      demand, so the page paints with nothing but its own CSS and app.js. Open
+      an image and you never download a PDF engine.
+    -->
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Free Online File Viewer",
+      "url": "https://www.dynamsoft.com/codepool/demos/file-viewer/",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any (web browser)",
+      "browserRequirements": "Desktop or mobile browser with JavaScript. PDF, TIFF, Office and video playback depend on the parsers bundled with the page and on the codecs the browser ships.",
+      "description": "Browser-based file inspector and viewer. It identifies a file by its magic bytes rather than its extension, reports size, dimensions, DPI, EXIF, GPS, page count and a local SHA-256 hash, then renders the content: JPEG, PNG, GIF, WebP, AVIF, SVG, multi-page TIFF, PDF, DOCX, XLSX, PPTX, CSV, JSON, plain text, video, audio and raw Android camera YUV frames (NV21, NV12, I420, YV12, YUY2, UYVY).",
+      "featureList": [
+        "Identify a file by content, not by extension",
+        "JPEG and TIFF EXIF table: camera, exposure, lens, timestamps and GPS",
+        "Multi-page navigation for PDF, TIFF, DOCX sections, XLSX sheets and PPTX slides",
+        "Raw YUV viewer for Android camera dumps, with pixel format, width and height controls",
+        "CSV and XLSX rendered as tables, with row pagination",
+        "Text with detected encoding, line numbers and a wrap toggle",
+        "SHA-256 computed in the browser",
+        "Everything is read locally — no upload, no server, no account"
+      ],
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free to use on dynamsoft.com/codepool and free to run from a local folder — this page uses no licensed SDK, no account and no key. Files are processed in the browser and are never uploaded."
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Dynamsoft",
+        "url": "https://www.dynamsoft.com/"
+      }
+    }
+    </script>
+</head>
+
+<body>
+
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
+                aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg?v=20261021b" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product"><span class="brand-tag">Free</span>File Viewer</span>
+            <nav class="header-nav" aria-label="Codepool">
+                <a class="nav-link" href="https://www.dynamsoft.com/codepool/demos/" data-demo-cta="demos">All
+                    Demos</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/codepool/" data-demo-cta="blog">Blog</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>Free online file viewer</h1>
+        <p>
+            Drop a file and see two things at once: what it <em>is</em> — real type, size, dimensions,
+            EXIF, page count — and what it <em>contains</em>. Images, PDF, multi-page TIFF, Word, Excel,
+            PowerPoint, CSV, text, video, and raw YUV frames dumped from an Android camera.
+        </p>
+        <p class="inline-note">
+            Nothing is uploaded. Every byte is parsed in this tab, so the page keeps working with the
+            network switched off once it has loaded.
+        </p>
+    </div>
+
+    <div class="container">
+        <section class="card drop-card" id="drop-card">
+            <div class="dropzone" id="dropzone" role="button" tabindex="0"
+                aria-label="Choose files, or drop them here">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <p class="dz-title">Drop files here</p>
+                <p class="dz-sub">or click to browse — several files at once is fine</p>
+            </div>
+            <input type="file" id="file-input" multiple hidden
+                accept="image/*,.tif,.tiff,.pdf,.docx,.xlsx,.pptx,.txt,.csv,.tsv,.json,.yuv,.md,.log,.xml,.svg,.mp4,.webm,.mov,.m4v,.mp3,.wav,.ogg,.bin">
+
+            <div class="sample-row" id="sample-row">
+                <span class="label">Samples</span>
+                <button class="chip" type="button" data-sample="sample-photo.jpg"><span class="dot"
+                        style="background:var(--fam-image)"></span>JPEG</button>
+                <button class="chip" type="button" data-sample="sample-screenshot.png"><span class="dot"
+                        style="background:var(--fam-image)"></span>PNG</button>
+                <button class="chip" type="button" data-sample="sample-diagram.svg"><span class="dot"
+                        style="background:var(--fam-image)"></span>SVG</button>
+                <button class="chip" type="button" data-sample="sample-scan.tiff"><span class="dot"
+                        style="background:var(--fam-image)"></span>TIFF</button>
+                <button class="chip" type="button" data-sample="sample-report.pdf"><span class="dot"
+                        style="background:var(--fam-pdf)"></span>PDF</button>
+                <button class="chip" type="button" data-sample="sample-contract.docx"><span class="dot"
+                        style="background:var(--fam-office)"></span>DOCX</button>
+                <button class="chip" type="button" data-sample="sample-budget.xlsx"><span class="dot"
+                        style="background:var(--fam-office)"></span>XLSX</button>
+                <button class="chip" type="button" data-sample="sample-deck.pptx"><span class="dot"
+                        style="background:var(--fam-office)"></span>PPTX</button>
+                <button class="chip" type="button" data-sample="sample-table.csv"><span class="dot"
+                        style="background:var(--fam-text)"></span>CSV</button>
+                <button class="chip" type="button" data-sample="sample-notes.txt"><span class="dot"
+                        style="background:var(--fam-text)"></span>TXT</button>
+                <button class="chip" type="button" data-sample="sample-config.json"><span class="dot"
+                        style="background:var(--fam-text)"></span>JSON</button>
+                <button class="chip" type="button" data-sample="sample-frame.yuv"><span class="dot"
+                        style="background:var(--fam-image)"></span>YUV</button>
+                <button class="chip" type="button" data-sample="sample-clip.mp4"><span class="dot"
+                        style="background:var(--fam-media)"></span>MP4</button>
+                <button class="chip" type="button" data-sample="sample-blob.bin"><span class="dot"
+                        style="background:var(--fam-binary)"></span>BIN</button>
+            </div>
+        </section>
+
+        <div class="workspace" id="workspace" hidden>
+            <aside class="pane files-pane card" aria-label="Opened files">
+                <div class="pane-head">
+                    <h2>Files <span class="count" id="file-count">0</span></h2>
+                    <button class="btn btn-quiet btn-small" id="clear-all" type="button">Clear</button>
+                </div>
+                <ul class="file-list" id="file-list"></ul>
+            </aside>
+
+            <section class="pane preview-pane card" aria-label="Preview">
+                <div class="preview-toolbar">
+                    <div class="tb-file">
+                        <span class="badge" id="tb-badge" data-family="binary">bin</span>
+                        <span class="name" id="tb-name" title="">no file</span>
+                    </div>
+                    <div class="tb-group" id="tb-pager">
+                        <button class="icon-btn" id="page-prev" type="button" aria-label="Previous page"
+                            title="Previous page">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6" />
+                            </svg>
+                        </button>
+                        <span class="tb-readout" id="page-indicator">1 / 1</span>
+                        <button class="icon-btn" id="page-next" type="button" aria-label="Next page"
+                            title="Next page">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="tb-group" id="tb-zoom">
+                        <button class="icon-btn" id="zoom-out" type="button" aria-label="Zoom out" title="Zoom out">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="7" />
+                                <line x1="8" y1="11" x2="14" y2="11" />
+                                <line x1="21" y1="21" x2="16.5" y2="16.5" />
+                            </svg>
+                        </button>
+                        <span class="tb-readout" id="zoom-indicator">100%</span>
+                        <button class="icon-btn" id="zoom-in" type="button" aria-label="Zoom in" title="Zoom in">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="7" />
+                                <line x1="8" y1="11" x2="14" y2="11" />
+                                <line x1="11" y1="8" x2="11" y2="14" />
+                                <line x1="21" y1="21" x2="16.5" y2="16.5" />
+                            </svg>
+                        </button>
+                        <button class="icon-btn" id="zoom-fit" type="button" aria-label="Fit to width"
+                            title="Fit to width">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                                <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                                <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
+                                <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                            </svg>
+                        </button>
+                        <button class="icon-btn" id="rotate" type="button" aria-label="Rotate 90 degrees"
+                            title="Rotate 90°">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="23 4 23 10 17 10" />
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="preview-stage" id="stage">
+                    <div class="stage-note" id="stage-note">
+                        <strong>No file selected.</strong> Drop a file anywhere on this page, or use one of the
+                        samples above. Press <code>Ctrl</code>+<code>V</code> to open an image from the clipboard.
+                    </div>
+                </div>
+                <div class="preview-foot" id="preview-foot"></div>
+            </section>
+
+            <aside class="pane info-pane card" aria-label="File details">
+                <div class="pane-head">
+                    <h2>File details</h2>
+                    <span class="count" id="info-kind">—</span>
+                </div>
+                <div class="info-body" id="info-body">
+                    <p class="info-empty">Details appear here once a file is opened.</p>
+                </div>
+            </aside>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>What it reads</h2>
+            </div>
+            <div class="card-body">
+                <div class="format-grid">
+                    <div class="format-card">
+                        <h3>Images</h3>
+                        <p>Dimensions, megapixels, colour depth, DPI and the full EXIF block — camera, lens,
+                            exposure, orientation and GPS.</p>
+                        <span class="ext">jpg jpeg png gif webp avif bmp ico svg</span>
+                    </div>
+                    <div class="format-card">
+                        <h3>TIFF</h3>
+                        <p>Every IFD becomes a page, so a scanned batch opens as one document with page
+                            navigation. LZW, Deflate and PackBits compression.</p>
+                        <span class="ext">tif tiff</span>
+                    </div>
+                    <div class="format-card">
+                        <h3>PDF</h3>
+                        <p>Rendered page by page with pdf.js: page size in points, PDF version, producer and
+                            creation date, page count.</p>
+                        <span class="ext">pdf</span>
+                    </div>
+                    <div class="format-card">
+                        <h3>Office</h3>
+                        <p>Word sections, spreadsheet sheets and presentation slides each map to a page, so
+                            the page control stays honest.</p>
+                        <span class="ext">docx xlsx pptx</span>
+                    </div>
+                    <div class="format-card">
+                        <h3>Text and CSV</h3>
+                        <p>Encoding is detected rather than assumed (UTF-8, UTF-16, GBK), CSV becomes a table
+                            with the delimiter it actually uses.</p>
+                        <span class="ext">txt csv tsv json md log xml</span>
+                    </div>
+                    <div class="format-card">
+                        <h3>Raw YUV</h3>
+                        <p>The file Android hands you from <code>onPreviewFrame</code> or an
+                            <code>ImageReader</code>: no header, no dimensions. Pick the layout and the
+                            frames resolve themselves.</p>
+                        <span class="ext">yuv nv21 nv12 i420 yv12</span>
+                    </div>
+                    <div class="format-card">
+                        <h3>Video and audio</h3>
+                        <p>Duration, resolution and aspect ratio from the container, then the browser's own
+                            decoder plays it.</p>
+                        <span class="ext">mp4 webm mov m4v mp3 wav ogg</span>
+                    </div>
+                    <div class="format-card">
+                        <h3>Everything else</h3>
+                        <p>A binary gets no fake preview: the viewer reports the container it recognised from
+                            the first bytes and stops there.</p>
+                        <span class="ext">exe zip sqlite elf …</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Why the metadata is the useful half</h2>
+            </div>
+            <div class="card-body">
+                <p>
+                    When a scanner pipeline misbehaves, the file usually tells you why before the pixels do.
+                    A JPEG that reports orientation 6 was taken sideways, so a decoder that ignores EXIF will
+                    feed a rotated page into OCR. A TIFF whose page count is 1 when the feeder pulled twelve
+                    sheets was truncated upstream. A PDF with no producer and a 2001 creation date is a scan
+                    that was flattened, not a document that was exported.
+                </p>
+                <p>
+                    The raw YUV case is the clearest. A file dumped from an Android camera has no header at
+                    all — no width, no height, no pixel format, and no clue whether you have one frame or
+                    forty. The viewer guesses from the file size against common capture sizes, and then lets
+                    you correct it: choose NV21, NV12, I420, YV12, YUY2 or UYVY, type the width and height,
+                    and the frame count and colours fall into place. Get the format wrong on a 4:2:0 frame
+                    and the image turns green and purple, which is exactly the bug you are looking for.
+                </p>
+                <ul class="body-list">
+                    <li>Type is decided by magic bytes first, extension second — a <code>.jpg</code> that is
+                        really a PNG is labelled as a PNG.</li>
+                    <li>Hashes are computed with the Web Crypto API, locally, so you can compare two copies of
+                        a file without sending either anywhere.</li>
+                    <li>Page state resets per file, and every parser is loaded on demand, so opening an image
+                        never downloads a PDF engine.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Limits worth knowing</h2>
+            </div>
+            <div class="card-body">
+                <p>
+                    Office rendering is a reconstruction, not a print engine: fonts are substituted, complex
+                    layouts reflow, and SmartArt or charts arrive as empty frames. Word pages come from the
+                    document's own section and page breaks, so a document that relies on "fit to page"
+                    shrink may paginate differently here than in Word. Excel sheets are split into blocks of
+                    40 rows so that the page control means something on a sheet with 10,000 rows; the split
+                    is a reading aid, not the workbook's own print layout.
+                </p>
+                <p>
+                    Video playback depends entirely on what the browser can decode — an H.265 clip in a
+                    <code>.mov</code> container may report its duration and still refuse to play. TIFF
+                    decoders handle the common compressions but not every exotic variant. Raw YUV has no
+                    metadata by definition, so the first frame is a guess until you set the width and height.
+                    Nothing here is a forensic tool: it reports what the bytes say, and the SHA-256 it shows
+                    is computed from the copy you dropped in.
+                </p>
+                <p class="hint">
+                    Large files: PDFs over ~150 MB and text over 8 MB are capped, with a note in the preview,
+                    because a browser tab is not a hex editor.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-drop" id="page-drop" aria-hidden="true">
+        <div class="page-drop-box">Drop to open</div>
+    </div>
+
+    <footer class="demo-footer">
+        <div class="demo-footer-inner">
+            <p class="disclaimer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                Files are opened on your device and never uploaded — there is no server side to upload to.
+                This demo uses no licensed SDK, so no key, account or activation is involved: the same page
+                also runs straight from a local folder.
+            </p>
+            <div class="footer-links">
+                <span>
+                    Parsers:
+                    <a href="https://mozilla.github.io/pdf.js/" data-demo-cta="pdfjs">pdf.js</a>,
+                    <a href="https://github.com/photopea/UTIF.js" data-demo-cta="utif">UTIF.js</a>,
+                    <a href="https://sheetjs.com/" data-demo-cta="sheetjs">SheetJS</a>,
+                    <a href="https://github.com/VolodymyrBaydalka/docxjs" data-demo-cta="docx-preview">docx-preview</a>,
+                    <a href="https://stuk.github.io/jszip/" data-demo-cta="jszip">JSZip</a>.
+                </span>
+                <a href="https://www.dynamsoft.com/codepool/demos/" data-demo-cta="demos">All demos</a>
+                <a href="https://www.dynamsoft.com/codepool/" data-demo-cta="blog">Codepool blog</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js?v=20261021l"></script>
+</body>
+
+</html>

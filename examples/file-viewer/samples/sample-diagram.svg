@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
+  <rect width="640" height="360" fill="#fafaf8"/>
+  <text x="32" y="48" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="600" fill="#323234">How a dropped file is classified</text>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#323234">
+    <rect x="32" y="80" width="150" height="56" rx="8" fill="#ffffff" stroke="#dddddd"/>
+    <text x="52" y="114">File bytes</text>
+    <rect x="244" y="80" width="150" height="56" rx="8" fill="#ffffff" stroke="#dddddd"/>
+    <text x="264" y="107">Signature</text>
+    <text x="264" y="124" font-size="12" fill="#606060">FF D8 FF …</text>
+    <rect x="456" y="80" width="150" height="56" rx="8" fill="#fff8ee" stroke="#f6c893"/>
+    <text x="476" y="107">Renderer</text>
+    <text x="476" y="124" font-size="12" fill="#7a4b00">JPEG / PDF / ZIP</text>
+    <line x1="182" y1="108" x2="244" y2="108" stroke="#999999" stroke-width="2" marker-end="url(#a)"/>
+    <line x1="394" y1="108" x2="456" y2="108" stroke="#999999" stroke-width="2" marker-end="url(#a)"/>
+    <rect x="32" y="196" width="150" height="56" rx="8" fill="#ffffff" stroke="#dddddd"/>
+    <text x="52" y="230">Extension</text>
+    <rect x="244" y="196" width="150" height="56" rx="8" fill="#ffffff" stroke="#dddddd"/>
+    <text x="264" y="223">Claims .yuv</text>
+    <text x="264" y="240" font-size="12" fill="#606060">no signature at all</text>
+    <rect x="456" y="196" width="150" height="56" rx="8" fill="#fff8ee" stroke="#f6c893"/>
+    <text x="476" y="223">YUV control</text>
+    <text x="476" y="240" font-size="12" fill="#7a4b00">format · w · h · stride</text>
+    <line x1="182" y1="224" x2="244" y2="224" stroke="#999999" stroke-width="2" marker-end="url(#a)"/>
+    <line x1="394" y1="224" x2="456" y2="224" stroke="#999999" stroke-width="2" marker-end="url(#a)"/>
+    <text x="32" y="312" font-size="13" fill="#606060">Content wins over the name. When there is no content to read, the name is all there is.</text>
+  </g>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#999999"/>
+    </marker>
+  </defs>
+</svg>

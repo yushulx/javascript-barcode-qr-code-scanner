@@ -1,0 +1,48 @@
+{
+  "scanner": {
+    "name": "codepool-file-viewer",
+    "version": "1.0.0",
+    "enabled": true,
+    "capture": {
+      "device": "ADF-01",
+      "resolution": 300,
+      "colourMode": "color",
+      "duplex": false,
+      "timeoutSeconds": 30
+    },
+    "outputs": [
+      {
+        "format": "pdf",
+        "compression": "jpeg",
+        "quality": 85
+      },
+      {
+        "format": "tiff",
+        "compression": "lzw",
+        "multipage": true
+      },
+      {
+        "format": "yuv",
+        "pixelFormat": "NV21",
+        "width": 640,
+        "height": 360
+      }
+    ],
+    "filters": {
+      "deskew": true,
+      "despeckle": true,
+      "blankPageThreshold": 0.995
+    },
+    "tags": [
+      "sample",
+      "demo",
+      "document-scanning"
+    ],
+    "notes": null
+  },
+  "viewer": {
+    "maxPagesInMemory": 3,
+    "showExif": true,
+    "hashAlgorithm": "SHA-256"
+  }
+}
