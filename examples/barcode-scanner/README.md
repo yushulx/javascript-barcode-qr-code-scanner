@@ -10,6 +10,8 @@ documents, video files, or a live camera stream — detection starts automatical
 - 🔍 **Dynamsoft Barcode Reader SDK** — high-performance 1D/2D barcode recognition (version `11.6.3200`)
 - 📷 **Real-time camera scanning** using native browser camera access
 - 🎬 **Video file scanning** — upload MP4/WebM/MOV and every frame is scanned automatically
+- 🎥 **Clip recorder** — record the camera stream with RecordRTC, then replay the clip through the
+  same video decoder
 - 📁 **Image file scanning** — upload one or many JPG/PNG/GIF/BMP/WebP images and scan instantly
 - 📄 **Multi-page PDF and TIFF** — every page is rendered and scanned, with prev/next navigation
 - 🎯 **Visual feedback** — bounding box overlay drawn on every detected barcode
@@ -57,6 +59,22 @@ pages of a document are loaded.
 
 Pick your camera and scanning starts automatically. Detected barcodes appear in real time with
 bounding box overlays.
+
+**Clip recorder:** the button next to the camera selector records the live stream with
+[RecordRTC](https://recordrtc.org/) (fetched from jsDelivr on first click). When you stop, the clip
+appears under the preview with its duration, resolution and size:
+
+- **Scan this clip** — switches to File mode and replays the recording through the ordinary video
+  decoder: same `capture()` call per frame, same overlay, same result list as an uploaded MP4.
+- **Download** — saves the clip as `camera-clip.webm`.
+- **Discard** — drops it and frees the object URL.
+
+A live camera keeps no history, so a missed frame is gone before you can look at it. Recording first
+turns it into a file you can replay, and because the clip travels the upload path, its decode result
+tells you whether the footage itself is readable — if it is, the live miss was timing.
+
+The clip is WebM; `MediaRecorder` writes no duration into the header, so the page measures it on
+load to make the seek bar work. Nothing leaves the tab.
 
 ## How PDF and TIFF are handled
 
@@ -156,7 +174,7 @@ Then open http://localhost:8000 in your browser.
 | File | Description |
 | --- | --- |
 | `index.html` | Page structure and SDK script tag |
-| `main.js` | Scanning logic, camera handling, PDF/TIFF rasterization, benchmark, ground truth |
+| `main.js` | Scanning logic, camera handling, clip recording, PDF/TIFF rasterization, benchmark, ground truth |
 | `styles.css` | UI styles |
 | `utils.js` | Small UI helpers |
 | `default.png` | Placeholder preview image |

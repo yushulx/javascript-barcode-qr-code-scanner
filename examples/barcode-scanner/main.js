@@ -203,7 +203,7 @@ async function handleFiles(files) {
     }
 }
 
-async function handleFile(file) {
+async function handleFile(file, focus) {
     if (!file) return;
 
     if (isScanableImage(file)) {
@@ -218,7 +218,7 @@ async function handleFile(file) {
         imagePreviewContainer.style.display = 'none';
         imageNavigator.style.display = 'none';
         imagePages = [];
-        loadVideoFile(file);
+        loadVideoFile(file, focus);
         return;
     }
 
@@ -468,21 +468,40 @@ function loadImage2Canvas(base64Image) {
     };
 }
 
-function loadVideoFile(file) {
+function loadVideoFile(file, focus) {
     let url = URL.createObjectURL(file);
     videoFilePlayer.src = url;
 
-    videoFilePlayer.onloadedmetadata = function () {
+    videoFilePlayer.onloadedmetadata = async function () {
         videoFileWrapper.style.display = 'block';
         imagePreviewContainer.style.display = 'none';
+        /* A clip handed over from the camera was requested from a button far
+           below the player, so it is brought into view. An upload is already
+           beside the drop zone and is left where the user is looking. */
+        if (focus) videoFileWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
         videoOverlay.width = videoFilePlayer.videoWidth;
         videoOverlay.height = videoFilePlayer.videoHeight;
+
+        /* The wrapper is a fixed 4:3 box and the player fills it with
+           `object-fit: cover`, so a 16:9 clip is cropped left and right. The
+           overlay canvas is stretched over the whole box, which would put its
+           boxes outside the pixels they were measured in. Matching the box to
+           the clip's own aspect keeps canvas coordinates and video pixels the
+           same — one video pixel, one canvas pixel. */
+        if (videoFilePlayer.videoWidth && videoFilePlayer.videoHeight) {
+            videoFileWrapper.style.paddingBottom =
+                (videoFilePlayer.videoHeight / videoFilePlayer.videoWidth * 100) + '%';
+        }
 
         if (!isSDKReady) {
             detectionResult.value = 'Dynamsoft Barcode Reader is not ready yet. Please activate it in Settings.\n';
             return;
         }
 
+        /* A clip recorded in the browser has no duration in its header. Wait for
+           the gauge to settle before playing, or the playback and the seek fight
+           each other and the frame loop stops on the first tick. */
+        await fixInfiniteDuration(videoFilePlayer);
         startFileScanning();
     };
 }
@@ -516,7 +535,10 @@ function startFileScanning() {
             }
 
             try {
-                ctx.clearRect(0, 0, videoOverlay.width, videoOverlay.height);
+                /* No clearRect here: scanVideoFrameDynamsoft clears the canvas
+                   itself, after capture() resolves, so the previous frame's
+                   boxes stay on screen instead of blinking off during the
+                   decode. */
                 await scanVideoFrameDynamsoft(tempCanvas, ctx);
             } catch (ex) {
                 console.error('Video scanning error:', ex);
@@ -550,19 +572,24 @@ async function scanVideoFrameDynamsoft(canvas, ctx) {
     await resetOrReapplyDynamsoftSettings();
     let result = await cvr.capture(canvas, dynamsoftTemplate);
 
+    /* The boxes are cleared here, once the new result is in hand, and not before
+       the await above — clearing first leaves the canvas blank for the two or
+       three animation frames that capture() takes, so the box blinks on and off
+       at about 15 Hz instead of sitting still. */
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
     if (!result.items || result.items.length === 0) return;
 
+    let newResult = false;
     for (let item of result.items) {
         if (item.type !== Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE) {
             continue;
         }
 
-        let type = item.formatString || 'Unknown';
-        let key = `[${type}] ${item.text}`;
-        if (fileScanResults.includes(key)) continue;
-
-        fileScanResults.push(key);
-
+        /* Every barcode found in this frame is boxed, on every frame. Gating the
+           drawing on the result list below (as it used to be) drew a box for the
+           single frame that first decoded the code and skipped it afterwards —
+           one frame out of a hundred, which reads as no overlay at all. */
         let points = item.location.points;
         ctx.strokeStyle = '#00ff00';
         ctx.lineWidth = 3;
@@ -573,9 +600,18 @@ async function scanVideoFrameDynamsoft(canvas, ctx) {
         ctx.lineTo(points[3].x, points[3].y);
         ctx.closePath();
         ctx.stroke();
+
+        let type = item.formatString || 'Unknown';
+        let key = `[${type}] ${item.text}`;
+        if (!fileScanResults.includes(key)) {
+            fileScanResults.push(key);
+            newResult = true;
+        }
     }
 
-    detectionResult.value = fileScanResults.join('\n') + '\n\n';
+    if (newResult) {
+        detectionResult.value = fileScanResults.join('\n') + '\n\n';
+    }
 }
 
 // ========== Image Result Rendering ==========
@@ -760,9 +796,28 @@ async function cameraChanged() {
         stopCamera();
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         videoElement.srcObject = stream;
+        fitPreviewToStream();
         startCameraScanning();
+        updateRecordButton();
     } catch (error) {
         console.error('Error accessing camera:', error);
+        updateRecordButton();
+    }
+}
+
+/* The preview box is a fixed 4:3 and the stream is filled into it with
+   `object-fit: cover`, so a 16:9 camera is cropped left and right. The overlay
+   canvas is stretched across the whole box, which slides every box it draws off
+   the barcode it belongs to. Matching the box to the stream keeps one video
+   pixel equal to one canvas pixel. */
+function fitPreviewToStream() {
+    const videoview = document.getElementById('videoview');
+    if (!videoview || !stream) return;
+
+    const track = stream.getVideoTracks()[0];
+    const settings = track && track.getSettings ? track.getSettings() : {};
+    if (settings.width && settings.height) {
+        videoview.style.paddingBottom = (settings.height / settings.width * 100) + '%';
     }
 }
 
@@ -821,6 +876,10 @@ function stopCameraScanning() {
 }
 
 function stopCamera() {
+    /* A take cannot outlive the stream it is recording: stop the recorder first,
+       or the MediaRecorder callback never fires and the button stays on "Stop". */
+    if (recorder) stopRecording();
+
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
         videoElement.srcObject = null;
@@ -831,6 +890,7 @@ function stopCamera() {
         let ctx = cameraOverlay.getContext('2d');
         ctx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
     }
+    updateRecordButton();
 }
 
 function showCameraResult(result) {
@@ -871,6 +931,255 @@ function showCameraResult(result) {
     }
 }
 
+// ========== Clip Recording ==========
+/* A live camera is a hard thing to test against: the frame that failed is gone
+   the moment it is gone. Recording the stream turns that into something you can
+   replay — the blob goes straight into the ordinary video path (same preview,
+   same frame loop, same overlay), so the clip is decoded exactly the way an
+   uploaded MP4/WebM would be.
+
+   RecordRTC is fetched from jsDelivr on the first click, like the PDF/TIFF
+   decoders, so a visitor who never records never pays for it. */
+const RECORDRTC_URL = 'https://cdn.jsdelivr.net/npm/recordrtc@5.6.2/RecordRTC.min.js';
+
+const recordBtn = document.getElementById('record_btn');
+const recordBtnLabel = document.getElementById('record_btn_label');
+const recordTimer = document.getElementById('record_timer');
+const recordingResultCard = document.getElementById('recording_result');
+const recordingPreview = document.getElementById('recording_preview');
+const recordingMeta = document.getElementById('recording_meta');
+const recordingDownload = document.getElementById('recording_download');
+
+let recordRtcPromise = null;
+let recorder = null;        // live RecordRTC instance while a take is running
+let recordingBusy = false;  // a take is starting, or being flushed to a blob
+let recordTimerId = null;
+let recordStartedAt = 0;
+let recording = null;       // { blob, url, file, seconds, width, height }
+
+function loadRecordRTC() {
+    if (!recordRtcPromise) {
+        recordRtcPromise = loadScript(RECORDRTC_URL).then(function () {
+            if (!window.RecordRTC) throw new Error('RecordRTC did not initialise.');
+            return window.RecordRTC;
+        }).catch(function (ex) {
+            recordRtcPromise = null;   // let the next click retry
+            throw ex;
+        });
+    }
+    return recordRtcPromise;
+}
+
+function formatClipTime(seconds) {
+    const total = Math.max(0, Math.floor(seconds));
+    return Math.floor(total / 60) + ':' + String(total % 60).padStart(2, '0');
+}
+
+/* MediaRecorder writes a WebM header with no duration, so an element loading the
+   blob reports `Infinity` and its seek bar cannot be dragged — which defeats the
+   point of scrubbing back to the frame that failed. Seeking far past the end
+   makes the browser measure the real duration; the element is then put back at
+   the start. Files that carry a proper header are left untouched.
+
+   Resolves once the seek has settled, so a caller that wants to play the clip
+   does not start in the middle of one. */
+function fixInfiniteDuration(video) {
+    if (video.duration !== Infinity) return Promise.resolve();
+
+    return new Promise(function (resolve) {
+        let settled = false;
+        const finish = function () {
+            if (settled) return;
+            settled = true;
+            video.removeEventListener('timeupdate', measure);
+            video.removeEventListener('seeked', rewound);
+            clearTimeout(guard);
+            resolve();
+        };
+        const measure = function () {
+            video.removeEventListener('timeupdate', measure);
+            try {
+                video.currentTime = 0;
+            } catch (e) {
+                finish();
+                return;
+            }
+            video.addEventListener('seeked', rewound);
+        };
+        const rewound = function () { finish(); };
+        const guard = setTimeout(finish, 1500);   // never hold a caller hostage
+
+        video.addEventListener('timeupdate', measure);
+        try {
+            video.currentTime = 1e101;
+        } catch (e) {
+            finish();
+        }
+    });
+}
+
+/* One owner for the button's three states — idle, recording, unavailable —
+   because the camera can be swapped or switched off underneath it. */
+function updateRecordButton() {
+    if (!recordBtn) return;
+    const cameraLive = !!stream && !!videoElement.srcObject;
+
+    if (recorder) {
+        recordBtn.classList.add('is-recording');
+        recordBtnLabel.textContent = 'Stop recording';
+        recordBtn.disabled = false;
+        recordTimer.hidden = false;
+        return;
+    }
+
+    recordBtn.classList.remove('is-recording');
+    recordBtnLabel.textContent = 'Start recording';
+    recordBtn.disabled = recordingBusy || !cameraLive;
+    recordTimer.hidden = true;
+    if (recordTimerId) {
+        clearInterval(recordTimerId);
+        recordTimerId = null;
+    }
+}
+
+function toggleRecording() {
+    if (recorder) {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+}
+
+async function startRecording() {
+    if (recorder || recordingBusy) return;
+    if (!stream) {
+        alert('The camera is not running. Pick a camera first.');
+        return;
+    }
+
+    recordingBusy = true;
+    recordBtn.disabled = true;
+    recordBtnLabel.textContent = 'Starting…';
+
+    try {
+        const RecordRTC = await loadRecordRTC();
+        hideRecording();                       // a new take replaces the old clip
+        recorder = new RecordRTC(stream, { type: 'video' });
+        recorder.startRecording();
+
+        recordStartedAt = Date.now();
+        recordTimer.textContent = '0:00';
+        recordTimerId = setInterval(function () {
+            recordTimer.textContent = formatClipTime((Date.now() - recordStartedAt) / 1000);
+        }, 200);
+    } catch (ex) {
+        console.error(ex);
+        alert('Could not start the recorder: ' + ex.message);
+    } finally {
+        recordingBusy = false;
+        updateRecordButton();
+    }
+}
+
+function stopRecording() {
+    if (!recorder || recordingBusy) return;
+
+    const instance = recorder;
+    recordingBusy = true;
+    recordBtn.disabled = true;
+    if (recordTimerId) {
+        clearInterval(recordTimerId);
+        recordTimerId = null;
+    }
+
+    const seconds = (Date.now() - recordStartedAt) / 1000;
+    const width = videoElement.videoWidth;
+    const height = videoElement.videoHeight;
+
+    instance.stopRecording(function () {
+        const blob = instance.getBlob();
+
+        /* The blob is read before the instance is torn down — destroy() clears
+           the recorder's copy. The stream itself is untouched: the preview and
+           the next take both keep using it. */
+        instance.destroy();
+        recorder = null;
+        recordingBusy = false;
+        updateRecordButton();
+
+        if (!blob || blob.size === 0) {
+            alert('The recording came back empty. Check that the camera is still running, then try again.');
+            return;
+        }
+
+        showRecording(blob, seconds, width, height);
+    });
+}
+
+function showRecording(blob, seconds, width, height) {
+    hideRecording();
+
+    const extension = blob.type.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+    const url = URL.createObjectURL(blob);
+
+    /* A File, not the raw blob: the scan path and the download both expect a
+       name, and the extension is what tells the upload handler this is a video
+       when the browser reports an empty MIME type. */
+    recording = {
+        blob: blob,
+        url: url,
+        seconds: seconds,
+        width: width,
+        height: height,
+        file: new File([blob], 'camera-clip.' + extension, {
+            type: blob.type || 'video/' + extension
+        })
+    };
+
+    recordingPreview.onloadedmetadata = function () {
+        fixInfiniteDuration(recordingPreview);
+    };
+    recordingPreview.src = url;
+    recordingMeta.textContent = formatClipTime(seconds) + ' · ' + width + '×' + height + ' · '
+        + (blob.size / 1048576).toFixed(1) + ' MB · ' + extension.toUpperCase();
+    recordingDownload.href = url;
+    recordingDownload.setAttribute('download', 'camera-clip.' + extension);
+    recordingResultCard.style.display = 'block';
+    /* The camera preview is taller than the viewport on most screens, and the
+       clip appears under it — bring it into view or the click looks like it did
+       nothing. */
+    recordingResultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/* Hidden, not deleted: the object URL keeps the preview alive, so it is revoked
+   here and nowhere else. */
+function hideRecording() {
+    if (recordingResultCard) recordingResultCard.style.display = 'none';
+    if (recordingPreview) {
+        recordingPreview.pause();
+        recordingPreview.removeAttribute('src');
+        recordingPreview.load();
+    }
+    if (recording && recording.url) URL.revokeObjectURL(recording.url);
+    recording = null;
+}
+
+function discardRecording() {
+    hideRecording();
+}
+
+async function scanRecording() {
+    if (!recording) return;
+
+    const file = recording.file;
+
+    /* Hand the clip to the upload path instead of writing a second decoder loop:
+       switching to File mode stops the camera, and loadVideoFile() then plays the
+       clip frame by frame through the same capture() call an upload uses. */
+    dropdown.value = 'file';
+    await selectChanged();
+    handleFile(file, true);
+}
 // ========== Loading Indicator ==========
 /* Reference-counted: rasterizing a document runs inside loadPages(), and SDK
    activation can overlap with it, so a bare show/hide pair would let one finish
