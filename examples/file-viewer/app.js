@@ -839,7 +839,10 @@
 
             var box = node('span');
             box.appendChild(node('span', 'fname', entry.name));
-            var meta = [entry.info ? entry.info.label : 'Reading…', fmtBytes(entry.size)];
+            /* Only the selected file has been parsed; the rest would otherwise
+               all claim to be "Reading…" at the same time. */
+            var meta = [entry.info ? entry.info.label : (entry.ext ? entry.ext.toUpperCase() : 'File'),
+                fmtBytes(entry.size)];
             if (entry.pages > 1) { meta.splice(1, 0, entry.pages + ' pages'); }
             box.appendChild(node('span', 'fmeta', meta.join(' · ')));
 
