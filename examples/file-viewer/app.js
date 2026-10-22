@@ -38,7 +38,7 @@
        404 that was cached before a deploy must not outlive the fix. (It did
        once — IIS had no .yuv MIME mapping, and browsers held the 404 even after
        the mapping was added.) */
-    var ASSET_V = '20261022d';
+    var ASSET_V = '20261022e';
     var TEXT_LINE_CAP = 8000;
     var CSV_ROWS_PER_PAGE = 50;
     var XLSX_ROWS_PER_PAGE = 40;
@@ -2886,6 +2886,7 @@
     var scanState = null;
     var dbrLoader = null;
     var dbrPromise = null;
+    var dbrReady = false;
     var lastScan = null;
     var toastTimer = null;
     var panelTimer = null;
@@ -2932,19 +2933,96 @@
         });
     }
 
-    /* The page the user is looking at, as pixels. Only raster views qualify:
-       an Office document is a DOM tree, and screenshotting it would be a
-       different (and worse) promise than "crop the page you see". */
+    /* Is there a page on screen at all (whatever its type)? Every viewer puts
+       its output inside .stage-center, including the HTML ones. */
+    function stageReady() {
+        return !!el.stage.querySelector('.stage-center');
+    }
+
+    /* The page as pixels, when it already is pixels: an image, a rendered PDF /
+       TIFF / YUV canvas, or the current frame of a video. Word, Excel,
+       PowerPoint and text have no pixel backing store — they are captured with
+       html2canvas at scan time instead. */
     function rasterOfStage() {
+        var video = el.stage.querySelector('video');
+        if (video && video.videoWidth) {
+            return { node: video, w: video.videoWidth, h: video.videoHeight, kind: 'video' };
+        }
         var img = el.stage.querySelector('.stage-rotor img');
         if (img && img.naturalWidth && img.getBoundingClientRect().width) {
-            return { node: img, w: img.naturalWidth, h: img.naturalHeight };
+            return { node: img, w: img.naturalWidth, h: img.naturalHeight, kind: 'image' };
         }
         var canvas = el.stage.querySelector('canvas.page-canvas');
         if (canvas && canvas.width && canvas.getBoundingClientRect().width) {
-            return { node: canvas, w: canvas.width, h: canvas.height };
+            return { node: canvas, w: canvas.width, h: canvas.height, kind: 'canvas' };
         }
         return null;
+    }
+
+    /* Where the picture actually is on screen. For <video> the element box can
+       be larger than the frame (object-fit keeps the aspect ratio), and the
+       letterbox is not part of the picture — mapping the selection against the
+       element box would offset every crop by half the letterbox. */
+    function contentRect(target) {
+        var box = target.node.getBoundingClientRect();
+        if (target.kind !== 'video') {
+            return { left: box.left, top: box.top, width: box.width, height: box.height,
+                right: box.right, bottom: box.bottom };
+        }
+        var vw = target.node.videoWidth;
+        var vh = target.node.videoHeight;
+        if (!vw || !vh) {
+            return { left: box.left, top: box.top, width: box.width, height: box.height,
+                right: box.right, bottom: box.bottom };
+        }
+        var scale = Math.min(box.width / vw, box.height / vh);
+        var w = vw * scale;
+        var h = vh * scale;
+        var left = box.left + (box.width - w) / 2;
+        var top = box.top + (box.height - h) / 2;
+        return { left: left, top: top, width: w, height: h, right: left + w, bottom: top + h };
+    }
+
+    function loadHtml2Canvas() {
+        if (window.html2canvas) { return Promise.resolve(); }
+        return loadScript('lib/html2canvas.min.js');
+    }
+
+    /* Rasterise what is on screen. Used for the DOM-rendered formats, and as
+       the fallback when a selection reaches outside the picture.
+
+       docx-preview and the PPTX renderer fit the page with CSS `zoom`, which
+       html2canvas applies to positions but not to text metrics — the capture
+       comes out with letters piled on top of each other. Swapping zoom for an
+       equivalent transform inside the clone fixes the metrics and keeps the
+       page where it was on screen (origin at the top centre, because the page
+       is centred inside the wrapper). */
+    function captureStage() {
+        return loadHtml2Canvas().then(function () {
+            var scale = Math.min(window.devicePixelRatio || 1, 2);
+            return window.html2canvas(el.stage, {
+                scale: scale,
+                backgroundColor: '#ffffff',
+                logging: false,
+                useCORS: true,
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: document.documentElement.clientWidth,
+                windowHeight: document.documentElement.clientHeight,
+                onclone: function (doc) {
+                    var zoomed = doc.querySelectorAll('.doc-host');
+                    for (var i = 0; i < zoomed.length; i++) {
+                        var h = zoomed[i];
+                        var z = parseFloat(h.style.zoom) || parseFloat(getComputedStyle(h).zoom) || 1;
+                        h.style.zoom = '1';
+                        h.style.transformOrigin = 'top center';
+                        h.style.transform = 'scale(' + z + ')';
+                    }
+                }
+            }).then(function (shot) {
+                return { canvas: shot, scale: scale };
+            });
+        });
     }
 
     function menuItem(icon, label, sub, primary) {
@@ -2986,9 +3064,9 @@
     }
 
     function openMenu(x, y) {
+        if (!stageReady()) { return; }
         var m = ensureMenu();
         menuRaster = rasterOfStage();
-        if (!menuRaster) { return; }
         m.hidden = false;
         var r = m.getBoundingClientRect();
         m.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
@@ -3007,30 +3085,47 @@
         return c;
     }
 
-    function saveRaster() {
+    /* The page as a single PNG: native resolution when it is already pixels,
+       otherwise a rasterisation of what is on screen. */
+    function pageImage() {
         var raster = menuRaster || rasterOfStage();
-        if (!raster) { return; }
-        rasterCanvas(raster).toBlob(function (blob) {
-            downloadBlob(blob, fileStem(active ? active.name : 'page') + '.png');
-        }, 'image/png');
+        if (raster) {
+            var c = document.createElement('canvas');
+            c.width = raster.w;
+            c.height = raster.h;
+            c.getContext('2d').drawImage(raster.node, 0, 0);
+            return Promise.resolve(c);
+        }
+        return captureStage().then(function (shot) { return shot.canvas; });
+    }
+
+    function saveRaster() {
+        pageImage().then(function (canvas) {
+            canvas.toBlob(function (blob) {
+                downloadBlob(blob, fileStem(active ? active.name : 'page') + '.png');
+            }, 'image/png');
+        }).catch(function () {
+            flash('Could not render this page');
+        });
         A.action('save_page_image', { kind: active ? active.kind : '' });
     }
 
     function copyRaster() {
-        var raster = menuRaster || rasterOfStage();
-        if (!raster) { return; }
-        var canvas = rasterCanvas(raster);
         if (!navigator.clipboard || !window.ClipboardItem) {
             flash('This browser cannot copy images — use Save image');
             return;
         }
-        canvas.toBlob(function (blob) {
-            navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function () {
-                flash('Page copied as PNG');
-            }).catch(function () {
-                flash('Copy failed — use Save image instead');
+        pageImage().then(function (canvas) {
+            return new Promise(function (resolve) {
+                canvas.toBlob(resolve, 'image/png');
             });
-        }, 'image/png');
+        }).then(function (blob) {
+            return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        }).then(function () {
+            flash('Page copied as PNG');
+        }).catch(function () {
+            flash('Copy failed — use Save image instead');
+        });
         A.action('copy_page_image', { kind: active ? active.kind : '' });
     }
 
@@ -3044,12 +3139,12 @@
     }
 
     function startScan() {
-        var raster = menuRaster || rasterOfStage();
         closeMenu();
-        if (!raster) {
-            flash('Open an image, PDF, TIFF or YUV page first');
+        if (!stageReady()) {
+            flash('Open a file first');
             return;
         }
+        var raster = rasterOfStage();
         cancelScan();
         /* Rotation would make screen→pixel mapping a matrix problem for no
            benefit; the user is about to drag a box, so show the page upright. */
@@ -3204,10 +3299,16 @@
         s.rect.style.width = st.w + 'px';
         s.rect.style.height = st.h + 'px';
 
-        var map = s.raster.node.getBoundingClientRect();
-        var kx = s.raster.w / map.width;
-        var ky = s.raster.h / map.height;
-        s.sizeHint.textContent = Math.round(st.w * kx) + ' × ' + Math.round(st.h * ky) + ' px';
+        /* Show the size in the units that matter: source pixels for a picture,
+           screen pixels for a rasterised page. */
+        if (s.raster) {
+            var cr = contentRect(s.raster);
+            var kx = s.raster.w / cr.width;
+            var ky = s.raster.h / cr.height;
+            s.sizeHint.textContent = Math.round(st.w * kx) + ' × ' + Math.round(st.h * ky) + ' px';
+        } else {
+            s.sizeHint.textContent = Math.round(st.w) + ' × ' + Math.round(st.h) + ' px on screen';
+        }
 
         var below = st.y + st.h + 54 < s.box.height;
         s.bar.style.left = Math.max(8, Math.min(st.x, s.box.width - 300)) + 'px';
@@ -3264,72 +3365,107 @@
         return dbrPromise;
     }
 
-    function cropSelection() {
-        var s = scanState;
-        var map = s.raster.node.getBoundingClientRect();
-        var kx = s.raster.w / map.width;
-        var ky = s.raster.h / map.height;
-        var st = s.state;
+    function intersectRect(a, b) {
+        var left = Math.max(a.left, b.left);
+        var top = Math.max(a.top, b.top);
+        var right = Math.min(a.left + a.width, b.left + b.width);
+        var bottom = Math.min(a.top + a.height, b.top + b.height);
+        if (right - left < 4 || bottom - top < 4) { return null; }
+        return { left: left, top: top, width: right - left, height: bottom - top };
+    }
 
-        var cx = s.box.left + st.x;
-        var cy = s.box.top + st.y;
-        var x0 = Math.max(map.left, cx);
-        var y0 = Math.max(map.top, cy);
-        var x1 = Math.min(map.left + map.width, cx + st.w);
-        var y1 = Math.min(map.top + map.height, cy + st.h);
-        if (x1 - x0 < 4 || y1 - y0 < 4) { return null; }
+    /* Crop the selection out of the page. A picture (image, PDF/TIFF/YUV canvas,
+       video frame) contributes its own pixels at native resolution; anything
+       else — Word, Excel, PowerPoint, text — is rasterised first. */
+    function cropSelection(sel, target) {
+        if (target) {
+            var cr = contentRect(target);
+            var inter = intersectRect(sel, cr);
+            if (inter) {
+                var kx = target.w / cr.width;
+                var ky = target.h / cr.height;
+                var sx = Math.round((inter.left - cr.left) * kx);
+                var sy = Math.round((inter.top - cr.top) * ky);
+                var sw = Math.max(1, Math.round(inter.width * kx));
+                var sh = Math.max(1, Math.round(inter.height * ky));
 
-        var sx = Math.round((x0 - map.left) * kx);
-        var sy = Math.round((y0 - map.top) * ky);
-        var sw = Math.max(1, Math.round((x1 - x0) * kx));
-        var sh = Math.max(1, Math.round((y1 - y0) * ky));
+                /* A hand-drawn box usually cuts the quiet zone. Widen it a
+                   little; the crop is what gets annotated, so the overlay stays
+                   honest. */
+                var pad = Math.round(Math.min(sw, sh) * 0.06);
+                var px = Math.max(0, sx - pad);
+                var py = Math.max(0, sy - pad);
+                var pw = Math.min(target.w - px, sw + pad * 2);
+                var ph = Math.min(target.h - py, sh + pad * 2);
 
-        /* A hand-drawn box usually cuts the quiet zone. Widen it a little;
-           the crop is what gets annotated, so the overlay stays honest. */
-        var pad = Math.round(Math.min(sw, sh) * 0.06);
-        var px = Math.max(0, sx - pad);
-        var py = Math.max(0, sy - pad);
-        var pw = Math.min(s.raster.w - px, sw + pad * 2);
-        var ph = Math.min(s.raster.h - py, sh + pad * 2);
+                var crop = document.createElement('canvas');
+                crop.width = pw;
+                crop.height = ph;
+                crop.getContext('2d').drawImage(target.node, px, py, pw, ph, 0, 0, pw, ph);
+                return Promise.resolve({ canvas: crop, x: px, y: py, w: pw, h: ph });
+            }
+        }
+        return captureDomRegion(sel);
+    }
 
-        var crop = document.createElement('canvas');
-        crop.width = pw;
-        crop.height = ph;
-        crop.getContext('2d').drawImage(s.raster.node, px, py, pw, ph, 0, 0, pw, ph);
-        return { canvas: crop, x: px, y: py, w: pw, h: ph, node: s.raster.node };
+    function captureDomRegion(sel) {
+        var box = el.stage.getBoundingClientRect();
+        return captureStage().then(function (shot) {
+            /* html2canvas renders the element's *visible* box, so the selection
+               maps straight onto the output — no scroll compensation. (Adding
+               scrollTop here pushed the crop past the bottom of the image,
+               which is how this was found: a blank result on a scrolled page.) */
+            var k = shot.scale;
+            var x = Math.round((sel.left - box.left) * k);
+            var y = Math.round((sel.top - box.top) * k);
+            var w = Math.max(1, Math.round(sel.width * k));
+            var h = Math.max(1, Math.round(sel.height * k));
+            var canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(shot.canvas, x, y, w, h, 0, 0, w, h);
+            return { canvas: canvas, x: x, y: y, w: w, h: h };
+        });
     }
 
     function readRegion() {
         if (!scanState) { return; }
-        var crop = cropSelection();
-        if (!crop) {
-            flash('Draw a box inside the page first');
-            return;
-        }
+        var st = scanState.state;
+        var sel = {
+            left: scanState.box.left + st.x,
+            top: scanState.box.top + st.y,
+            width: st.w,
+            height: st.h
+        };
+        var target = scanState.raster;
         var file = active ? active.name : '';
         cancelScan();
         openPanel();
-        scanStatus('Loading Dynamsoft Barcode Reader… (first run only)');
-        A.start('barcode_scan', 'image');
+        scanStatus(target ? 'Reading…' : 'Rendering the page…');
+        A.start('barcode_scan', target ? 'image' : 'document');
 
-        reader().then(function (router) {
-            scanStatus('Reading…');
-            var started = performance.now();
-            var data = crop.canvas.getContext('2d').getImageData(0, 0, crop.w, crop.h);
-            /* capture() may detach its input buffer, so hand it a copy. */
-            return router.capture({
-                bytes: new Uint8Array(data.data),
-                width: crop.w,
-                height: crop.h,
-                stride: crop.w * 4,
-                format: 10
-            }, 'ReadBarcodes_Default').then(function (result) {
-                if (result.errorCode) {
-                    throw new Error('Reader error ' + result.errorCode + ': ' + (result.errorString || 'decode failed'));
-                }
-                var items = (result.items || []).filter(function (i) { return i.type === 2; }).map(function (i) {
-                    return {
-                        text: i.text || '',
+        cropSelection(sel, target).then(function (crop) {
+            if (!crop) { throw new Error('The selection is outside the page.'); }
+            scanStatus(dbrReady ? 'Reading…' : 'Loading Dynamsoft Barcode Reader… (first run only)');
+            return reader().then(function (router) {
+                dbrReady = true;
+                scanStatus('Reading…');
+                var started = performance.now();
+                var data = crop.canvas.getContext('2d').getImageData(0, 0, crop.w, crop.h);
+                /* capture() may detach its input buffer, so hand it a copy. */
+                return router.capture({
+                    bytes: new Uint8Array(data.data),
+                    width: crop.w,
+                    height: crop.h,
+                    stride: crop.w * 4,
+                    format: 10
+                }, 'ReadBarcodes_Default').then(function (result) {
+                    if (result.errorCode) {
+                        throw new Error('Reader error ' + result.errorCode + ': ' + (result.errorString || 'decode failed'));
+                    }
+                    var items = (result.items || []).filter(function (i) { return i.type === 2; }).map(function (i) {
+                        return {
+                            text: i.text || '',
                         format: i.formatString || 'Unknown',
                         points: ((i.location && i.location.points) || []).map(function (p) {
                             return { x: p.x, y: p.y };
@@ -3339,21 +3475,22 @@
                     };
                 });
                 return { items: items, ms: Math.round(performance.now() - started) };
+                });
+            }).then(function (out) {
+                lastScan = {
+                    file: file,
+                    region: { x: crop.x, y: crop.y, width: crop.w, height: crop.h },
+                    items: out.items,
+                    ms: out.ms,
+                    canvas: annotateCrop(crop.canvas, out.items)
+                };
+                renderScan();
+                if (out.items.length) {
+                    A.success('barcode_scan', 'image', { barcode_count: out.items.length });
+                } else {
+                    A.fail('barcode_scan', 'image');
+                }
             });
-        }).then(function (out) {
-            lastScan = {
-                file: file,
-                region: { x: crop.x, y: crop.y, width: crop.w, height: crop.h },
-                items: out.items,
-                ms: out.ms,
-                canvas: annotateCrop(crop.canvas, out.items)
-            };
-            renderScan();
-            if (out.items.length) {
-                A.success('barcode_scan', 'image', { barcode_count: out.items.length });
-            } else {
-                A.fail('barcode_scan', 'image');
-            }
         }).catch(function (err) {
             lastScan = null;
             scanError(err);
@@ -3526,8 +3663,12 @@
 
     /* Context menu inside the preview. Only raster pages offer it: an Office
        document is a DOM tree, and there is no honest pixel crop to decode. */
+    /* Context menu for whatever page is open. The selection is a screenshot of
+       that area, so the menu no longer cares which format produced it. Links
+       inside a document keep the browser's own menu. */
     el.stage.addEventListener('contextmenu', function (e) {
-        if (!rasterOfStage()) { return; }
+        if (!stageReady()) { return; }
+        if (e.target.closest && e.target.closest('a[href]')) { return; }
         e.preventDefault();
         openMenu(e.clientX, e.clientY);
     });

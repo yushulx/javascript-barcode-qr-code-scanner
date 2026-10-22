@@ -20,7 +20,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="styles.css?v=20261022d">
+    <link rel="stylesheet" href="styles.css?v=20261022i">
 
 
     <!--
@@ -404,12 +404,12 @@
                     is computed from the copy you dropped in.
                 </p>
                 <p>
-                    <strong>Right-click scanning works on raster pages.</strong> Images, PDF, TIFF and raw YUV
-                    are pixels, so a region can be cropped and decoded. Word, Excel and PowerPoint are rendered
-                    as HTML — there is no pixel page to crop, and the menu stays out of the way rather than
-                    screenshotting something the browser drew. The reader is downloaded the first time you
-                    scan and needs a license to activate: the hosted page carries a domain-bound one, a copy
-                    you run yourself needs its own.
+                    <strong>Right-click scanning crops the pixels you select.</strong> When the page already
+                    is pixels — an image, PDF, TIFF, YUV or the current video frame — the crop comes from
+                    its own resolution. Word, Excel, PowerPoint and text are rendered to pixels first, so
+                    that crop is screen resolution. The reader is downloaded the first time you scan and
+                    needs a license to activate: the hosted page carries a domain-bound one, a copy you run
+                    yourself needs its own.
                 </p>
                 <p class="hint">
                     Large files: PDFs over ~150 MB and text over 8 MB are capped, with a note in the preview,
@@ -457,7 +457,7 @@
         </div>
     </footer>
 
-    <script src="app.js?v=20261022d"></script>
+    <script src="app.js?v=20261022i"></script>
 </body>
 
 </html>
