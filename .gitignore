@@ -1,1 +1,4 @@
 .mimosa
+# Local assistant workspace, never part of the sample
+.workbuddy/
+.wbapp_*.genie

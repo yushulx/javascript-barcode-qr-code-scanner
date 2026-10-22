@@ -20,7 +20,9 @@
     'use strict';
 
     var noop = function () { };
-    var A = window.DemoAnalytics || { action: noop, track: noop, error: noop };
+    var A = window.DemoAnalytics || {
+        action: noop, track: noop, error: noop, ready: noop, start: noop, success: noop, fail: noop
+    };
 
     /* ------------------------------------------------------------------ */
     /* Constants                                                           */
@@ -36,7 +38,7 @@
        404 that was cached before a deploy must not outlive the fix. (It did
        once — IIS had no .yuv MIME mapping, and browsers held the 404 even after
        the mapping was added.) */
-    var ASSET_V = '20261021m';
+    var ASSET_V = '20261022d';
     var TEXT_LINE_CAP = 8000;
     var CSV_ROWS_PER_PAGE = 50;
     var XLSX_ROWS_PER_PAGE = 40;
@@ -73,7 +75,13 @@
         rotate: document.getElementById('rotate'),
         infoBody: document.getElementById('info-body'),
         infoKind: document.getElementById('info-kind'),
-        pageDrop: document.getElementById('page-drop')
+        pageDrop: document.getElementById('page-drop'),
+        scanPanel: document.getElementById('scan-panel'),
+        scanBody: document.getElementById('scan-body'),
+        scanClose: document.getElementById('scan-close'),
+        scanCopy: document.getElementById('scan-copy-result'),
+        scanSavePng: document.getElementById('scan-save-png'),
+        scanSaveJson: document.getElementById('scan-save-json')
     };
 
     /* ------------------------------------------------------------------ */
@@ -152,11 +160,6 @@
     function extOf(name) {
         var i = name.lastIndexOf('.');
         return i > 0 ? name.slice(i + 1).toLowerCase() : '';
-    }
-
-    function stripExt(name) {
-        var i = name.lastIndexOf('.');
-        return i > 0 ? name.slice(0, i) : name;
     }
 
     var scriptCache = {};
@@ -808,6 +811,8 @@
         active = entry;
         zoom = 1;
         rotation = 0;
+        /* Results belong to the file they were read from, not to the next one. */
+        if (el.scanPanel && !el.scanPanel.hidden) { closePanel(); }
         renderFileList();
         updateToolbar();
         inspect(entry);
@@ -2855,8 +2860,712 @@
     }
 
     /* ------------------------------------------------------------------ */
+    /* Barcode scan: right-click menu, region selection, result panel      */
+    /* ------------------------------------------------------------------ */
+
+    /* The reader is not part of the page. It is fetched the first time the
+       user scans something, which is why every other format keeps working
+       with the network switched off. Version pinned to the bundle the other
+       Codepool demos load. */
+    var DBR_BUNDLE = 'https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js';
+
+    /* Same two keys as the other hosted Codepool demos: the domain-bound one
+       for dynamsoft.com, the trial one everywhere else. Verified by
+       demos/_scripts/check-license-keys.js — do not retype by hand. */
+    var CODEPOOL_LICENSE_KEY = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAwLTEwMTY0ODQ5MCIsIm1haW5TZXJ2ZXJVUkwiOiJodHRwczovL21sdHMuZHluYW1zb2Z0LmNvbS8iLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMCIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NsdHMuZHluYW1zb2Z0LmNvbS8iLCJjaGVja0NvZGUiOjE0MDA4MDY1Mjl9';
+    var TRIAL_LICENSE_KEY = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==';
+
+    var ICONS = {
+        scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="8" x2="7" y2="16"/><line x1="10.5" y1="8" x2="10.5" y2="16"/><line x1="13.5" y1="8" x2="13.5" y2="16"/><line x1="17" y1="8" x2="17" y2="16"/></svg>',
+        copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+        save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+    };
+
+    var menuEl = null;
+    var menuRaster = null;
+    var scanState = null;
+    var dbrLoader = null;
+    var dbrPromise = null;
+    var lastScan = null;
+    var toastTimer = null;
+    var panelTimer = null;
+
+    function flash(text) {
+        var t = document.getElementById('toast');
+        if (!t) {
+            t = node('div', 'toast');
+            t.id = 'toast';
+            document.body.appendChild(t);
+        }
+        t.textContent = text;
+        t.classList.add('is-on');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { t.classList.remove('is-on'); }, 2400);
+    }
+
+    function downloadBlob(blob, name) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+    }
+
+    function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        }
+        return new Promise(function (resolve, reject) {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.top = '-1000px';
+            document.body.appendChild(ta);
+            ta.select();
+            var ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+            ta.remove();
+            if (ok) { resolve(); } else { reject(new Error('copy is not available')); }
+        });
+    }
+
+    /* The page the user is looking at, as pixels. Only raster views qualify:
+       an Office document is a DOM tree, and screenshotting it would be a
+       different (and worse) promise than "crop the page you see". */
+    function rasterOfStage() {
+        var img = el.stage.querySelector('.stage-rotor img');
+        if (img && img.naturalWidth && img.getBoundingClientRect().width) {
+            return { node: img, w: img.naturalWidth, h: img.naturalHeight };
+        }
+        var canvas = el.stage.querySelector('canvas.page-canvas');
+        if (canvas && canvas.width && canvas.getBoundingClientRect().width) {
+            return { node: canvas, w: canvas.width, h: canvas.height };
+        }
+        return null;
+    }
+
+    function menuItem(icon, label, sub, primary) {
+        var b = node('button', 'ctx-item' + (primary ? ' is-primary' : ''));
+        b.type = 'button';
+        b.setAttribute('role', 'menuitem');
+        var i = node('span', 'ctx-icon');
+        i.innerHTML = icon;
+        var l = node('span', 'ctx-label');
+        l.appendChild(node('span', null, label));
+        if (sub) { l.appendChild(node('small', null, sub)); }
+        b.appendChild(i);
+        b.appendChild(l);
+        return b;
+    }
+
+    function ensureMenu() {
+        if (menuEl) { return menuEl; }
+        menuEl = node('div', 'ctx-menu');
+        menuEl.hidden = true;
+        menuEl.setAttribute('role', 'menu');
+
+        var scanBtn = menuItem(ICONS.scan, 'Scan barcodes here',
+            'Drag a box, then read the region', true);
+        scanBtn.addEventListener('click', function () { startScan(); });
+
+        var copyBtn = menuItem(ICONS.copy, 'Copy image', 'This page as PNG');
+        copyBtn.addEventListener('click', function () { closeMenu(); copyRaster(); });
+
+        var saveBtn = menuItem(ICONS.save, 'Save image', 'This page as PNG');
+        saveBtn.addEventListener('click', function () { closeMenu(); saveRaster(); });
+
+        menuEl.appendChild(scanBtn);
+        menuEl.appendChild(node('div', 'ctx-sep'));
+        menuEl.appendChild(copyBtn);
+        menuEl.appendChild(saveBtn);
+        document.body.appendChild(menuEl);
+        return menuEl;
+    }
+
+    function openMenu(x, y) {
+        var m = ensureMenu();
+        menuRaster = rasterOfStage();
+        if (!menuRaster) { return; }
+        m.hidden = false;
+        var r = m.getBoundingClientRect();
+        m.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
+        m.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
+    }
+
+    function closeMenu() {
+        if (menuEl) { menuEl.hidden = true; }
+    }
+
+    function rasterCanvas(raster) {
+        var c = document.createElement('canvas');
+        c.width = raster.w;
+        c.height = raster.h;
+        c.getContext('2d').drawImage(raster.node, 0, 0);
+        return c;
+    }
+
+    function saveRaster() {
+        var raster = menuRaster || rasterOfStage();
+        if (!raster) { return; }
+        rasterCanvas(raster).toBlob(function (blob) {
+            downloadBlob(blob, fileStem(active ? active.name : 'page') + '.png');
+        }, 'image/png');
+        A.action('save_page_image', { kind: active ? active.kind : '' });
+    }
+
+    function copyRaster() {
+        var raster = menuRaster || rasterOfStage();
+        if (!raster) { return; }
+        var canvas = rasterCanvas(raster);
+        if (!navigator.clipboard || !window.ClipboardItem) {
+            flash('This browser cannot copy images — use Save image');
+            return;
+        }
+        canvas.toBlob(function (blob) {
+            navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function () {
+                flash('Page copied as PNG');
+            }).catch(function () {
+                flash('Copy failed — use Save image instead');
+            });
+        }, 'image/png');
+        A.action('copy_page_image', { kind: active ? active.kind : '' });
+    }
+
+    /* --- region selection -------------------------------------------- */
+
+    function cancelScan() {
+        if (!scanState) { return; }
+        scanState.layer.remove();
+        document.body.style.overflow = '';
+        scanState = null;
+    }
+
+    function startScan() {
+        var raster = menuRaster || rasterOfStage();
+        closeMenu();
+        if (!raster) {
+            flash('Open an image, PDF, TIFF or YUV page first');
+            return;
+        }
+        cancelScan();
+        /* Rotation would make screen→pixel mapping a matrix problem for no
+           benefit; the user is about to drag a box, so show the page upright. */
+        if (rotation % 360 !== 0) {
+            rotation = 0;
+            if (viewer && viewer.setZoom) { viewer.setZoom(); }
+        }
+
+        var box = el.stage.getBoundingClientRect();
+        var layer = node('div', 'scan-layer');
+        layer.style.left = box.left + 'px';
+        layer.style.top = box.top + 'px';
+        layer.style.width = box.width + 'px';
+        layer.style.height = box.height + 'px';
+
+        var rect = node('div', 'scan-rect');
+        rect.hidden = true;
+        ['nw', 'ne', 'sw', 'se'].forEach(function (dir) {
+            var h = node('div', 'scan-handle');
+            h.setAttribute('data-dir', dir);
+            rect.appendChild(h);
+        });
+
+        var hint = node('div', 'scan-hint', 'Drag a box around the barcode · Esc to cancel');
+
+        var bar = node('div', 'scan-bar');
+        bar.hidden = true;
+        var sizeHint = node('span', 'scan-bar-hint', '');
+        var cancelBtn = node('button', 'btn btn-secondary', 'Cancel');
+        cancelBtn.type = 'button';
+        cancelBtn.addEventListener('click', cancelScan);
+        var readBtn = node('button', 'btn btn-primary', 'Read barcode');
+        readBtn.type = 'button';
+        bar.appendChild(sizeHint);
+        bar.appendChild(cancelBtn);
+        bar.appendChild(readBtn);
+
+        layer.appendChild(rect);
+        layer.appendChild(hint);
+        layer.appendChild(bar);
+        document.body.appendChild(layer);
+        document.body.style.overflow = 'hidden';
+
+        scanState = {
+            raster: raster,
+            box: box,
+            layer: layer,
+            rect: rect,
+            hint: hint,
+            bar: bar,
+            sizeHint: sizeHint,
+            state: { x: 0, y: 0, w: 0, h: 0 },
+            drag: null
+        };
+
+        readBtn.addEventListener('click', readRegion);
+        layer.addEventListener('pointerdown', onScanDown);
+        layer.addEventListener('pointermove', onScanMove);
+        layer.addEventListener('pointerup', onScanUp);
+        layer.addEventListener('pointercancel', onScanUp);
+        layer.addEventListener('wheel', function (e) { e.preventDefault(); }, { passive: false });
+
+        A.action('scan_region_start', { kind: active ? active.kind : '' });
+    }
+
+    function localPoint(e) {
+        var box = scanState.box;
+        return { x: e.clientX - box.left, y: e.clientY - box.top };
+    }
+
+    function insideSelection(p) {
+        var s = scanState.state;
+        return p.x >= s.x && p.x <= s.x + s.w && p.y >= s.y && p.y <= s.y + s.h;
+    }
+
+    function onScanDown(e) {
+        if (e.button !== 0 || !scanState) { return; }
+        /* The floating Read/Cancel bar sits inside the layer; without this the
+           pointerdown would start a new selection and hide the bar before the
+           click ever reached the button. */
+        if (e.target.closest && e.target.closest('.scan-bar')) { return; }
+        var p = localPoint(e);
+        var dir = e.target && e.target.getAttribute ? e.target.getAttribute('data-dir') : null;
+        var s = scanState;
+        s.drag = {
+            dir: dir,
+            sx: p.x,
+            sy: p.y,
+            orig: { x: s.state.x, y: s.state.y, w: s.state.w, h: s.state.h },
+            mode: dir ? 'resize' : (s.rect.hidden ? 'draw' : (insideSelection(p) ? 'move' : 'draw'))
+        };
+        if (s.drag.mode === 'draw') {
+            s.state = { x: p.x, y: p.y, w: 0, h: 0 };
+            s.rect.hidden = false;
+            s.bar.hidden = true;
+            s.hint.hidden = true;
+        }
+        try { s.layer.setPointerCapture(e.pointerId); } catch (err) { /* not fatal */ }
+        e.preventDefault();
+    }
+
+    function onScanMove(e) {
+        var s = scanState;
+        if (!s || !s.drag) { return; }
+        var p = localPoint(e);
+        var st = s.state;
+        var W = s.box.width;
+        var H = s.box.height;
+
+        if (s.drag.mode === 'draw') {
+            st.x = Math.max(0, Math.min(s.drag.sx, p.x));
+            st.y = Math.max(0, Math.min(s.drag.sy, p.y));
+            st.w = Math.min(W - st.x, Math.abs(p.x - s.drag.sx));
+            st.h = Math.min(H - st.y, Math.abs(p.y - s.drag.sy));
+        } else if (s.drag.mode === 'move') {
+            st.x = Math.max(0, Math.min(W - st.w, s.drag.orig.x + (p.x - s.drag.sx)));
+            st.y = Math.max(0, Math.min(H - st.h, s.drag.orig.y + (p.y - s.drag.sy)));
+        } else if (s.drag.mode === 'resize') {
+            var o = s.drag.orig;
+            var left = o.x, top = o.y, right = o.x + o.w, bottom = o.y + o.h;
+            if (s.drag.dir.indexOf('w') >= 0) { left = Math.max(0, Math.min(p.x, W)); }
+            if (s.drag.dir.indexOf('e') >= 0) { right = Math.max(0, Math.min(p.x, W)); }
+            if (s.drag.dir.indexOf('n') >= 0) { top = Math.max(0, Math.min(p.y, H)); }
+            if (s.drag.dir.indexOf('s') >= 0) { bottom = Math.max(0, Math.min(p.y, H)); }
+            st.x = Math.min(left, right);
+            st.w = Math.abs(right - left);
+            st.y = Math.min(top, bottom);
+            st.h = Math.abs(bottom - top);
+        }
+        paintScan();
+    }
+
+    function onScanUp() {
+        var s = scanState;
+        if (!s || !s.drag) { return; }
+        s.drag = null;
+        if (s.state.w < 12 || s.state.h < 12) {
+            s.rect.hidden = true;
+            s.bar.hidden = true;
+            s.hint.hidden = false;
+            return;
+        }
+        paintScan();
+    }
+
+    function paintScan() {
+        var s = scanState;
+        if (!s) { return; }
+        var st = s.state;
+        s.rect.style.left = st.x + 'px';
+        s.rect.style.top = st.y + 'px';
+        s.rect.style.width = st.w + 'px';
+        s.rect.style.height = st.h + 'px';
+
+        var map = s.raster.node.getBoundingClientRect();
+        var kx = s.raster.w / map.width;
+        var ky = s.raster.h / map.height;
+        s.sizeHint.textContent = Math.round(st.w * kx) + ' × ' + Math.round(st.h * ky) + ' px';
+
+        var below = st.y + st.h + 54 < s.box.height;
+        s.bar.style.left = Math.max(8, Math.min(st.x, s.box.width - 300)) + 'px';
+        s.bar.style.top = (below ? st.y + st.h + 10 : Math.max(8, st.y - 54)) + 'px';
+        s.bar.hidden = false;
+    }
+
+    /* --- decode -------------------------------------------------------- */
+
+    function loadDbr() {
+        if (window.Dynamsoft && window.Dynamsoft.License) { return Promise.resolve(); }
+        if (dbrLoader) { return dbrLoader; }
+        dbrLoader = new Promise(function (resolve, reject) {
+            var s = document.createElement('script');
+            s.async = true;
+            s.src = DBR_BUNDLE;
+            s.onload = function () {
+                if (window.Dynamsoft) { resolve(); } else { reject(new Error('The reader did not initialize.')); }
+            };
+            s.onerror = function () {
+                dbrLoader = null;
+                reject(new Error('The reader could not be downloaded. Check the network and try again.'));
+            };
+            document.head.appendChild(s);
+        });
+        return dbrLoader;
+    }
+
+    function reader() {
+        if (dbrPromise) { return dbrPromise; }
+        dbrPromise = loadDbr().then(function () {
+            var host = location.hostname.toLowerCase();
+            var bound = host === 'dynamsoft.com' || host.endsWith('.dynamsoft.com');
+            var custom = null;
+            try {
+                custom = new URLSearchParams(location.search).get('license') ||
+                    localStorage.getItem('dy-demo-license');
+            } catch (e) { custom = null; }
+            if (!bound && !custom) {
+                A.action('license_fallback', { host: host, secure: window.isSecureContext });
+            }
+            var key = custom || (bound ? CODEPOOL_LICENSE_KEY : TRIAL_LICENSE_KEY);
+
+            window.Dynamsoft.Core.CoreModule.engineResourcePaths.rootDirectory = 'https://cdn.jsdelivr.net/npm/';
+            return window.Dynamsoft.License.LicenseManager.initLicense(key, true).then(function () {
+                return window.Dynamsoft.Core.CoreModule.loadWasm(['DBR']);
+            }).then(function () {
+                return window.Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+            });
+        }).catch(function (err) {
+            dbrPromise = null;
+            throw err;
+        });
+        return dbrPromise;
+    }
+
+    function cropSelection() {
+        var s = scanState;
+        var map = s.raster.node.getBoundingClientRect();
+        var kx = s.raster.w / map.width;
+        var ky = s.raster.h / map.height;
+        var st = s.state;
+
+        var cx = s.box.left + st.x;
+        var cy = s.box.top + st.y;
+        var x0 = Math.max(map.left, cx);
+        var y0 = Math.max(map.top, cy);
+        var x1 = Math.min(map.left + map.width, cx + st.w);
+        var y1 = Math.min(map.top + map.height, cy + st.h);
+        if (x1 - x0 < 4 || y1 - y0 < 4) { return null; }
+
+        var sx = Math.round((x0 - map.left) * kx);
+        var sy = Math.round((y0 - map.top) * ky);
+        var sw = Math.max(1, Math.round((x1 - x0) * kx));
+        var sh = Math.max(1, Math.round((y1 - y0) * ky));
+
+        /* A hand-drawn box usually cuts the quiet zone. Widen it a little;
+           the crop is what gets annotated, so the overlay stays honest. */
+        var pad = Math.round(Math.min(sw, sh) * 0.06);
+        var px = Math.max(0, sx - pad);
+        var py = Math.max(0, sy - pad);
+        var pw = Math.min(s.raster.w - px, sw + pad * 2);
+        var ph = Math.min(s.raster.h - py, sh + pad * 2);
+
+        var crop = document.createElement('canvas');
+        crop.width = pw;
+        crop.height = ph;
+        crop.getContext('2d').drawImage(s.raster.node, px, py, pw, ph, 0, 0, pw, ph);
+        return { canvas: crop, x: px, y: py, w: pw, h: ph, node: s.raster.node };
+    }
+
+    function readRegion() {
+        if (!scanState) { return; }
+        var crop = cropSelection();
+        if (!crop) {
+            flash('Draw a box inside the page first');
+            return;
+        }
+        var file = active ? active.name : '';
+        cancelScan();
+        openPanel();
+        scanStatus('Loading Dynamsoft Barcode Reader… (first run only)');
+        A.start('barcode_scan', 'image');
+
+        reader().then(function (router) {
+            scanStatus('Reading…');
+            var started = performance.now();
+            var data = crop.canvas.getContext('2d').getImageData(0, 0, crop.w, crop.h);
+            /* capture() may detach its input buffer, so hand it a copy. */
+            return router.capture({
+                bytes: new Uint8Array(data.data),
+                width: crop.w,
+                height: crop.h,
+                stride: crop.w * 4,
+                format: 10
+            }, 'ReadBarcodes_Default').then(function (result) {
+                if (result.errorCode) {
+                    throw new Error('Reader error ' + result.errorCode + ': ' + (result.errorString || 'decode failed'));
+                }
+                var items = (result.items || []).filter(function (i) { return i.type === 2; }).map(function (i) {
+                    return {
+                        text: i.text || '',
+                        format: i.formatString || 'Unknown',
+                        points: ((i.location && i.location.points) || []).map(function (p) {
+                            return { x: p.x, y: p.y };
+                        }),
+                        moduleSize: typeof i.moduleSize === 'number' ? i.moduleSize : null,
+                        angle: typeof i.angle === 'number' ? i.angle : null
+                    };
+                });
+                return { items: items, ms: Math.round(performance.now() - started) };
+            });
+        }).then(function (out) {
+            lastScan = {
+                file: file,
+                region: { x: crop.x, y: crop.y, width: crop.w, height: crop.h },
+                items: out.items,
+                ms: out.ms,
+                canvas: annotateCrop(crop.canvas, out.items)
+            };
+            renderScan();
+            if (out.items.length) {
+                A.success('barcode_scan', 'image', { barcode_count: out.items.length });
+            } else {
+                A.fail('barcode_scan', 'image');
+            }
+        }).catch(function (err) {
+            lastScan = null;
+            scanError(err);
+            A.error('barcode_scan_failed', (err && err.message) || 'unknown');
+        });
+    }
+
+    function annotateCrop(crop, items) {
+        var k = Math.min(1, 760 / crop.width);
+        var out = document.createElement('canvas');
+        out.width = Math.max(1, Math.round(crop.width * k));
+        out.height = Math.max(1, Math.round(crop.height * k));
+        var ctx = out.getContext('2d');
+        ctx.drawImage(crop, 0, 0, out.width, out.height);
+
+        var font = Math.max(11, Math.round(out.width / 34));
+        ctx.lineWidth = Math.max(2, Math.round(out.width / 260));
+        ctx.font = '600 ' + font + 'px "Open Sans", Arial, sans-serif';
+        ctx.textBaseline = 'alphabetic';
+
+        items.forEach(function (item, index) {
+            var pts = item.points || [];
+            if (!pts.length) { return; }
+            var xs = pts.map(function (p) { return p.x * k; });
+            var ys = pts.map(function (p) { return p.y * k; });
+            var minX = Math.min.apply(null, xs);
+            var maxX = Math.max.apply(null, xs);
+            var minY = Math.min.apply(null, ys);
+            var maxY = Math.max.apply(null, ys);
+
+            ctx.strokeStyle = '#fe8e14';
+            ctx.fillStyle = 'rgba(254, 142, 20, 0.12)';
+            ctx.beginPath();
+            xs.forEach(function (x, i) {
+                if (i) { ctx.lineTo(x, ys[i]); } else { ctx.moveTo(x, ys[i]); }
+            });
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            var label = (index + 1) + '  ' + item.format;
+            var textW = ctx.measureText(label).width;
+            var boxH = font + 8;
+            var labelY = minY - boxH - 2;
+            if (labelY < 0) { labelY = minY + 2; }
+            var labelX = Math.max(0, Math.min(minX, out.width - textW - 12));
+            ctx.fillStyle = 'rgba(22, 22, 24, 0.86)';
+            ctx.fillRect(labelX, labelY, textW + 12, boxH);
+            ctx.fillStyle = '#fff';
+            ctx.fillText(label, labelX + 6, labelY + font + 1);
+
+            item._box = { x: Math.round(minX), y: Math.round(minY), w: Math.round(maxX - minX), h: Math.round(maxY - minY) };
+        });
+        return out;
+    }
+
+    /* --- panel ---------------------------------------------------------- */
+
+    function openPanel() {
+        if (!el.scanPanel) { return; }
+        clearTimeout(panelTimer);
+        el.scanPanel.hidden = false;
+        requestAnimationFrame(function () {
+            el.scanPanel.classList.add('is-open');
+        });
+    }
+
+    function closePanel() {
+        if (!el.scanPanel) { return; }
+        el.scanPanel.classList.remove('is-open');
+        panelTimer = setTimeout(function () { el.scanPanel.hidden = true; }, 200);
+    }
+
+    function scanStatus(text) {
+        el.scanBody.innerHTML = '';
+        var row = node('div', 'scan-status');
+        row.appendChild(node('div', 'spinner'));
+        row.appendChild(node('span', null, text));
+        el.scanBody.appendChild(row);
+    }
+
+    function scanError(err) {
+        el.scanBody.innerHTML = '';
+        var box = node('div', 'scan-empty');
+        box.appendChild(node('strong', null, 'The reader could not run.'));
+        box.appendChild(document.createTextNode(' ' + ((err && err.message) || 'Unknown error') +
+            ' The page itself keeps working — only decoding needs the reader.'));
+        el.scanBody.appendChild(box);
+        setResultActions(false);
+    }
+
+    function setResultActions(on) {
+        ['scanCopy', 'scanSavePng', 'scanSaveJson'].forEach(function (key) {
+            if (el[key]) { el[key].disabled = !on; }
+        });
+    }
+
+    function renderScan() {
+        var s = lastScan;
+        el.scanBody.innerHTML = '';
+        setResultActions(!!(s && s.items.length));
+
+        if (!s) { return; }
+
+        var figure = document.createElement('figure');
+        figure.className = 'scan-figure';
+        figure.appendChild(s.canvas);
+        var cap = node('figcaption');
+        cap.textContent = (s.file || 'page') + ' · region ' + s.region.width + ' × ' + s.region.height +
+            ' px at ' + s.region.x + ',' + s.region.y + ' · ' + s.ms + ' ms';
+        figure.appendChild(cap);
+        el.scanBody.appendChild(figure);
+
+        if (!s.items.length) {
+            var empty = node('div', 'scan-empty');
+            empty.appendChild(node('strong', null, 'No barcode decoded in this area.'));
+            empty.appendChild(document.createTextNode(' Try a tighter box around the symbol, include its ' +
+                'quiet zone, and avoid glare. A blurry or very small symbol may need a different capture.'));
+            el.scanBody.appendChild(empty);
+            return;
+        }
+
+        s.items.forEach(function (item, index) {
+            var card = node('div', 'scan-result');
+            var head = node('div', 'scan-result-head');
+            head.appendChild(node('span', 'fmt', item.format));
+            head.appendChild(node('span', 'idx', '#' + (index + 1)));
+            card.appendChild(head);
+            card.appendChild(node('p', 'txt', item.text || '(empty payload)'));
+            var meta = [];
+            if (item._box) { meta.push(item._box.w + ' × ' + item._box.h + ' px'); }
+            if (item.moduleSize) { meta.push('module ' + item.moduleSize.toFixed(1)); }
+            if (item.angle) { meta.push('angle ' + Math.round(item.angle) + '°'); }
+            if (meta.length) { card.appendChild(node('p', 'meta', meta.join(' · '))); }
+            el.scanBody.appendChild(card);
+        });
+    }
+
+    function scanPayload() {
+        if (!lastScan) { return null; }
+        return {
+            file: lastScan.file,
+            region: lastScan.region,
+            results: lastScan.items.map(function (item) {
+                return {
+                    format: item.format,
+                    text: item.text,
+                    points: item.points,
+                    moduleSize: item.moduleSize,
+                    angle: item.angle
+                };
+            })
+        };
+    }
+
+    function scanJsonText() {
+        var payload = scanPayload();
+        return payload ? JSON.stringify(payload, null, 2) : '';
+    }
+
+    function fileStem(name) {
+        var base = name || 'scan';
+        var dot = base.lastIndexOf('.');
+        return (dot > 0 ? base.slice(0, dot) : base).replace(/[^\w.-]+/g, '-');
+    }
+
+    /* ------------------------------------------------------------------ */
     /* Events                                                              */
     /* ------------------------------------------------------------------ */
+
+    /* Context menu inside the preview. Only raster pages offer it: an Office
+       document is a DOM tree, and there is no honest pixel crop to decode. */
+    el.stage.addEventListener('contextmenu', function (e) {
+        if (!rasterOfStage()) { return; }
+        e.preventDefault();
+        openMenu(e.clientX, e.clientY);
+    });
+
+    document.addEventListener('pointerdown', function (e) {
+        if (menuEl && !menuEl.hidden && !menuEl.contains(e.target)) { closeMenu(); }
+    }, true);
+    window.addEventListener('resize', closeMenu);
+    window.addEventListener('scroll', closeMenu, true);
+
+    if (el.scanClose) { el.scanClose.addEventListener('click', closePanel); }
+
+    if (el.scanCopy) {
+        el.scanCopy.addEventListener('click', function () {
+            copyText(scanJsonText()).then(function () {
+                flash('Results copied as JSON');
+            }).catch(function () {
+                flash('Copy failed — download the JSON instead');
+            });
+        });
+    }
+
+    if (el.scanSavePng) {
+        el.scanSavePng.addEventListener('click', function () {
+            if (!lastScan) { return; }
+            lastScan.canvas.toBlob(function (blob) {
+                downloadBlob(blob, fileStem(lastScan.file) + '-scan.png');
+            }, 'image/png');
+        });
+    }
+
+    if (el.scanSaveJson) {
+        el.scanSaveJson.addEventListener('click', function () {
+            if (!lastScan) { return; }
+            downloadBlob(new Blob([scanJsonText()], { type: 'application/json' }),
+                fileStem(lastScan.file) + '-scan.json');
+        });
+    }
 
     el.dropzone.addEventListener('click', function () { el.input.click(); });
     el.dropzone.addEventListener('keydown', function (e) {
@@ -2877,6 +3586,10 @@
         entries = [];
         active = null;
         viewer = null;
+        lastScan = null;
+        closePanel();
+        cancelScan();
+        closeMenu();
         el.workspace.hidden = true;
         el.dropCard.classList.remove('is-compact');
         clearStage();
@@ -3009,6 +3722,13 @@
     /* Keyboard shortcuts that do not fight the browser: -/+ zoom, arrows for
        pages only when the focus is not in a field. */
     document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            if (menuEl && !menuEl.hidden) { closeMenu(); return; }
+            if (scanState) { cancelScan(); return; }
+            if (el.scanPanel && !el.scanPanel.hidden) { closePanel(); }
+            return;
+        }
+        if (scanState) { return; }   /* modal-ish: do not page the document behind the box */
         var tag = (e.target && e.target.tagName) || '';
         if (/^(INPUT|SELECT|TEXTAREA)$/.test(tag)) { return; }
         if (e.key === '-' || e.key === '_') { el.zoomOut.click(); }

@@ -20,7 +20,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="styles.css?v=20261021l">
+    <link rel="stylesheet" href="styles.css?v=20261022d">
 
 
     <!--
@@ -52,14 +52,16 @@
         "CSV and XLSX rendered as tables, with row pagination",
         "Text with detected encoding, line numbers and a wrap toggle",
         "SHA-256 computed in the browser",
-        "Everything is read locally — no upload, no server, no account"
+        "Right-click a page, drag a box and decode the barcodes in that region with Dynamsoft Barcode Reader",
+        "Scan results come with an annotated crop that can be copied, saved as PNG or exported as JSON",
+        "Everything is read locally — no upload, no server"
       ],
       "isAccessibleForFree": true,
       "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD",
-        "description": "Free to use on dynamsoft.com/codepool and free to run from a local folder — this page uses no licensed SDK, no account and no key. Files are processed in the browser and are never uploaded."
+        "description": "Free to use on dynamsoft.com/codepool. Reading files needs no SDK, no account and no key — the viewer also runs straight from a local folder. The hosted barcode scan activates a domain-bound Dynamsoft Barcode Reader license, so there is nothing to install or paste. Files are parsed in the browser and are never uploaded."
       },
       "publisher": {
         "@type": "Organization",
@@ -85,6 +87,13 @@
                     Demos</a>
                 <a class="nav-link" href="https://www.dynamsoft.com/codepool/" data-demo-cta="blog">Blog</a>
             </nav>
+            <nav class="header-nav" aria-label="Dynamsoft Barcode Reader">
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
+                    data-demo-cta="barcode-reader">Barcode Reader</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">30-Day Free Trial</a>
+            </nav>
         </div>
     </header>
 
@@ -96,8 +105,9 @@
             PowerPoint, CSV, text, video, and raw YUV frames dumped from an Android camera.
         </p>
         <p class="inline-note">
-            Nothing is uploaded. Every byte is parsed in this tab, so the page keeps working with the
-            network switched off once it has loaded.
+            Nothing is uploaded. Every byte is parsed in this tab, so reading a file keeps working with the
+            network switched off. The one exception is the optional barcode scan: it downloads Dynamsoft
+            Barcode Reader the first time you use it and activates a license online.
         </p>
     </div>
 
@@ -120,8 +130,7 @@
             <div class="sample-row" id="sample-row">
                 <span class="label">Samples</span>
                 <button class="chip" type="button" data-sample="sample-photo.jpg"><span class="dot"
-                        style="background:var(--fam-image)"></span>JPEG</button>
-                <button class="chip" type="button" data-sample="sample-screenshot.png"><span class="dot"
+                        style="background:var(--fam-image)"></span>JPEG</button>                <button class="chip" type="button" data-sample="sample-screenshot.png"><span class="dot"
                         style="background:var(--fam-image)"></span>PNG</button>
                 <button class="chip" type="button" data-sample="sample-diagram.svg"><span class="dot"
                         style="background:var(--fam-image)"></span>SVG</button>
@@ -145,6 +154,8 @@
                         style="background:var(--fam-image)"></span>YUV</button>
                 <button class="chip" type="button" data-sample="sample-clip.mp4"><span class="dot"
                         style="background:var(--fam-media)"></span>MP4</button>
+                <button class="chip" type="button" data-sample="sample-barcodes.jpg"><span class="dot"
+                        style="background:var(--fam-image)"></span>BARCODE</button>
                 <button class="chip" type="button" data-sample="sample-blob.bin"><span class="dot"
                         style="background:var(--fam-binary)"></span>BIN</button>
             </div>
@@ -242,6 +253,39 @@
             </aside>
         </div>
 
+        <aside class="scan-panel" id="scan-panel" aria-labelledby="scan-panel-title" hidden>
+            <div class="scan-panel-head">
+                <h2 id="scan-panel-title">Barcode scan</h2>
+                <button class="icon-btn" id="scan-close" type="button" aria-label="Close the scan panel"
+                    title="Close (Esc)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="scan-panel-body" id="scan-body">
+                <p class="scan-empty">Right-click a page, choose <strong>Scan barcodes here</strong>, drag a box
+                    around the symbol and press Read.</p>
+            </div>
+            <div class="scan-panel-foot">
+                <div class="scan-actions-row">
+                    <button class="btn btn-secondary btn-small" id="scan-copy-result" type="button" disabled>Copy
+                        results</button>
+                    <button class="btn btn-secondary btn-small" id="scan-save-png" type="button" disabled>PNG</button>
+                    <button class="btn btn-secondary btn-small" id="scan-save-json" type="button" disabled>JSON</button>
+                </div>
+                <p class="scan-license">
+                    Decoding runs on <a href="https://www.dynamsoft.com/barcode-reader/overview/"
+                        data-demo-cta="barcode-reader-scan">Dynamsoft Barcode Reader</a>, which needs a license to
+                    activate — <a
+                        href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                        data-demo-cta="trial-scan">get a 30-day trial license</a>.
+                </p>
+            </div>
+        </aside>
+
         <div class="card">
             <div class="card-header">
                 <h2>What it reads</h2>
@@ -290,6 +334,12 @@
                         <p>Duration, resolution and aspect ratio from the container, then the browser's own
                             decoder plays it.</p>
                         <span class="ext">mp4 webm mov m4v mp3 wav ogg</span>
+                    </div>
+                    <div class="format-card">
+                        <h3>Barcode scan</h3>
+                        <p>Right-click any page, drag a box around the symbol and read it in place. The result
+                            arrives with an annotated crop you can copy or download.</p>
+                        <span class="ext">right-click · SDK on demand</span>
                     </div>
                     <div class="format-card">
                         <h3>Everything else</h3>
@@ -353,6 +403,14 @@
                     Nothing here is a forensic tool: it reports what the bytes say, and the SHA-256 it shows
                     is computed from the copy you dropped in.
                 </p>
+                <p>
+                    <strong>Right-click scanning works on raster pages.</strong> Images, PDF, TIFF and raw YUV
+                    are pixels, so a region can be cropped and decoded. Word, Excel and PowerPoint are rendered
+                    as HTML — there is no pixel page to crop, and the menu stays out of the way rather than
+                    screenshotting something the browser drew. The reader is downloaded the first time you
+                    scan and needs a license to activate: the hosted page carries a domain-bound one, a copy
+                    you run yourself needs its own.
+                </p>
                 <p class="hint">
                     Large files: PDFs over ~150 MB and text over 8 MB are capped, with a note in the preview,
                     because a browser tab is not a hex editor.
@@ -375,8 +433,9 @@
                     <line x1="12" y1="8" x2="12.01" y2="8" />
                 </svg>
                 Files are opened on your device and never uploaded — there is no server side to upload to.
-                This demo uses no licensed SDK, so no key, account or activation is involved: the same page
-                also runs straight from a local folder.
+                Reading a file needs no SDK at all, so the viewer also runs from a local folder. Only the
+                optional barcode scan loads Dynamsoft Barcode Reader; the hosted page activates its license
+                automatically, and a self-hosted copy needs a license of its own.
             </p>
             <div class="footer-links">
                 <span>
@@ -387,13 +446,18 @@
                     <a href="https://github.com/VolodymyrBaydalka/docxjs" data-demo-cta="docx-preview">docx-preview</a>,
                     <a href="https://stuk.github.io/jszip/" data-demo-cta="jszip">JSZip</a>.
                 </span>
+                <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
+                    Barcode Reader</a>
                 <a href="https://www.dynamsoft.com/codepool/demos/" data-demo-cta="demos">All demos</a>
                 <a href="https://www.dynamsoft.com/codepool/" data-demo-cta="blog">Codepool blog</a>
+                <a class="btn btn-primary footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
             </div>
         </div>
     </footer>
 
-    <script src="app.js?v=20261021m"></script>
+    <script src="app.js?v=20261022d"></script>
 </body>
 
 </html>
