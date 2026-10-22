@@ -875,6 +875,19 @@
         el.zoomIndicator.textContent = pct + '%';
         el.zoomGroup.classList.toggle('is-hidden', !(viewer && viewer.zoomable));
         el.rotate.style.display = viewer && viewer.rotatable ? '' : 'none';
+        requestAnimationFrame(updatePannable);
+    }
+
+    /* Panning: when a page is larger than the stage, dragging it should move the
+       view. Only for pictures and rendered pages — a text or table view uses
+       dragging to select, and taking that away would be worse than no panning. */
+    function updatePannable() {
+        if (!el.stage) { return; }
+        var overflow = el.stage.scrollWidth > el.stage.clientWidth + 2 ||
+            el.stage.scrollHeight > el.stage.clientHeight + 2;
+        var isPicture = !!el.stage.querySelector('.stage-rotor, canvas.page-canvas');
+        var isTextual = !!el.stage.querySelector('.text-host, .table-host, .doc-host');
+        el.stage.classList.toggle('is-pannable', overflow && isPicture && !isTextual);
     }
 
     /* ------------------------------------------------------------------ */
@@ -1266,6 +1279,10 @@
         var img = new Image();
         img.alt = entry.name;
         img.decoding = 'async';
+        /* An <img> is natively draggable: press and move and the browser starts
+           an HTML5 drag, which the page-wide "drop files" overlay then claims —
+           the picture looks like it is being dropped instead of panned. */
+        img.draggable = false;
 
         var rotor = makeRotor(img);
         var center = stageInner();
@@ -1881,7 +1898,11 @@
                     /* Last page, short page: without slack below the document the
                        browser cannot scroll it to the top, and "page 3" would sit
                        half off screen. */
-                    host.style.paddingBottom = Math.max(0, el.stage.clientHeight - 80) + 'px';
+                    /* Slack below the document so its last page can scroll to
+                       the top. Measured against the viewport, not the stage:
+                       the stage is content-sized now, so reading its own height
+                       here would grow the padding on every call. */
+                    host.style.paddingBottom = Math.max(0, window.innerHeight - 240) + 'px';
                     updateZoomReadout();
                 }
 
@@ -3663,6 +3684,40 @@
 
     /* Context menu inside the preview. Only raster pages offer it: an Office
        document is a DOM tree, and there is no honest pixel crop to decode. */
+    /* A drag that begins inside the preview is not a file drop. Without this the
+       native image drag fires dragenter with a "Files" payload, and the drop
+       overlay covers the picture the user is trying to move. */
+    el.stage.addEventListener('dragstart', function (e) { e.preventDefault(); });
+
+    var panState = null;
+
+    function endPan() {
+        if (!panState) { return; }
+        panState = null;
+        el.stage.classList.remove('is-panning');
+    }
+
+    el.stage.addEventListener('pointerdown', function (e) {
+        if (e.button !== 0 || scanState) { return; }
+        if (!el.stage.classList.contains('is-pannable')) { return; }
+        if (e.target.closest && e.target.closest('a, button, video, audio')) { return; }
+        panState = { x: e.clientX, y: e.clientY, left: el.stage.scrollLeft, top: el.stage.scrollTop };
+        el.stage.classList.add('is-panning');
+        try { el.stage.setPointerCapture(e.pointerId); } catch (err) { /* not fatal */ }
+        e.preventDefault();
+    });
+
+    el.stage.addEventListener('pointermove', function (e) {
+        if (!panState) { return; }
+        el.stage.scrollLeft = panState.left - (e.clientX - panState.x);
+        el.stage.scrollTop = panState.top - (e.clientY - panState.y);
+    });
+
+    el.stage.addEventListener('pointerup', endPan);
+    el.stage.addEventListener('pointercancel', endPan);
+    el.stage.addEventListener('pointerenter', updatePannable);
+    window.addEventListener('resize', function () { requestAnimationFrame(updatePannable); });
+
     /* Context menu for whatever page is open. The selection is a screenshot of
        that area, so the menu no longer cares which format produced it. Links
        inside a document keep the browser's own menu. */
