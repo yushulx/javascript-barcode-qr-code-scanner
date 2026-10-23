@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Online MRZ Generator + Synthetic Test Dataset</title>
+    <meta name="description"
+        content="Free online MRZ generator. Create ICAO 9303-compliant Machine Readable Zone strings and mock document previews for passports (TD3), ID cards (TD1/TD2) and visas (MRVA/MRVB) — or build a reproducible dataset of degraded passport images with ground-truth fields and export it as a ZIP for reader benchmarking. Runs entirely in the browser.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/mrz-generator/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Free Online MRZ Generator + Synthetic Test Dataset | Dynamsoft Codepool Demo">
+    <meta property="og:description"
+        content="Free online MRZ generator — generate ICAO 9303-compliant MRZ strings with valid check digits for passports, ID cards and visas, or build a seeded dataset of blurred, rotated and glare-hit test images with ground-truth fields for benchmarking an MRZ reader.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/mrz-generator/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/mrz-generator/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+
+</head>
+
+<body>
+
+    <div id="loading-indicator" class="loading-indicator">
+        <div class="spinner"></div>
+    </div>
+
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
+                aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product">Free MRZ Generator</span>
+            <nav class="header-nav" aria-label="Dynamsoft">
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
+                    data-demo-cta="barcode-reader">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/" data-demo-cta="docs">Documentation</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">30-Day Free Trial</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>Free MRZ generator</h1>
+        <p>
+            Generate ICAO 9303-compliant Machine Readable Zone strings with valid check digits for
+            passports, ID cards and visas, and preview them as a mock document image — entirely in your
+            browser. <em>Test image dataset</em> mode builds a seeded set of synthetic documents with
+            blur, motion, rotation, perspective, glare, noise and JPEG degradations, keeps the
+            ground-truth fields for every image, and exports the whole thing as a ZIP your MRZ reader
+            can be scored against.
+        </p>
+    </div>
+
+    <div class="notice-banner" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <div>
+            <strong>For testing only.</strong>
+            Every value on this page is randomly generated sample data. The output is not a valid
+            travel document, is not machine verifiable against any government registry, and must not
+            be used to impersonate anyone. Use it to test an MRZ reader, not as identification.
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="mode-switch" role="tablist" aria-label="Generator modes">
+            <button id="modeTabSingle" class="mode-tab is-active" type="button" role="tab" aria-selected="true"
+                aria-controls="mode_single">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                    <line x1="7" y1="15" x2="17" y2="15" />
+                    <line x1="7" y1="18" x2="14" y2="18" />
+                    <circle cx="8" cy="9" r="2" />
+                </svg>
+                Single document
+            </button>
+            <button id="modeTabDataset" class="mode-tab" type="button" role="tab" aria-selected="false"
+                aria-controls="mode_dataset">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 3 2 8l10 5 10-5-10-5z" />
+                    <path d="m2 14 10 5 10-5" />
+                    <path d="m2 11 10 5 10-5" />
+                </svg>
+                Test image dataset
+            </button>
+        </div>
+
+        <div class="mode-panel" id="mode_single">
+        <div class="card">
+            <div class="card-header">
+                <h2>Document Configuration</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-group full-width">
+                    <label for="dropdown">Document Type</label>
+                    <select onchange="selectChanged()" id="dropdown" class="form-control">
+                        <option value="Passport(TD3)">Passport (TD3)</option>
+                        <option value="ID Card(TD1)">ID Card (TD1)</option>
+                        <option value="ID Card(TD2)">ID Card (TD2)</option>
+                        <option value="Visa(A)">Visa Type A</option>
+                        <option value="Visa(B)">Visa Type B</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="document_type_txt">Document Type Code</label>
+                        <input type="text" id="document_type_txt" class="form-control" placeholder="P" maxlength="2" title="1-2 characters, e.g. P, PD, ID, IP">
+                    </div>
+                    <div class="form-group">
+                        <label for="country_code_txt">Country</label>
+                        <input type="text" id="country_code_txt" class="form-control" placeholder="GBR" maxlength="3">
+                    </div>
+                    <div class="form-group">
+                        <label for="nationality_txt">Nationality</label>
+                        <input type="text" id="nationality_txt" class="form-control" placeholder="GBR" maxlength="3">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="surname_txt">Surname</label>
+                        <input type="text" id="surname_txt" class="form-control" placeholder="SMITH">
+                    </div>
+                    <div class="form-group">
+                        <label for="given_names_txt">Given Names</label>
+                        <input type="text" id="given_names_txt" class="form-control" placeholder="JOHN">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="document_number_txt">Document Number</label>
+                        <input type="text" id="document_number_txt" class="form-control" placeholder="K1RELFC7">
+                    </div>
+                    <div class="form-group">
+                        <label for="sex_txt">Sex</label>
+                        <input type="text" id="sex_txt" class="form-control" placeholder="M" maxlength="1">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="birth_date_txt">Birth Date (YYMMDD)</label>
+                        <input type="text" id="birth_date_txt" class="form-control" placeholder="900115" maxlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="expiry_date_txt">Expiry Date (YYMMDD)</label>
+                        <input type="text" id="expiry_date_txt" class="form-control" placeholder="300115" maxlength="6">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="optional_data1_txt">Optional Data 1</label>
+                        <input type="text" id="optional_data1_txt" class="form-control" placeholder="ZE184226B">
+                    </div>
+                    <div class="form-group">
+                        <label for="optional_data2_txt">Optional Data 2</label>
+                        <input type="text" id="optional_data2_txt" class="form-control" placeholder="Optional">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="randomBtn" onclick="randomize()" class="btn btn-secondary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="23 4 23 10 17 10" />
+                            <polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                            <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+                        </svg>
+                        <span class="btn-label">Randomize data</span>
+                    </button>
+                    <button id="generateBtn" onclick="generate()" class="btn btn-primary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" aria-hidden="true">
+                            <path d="M3 5v14M6.5 5v14M10 5v10M13.5 5v14M17 5v14M20.5 5v14" />
+                        </svg>
+                        <span class="btn-label">Generate MRZ</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Generated MRZ Code</h2>
+            </div>
+            <div class="card-body">
+                <textarea rows="3" readonly id="outputMRZ" class="mrz-output"
+                    placeholder="Generated MRZ will appear here..."></textarea>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Document Preview</h2>
+            </div>
+            <div class="card-body">
+                <div class="canvas-wrapper">
+                    <canvas id="overlay"></canvas>
+                </div>
+            </div>
+        </div>
+        </div><!-- /mode_single -->
+
+        <div class="mode-panel" id="mode_dataset" hidden>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Dataset settings</h2>
+                </div>
+                <div class="card-body">
+                    <p>
+                        Build a set of synthetic passport, ID card and visa images with known difficulty
+                        and known expected fields. The seed drives every random choice — identities,
+                        document types and degradation values — so the same seed rebuilds the same test
+                        cases. Export the ZIP and score a reader against it in the
+                        <a href="https://www.dynamsoft.com/codepool/demos/mrz-scanner/" data-demo-cta="scanner">MRZ scanner benchmark</a>.
+                    </p>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dsPreset">Difficulty preset</label>
+                            <select id="dsPreset" class="form-control"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dsSeed">Seed</label>
+                            <input type="text" id="dsSeed" class="form-control" maxlength="32" value="codepool"
+                                spellcheck="false" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="dsSamples">Images</label>
+                            <input type="number" id="dsSamples" class="form-control" min="1" max="100" step="1"
+                                value="12">
+                        </div>
+                        <div class="form-group">
+                            <label for="dsDocType">Documents</label>
+                            <select id="dsDocType" class="form-control"></select>
+                        </div>
+                    </div>
+
+                    <p class="hint" id="dsPresetNote"></p>
+
+                    <label class="check-row" for="dsDifficulty">
+                        <input type="checkbox" id="dsDifficulty" class="range-check" checked>
+                        <span>
+                            <strong>Vary the difficulty per image</strong>
+                            <span class="range-hint">Draws one factor for each image and measures every
+                                range from its undamaged end by that fraction, so the set runs from nearly
+                                clean to thoroughly degraded. Switch it off to apply each range
+                                independently, which stacks every degradation on every image.</span>
+                        </span>
+                    </label>
+
+                    <div class="table-scroll">
+                        <table class="spec-table range-table">
+                            <caption>Degradations — one value is drawn per image from its range</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">On</th>
+                                    <th scope="col">Degradation</th>
+                                    <th scope="col">Min</th>
+                                    <th scope="col">Max</th>
+                                    <th scope="col">Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dsRows"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="button-group">
+                        <button id="dsBuildBtn" class="btn btn-primary" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M12 3v12" />
+                                <path d="m7 10 5 5 5-5" />
+                                <path d="M4 21h16" />
+                            </svg>
+                            <span class="btn-label">Build dataset</span>
+                        </button>
+                        <button id="dsSeedBtn" class="btn btn-secondary" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="23 4 23 10 17 10" />
+                                <polyline points="1 20 1 14 7 14" />
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                                <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+                            </svg>
+                            <span class="btn-label">New seed</span>
+                        </button>
+                        <button id="dsResetBtn" class="btn btn-secondary" type="button">
+                            <span class="btn-label">Reset preset</span>
+                        </button>
+                    </div>
+
+                    <div class="progress" id="dsProgress" hidden>
+                        <div class="progress-track">
+                            <div class="progress-bar" id="dsProgressBar"></div>
+                        </div>
+                        <p class="progress-text" id="dsProgressText"></p>
+                    </div>
+
+                    <p class="hint" id="dsStatus"></p>
+                    <div class="form-error" id="dsError" role="alert"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Sample preview and ground truth</h2>
+                </div>
+                <div class="card-body">
+                    <div class="canvas-wrapper">
+                        <canvas id="dsCanvas" width="900" height="580"></canvas>
+                    </div>
+
+                    <div class="sample-nav">
+                        <button id="dsPrevBtn" class="btn btn-secondary btn-sm" type="button" disabled>← Previous</button>
+                        <span class="sample-counter" id="dsCounter">—</span>
+                        <button id="dsNextBtn" class="btn btn-secondary btn-sm" type="button" disabled>Next →</button>
+                    </div>
+
+                    <p class="hint" id="dsSampleStatus"></p>
+
+                    <div class="table-scroll">
+                        <table class="spec-table">
+                            <caption>Expected result for this image — what a correct reader must return</caption>
+                            <tbody id="dsExpected"></tbody>
+                        </table>
+                    </div>
+
+                    <p class="hint" id="dsApplied"></p>
+
+                    <div class="button-group">
+                        <button id="dsZipBtn" class="btn btn-primary" type="button" disabled>
+                            <span class="btn-label">Download dataset ZIP</span>
+                        </button>
+                        <button id="dsJsonBtn" class="btn btn-secondary" type="button" disabled>
+                            <span class="btn-label">annotations.json</span>
+                        </button>
+                        <button id="dsPngBtn" class="btn btn-secondary" type="button" disabled>
+                            <span class="btn-label">This image (PNG)</span>
+                        </button>
+                    </div>
+
+                    <div class="form-error" id="dsExportError" role="alert"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>What the dataset does and does not measure</h2>
+                </div>
+                <div class="card-body">
+                    <p>
+                        A stress image is <strong>synthesised, not photographed</strong>. The degradations
+                        model the capture problems that make an MRZ hard to read — blur, motion, rotation,
+                        perspective, uneven lighting, glare, noise, JPEG artifacts and a small final scale —
+                        but they are generated, so absolute accuracy figures are not a claim about real
+                        camera footage. What the dataset measures reliably is the relative behaviour of a
+                        reader: which conditions it survives, and where it starts to lose characters.
+                    </p>
+                    <p>
+                        <strong>The MRZ is never cut.</strong> The frame crop trims the border around the
+                        document and stops before the edge would reach the MRZ band — a partial MRZ cannot be
+                        parsed by any reader, so it would be a guaranteed miss that measures nothing. The
+                        value actually used is recorded as <code>crop</code> in the annotations, with the
+                        request beside it as <code>crop_requested</code>.
+                    </p>
+                    <p>
+                        <strong>Every value is synthetic.</strong> Names, numbers and dates come from fixed
+                        lists and generated dates, and the document is a mock rendered on a canvas — it is
+                        not a real travel document and must not be treated as one.
+                    </p>
+                    <p>
+                        Dates in the ground truth are <code>YYMMDD</code> exactly as encoded in the MRZ; the
+                        century a reader assumes is its own convention, so it is not scored. The per-image
+                        degradation values are recorded in the annotations, so a miss can be read against
+                        the condition that caused it.
+                    </p>
+                </div>
+            </div>
+        </div><!-- /mode_dataset -->
+    </div>
+
+    <footer class="demo-footer">
+        <div class="demo-footer-inner">
+            <p class="disclaimer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                Synthetic sample data only — not a real travel document.
+                Running this page is free because it activates a Codepool license bound to dynamsoft.com.
+                The source on GitHub is a separate thing — self-hosting it needs your own Dynamsoft license.
+            </p>
+            <div class="footer-links">
+                <span>
+                    Built with plain JavaScript — nothing leaves your browser. Verify generated MRZ with
+                    <a href="https://www.dynamsoft.com/capture-vision/overview/" data-demo-cta="capture-vision">Dynamsoft
+                        Capture Vision</a>.
+                </span>
+                <a href="https://www.dynamsoft.com/codepool/demos/mrz-scanner/" data-demo-cta="scanner">Score a dataset in the MRZ benchmark</a>
+                <a class="btn btn-primary footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Load MRZ Generator library first -->
+    <script src="mrz-generator.js"></script>
+    <!-- Dataset engine (identity, degradations, ground truth, ZIP) -->
+    <script src="stress.js"></script>
+    <!-- Load main application code -->
+    <script src="app.js"></script>
+</body>
+
+</html>

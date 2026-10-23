@@ -1,0 +1,1415 @@
+/* Barcode Structure Diagram — Codepool demo styles.
+
+   Visual language follows the Dynamsoft style guide
+   (https://dynamsoft.github.io/styleguide/style-guide.html):
+     - brand orange  #FE8E14  (CTA / accent only)
+     - brand gray    #323234  (headings, body copy)
+     - grays         #606060 #999999 #CCCCCC #DDDDDD #F5F5F5
+     - headings      Oswald        body copy  Open Sans
+
+   The one departure from the other demos: the symbols on this page are drawn
+   in the region colours rather than black on white, because the colour *is*
+   the annotation. The palette is therefore the page's most important design
+   decision — see the ROLE COLOURS block below.
+
+   Only the page chrome is branded; the barcodes themselves are rendered
+   black on white so they stay scannable. */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@300;400;500&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Brand */
+    --dy-orange: #fe8e14;
+    --dy-orange-hover: #e07d0b;
+    --dy-orange-tint: #fff8ee;
+    --dy-orange-edge: #f6c893;
+
+    /* Neutrals */
+    --dy-gray-900: #323234;
+    --dy-gray-700: #606060;
+    --dy-gray-500: #999999;
+    --dy-gray-300: #cccccc;
+    --dy-gray-200: #dddddd;
+    --dy-gray-100: #eeeeee;
+    --dy-gray-50: #f5f5f5;
+
+    /* Accent used for inline text links, so orange stays reserved for CTAs */
+    --dy-link: #306877;
+    --dy-link-hover: #27555f;
+
+    /* Error state (validation / render failures) */
+    --dy-error: #b3261e;
+    --dy-error-tint: #fdf2f1;
+    --dy-error-edge: #f0c9c6;
+
+    --white: #ffffff;
+
+    --font-heading: 'Oswald', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Open Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'Courier New', Courier, monospace;
+
+    --radius: 6px;
+    --radius-sm: 4px;
+    --shell: 1200px;
+
+    /* ------------------------------------------------------------------
+       ROLE COLOURS
+
+       One colour per structural role, shared by every symbology, so "teal
+       means a guard pattern" holds whether the reader is looking at EAN-13
+       or ITF-14. The values come from the ROLES table in barcode-1d.js and
+       are read back from there at render time — this list is the fallback
+       for the legend before a symbol has been drawn.
+       ------------------------------------------------------------------ */
+    --role-quiet: #dfe4ea;
+    --role-guard: #2f6f7e;
+    --role-start: #1f7a4d;
+    --role-stop: #a03d1f;
+    --role-data: #2b5d9b;
+    --role-check: #fe8e14;
+    --role-pair: #7a4fbf;
+    --role-bearer: #6b7280;
+}
+
+body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--dy-gray-900);
+    background: var(--white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------------------------------------------------------------------------
+   Corporate header — logo left, product name, orange trial CTA right
+   --------------------------------------------------------------------------- */
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--white);
+    border-bottom: 1px solid var(--dy-gray-200);
+}
+
+.site-header-inner {
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    min-height: 68px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+}
+
+.brand-logo {
+    display: block;
+    height: 26px;
+    width: auto;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 26px;
+    background: var(--dy-gray-200);
+}
+
+.brand-product {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    white-space: nowrap;
+}
+
+.brand-tag {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 1px 7px 2px;
+    border: 1px solid rgba(254, 142, 20, 0.55);
+    border-radius: 4px;
+    background: rgba(254, 142, 20, 0.14);
+    color: var(--dy-orange, #fe8e14);
+    font-family: var(--font-heading);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: 0.1em;
+}
+
+.header-nav {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+/* Scoped to .nav-link so it never overrides the CTA button's own colors. */
+.header-nav .nav-link {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dy-gray-700);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.header-nav .nav-link:hover {
+    color: var(--dy-orange);
+}
+
+/* ---------------------------------------------------------------------------
+   Page intro
+   --------------------------------------------------------------------------- */
+
+/* NOTE: body is a column flex container (to pin the footer to the bottom), and
+   a flex item with `margin: auto` on the cross axis loses `align-items:
+   stretch` — it shrinks to its content width instead of filling the row. Every
+   centered shell below therefore needs an explicit `width: 100%` so that
+   `max-width` + `margin: 0 auto` still centers a full-width block. */
+
+.page-intro {
+    width: 100%;
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 3rem 1.5rem 2.25rem;
+}
+
+.page-intro h1 {
+    font-family: var(--font-heading);
+    font-size: clamp(1.9rem, 4vw, 2.5rem);
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--dy-gray-900);
+    margin-bottom: 0.75rem;
+}
+
+.page-intro p {
+    font-size: 1.0625rem;
+    color: var(--dy-gray-700);
+    max-width: 68ch;
+}
+
+/* ---------------------------------------------------------------------------
+   Tip / notice callout
+   --------------------------------------------------------------------------- */
+
+.notice-banner {
+    width: 100%;
+    max-width: var(--shell);
+    margin: 0 auto 2.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--dy-orange-tint);
+    border: 1px solid var(--dy-orange-edge);
+    border-left: 4px solid var(--dy-orange);
+    border-radius: var(--radius-sm);
+    color: var(--dy-gray-900);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.notice-banner svg {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    margin-top: 1px;
+    color: var(--dy-orange-hover);
+}
+
+.notice-banner strong {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Layout
+   --------------------------------------------------------------------------- */
+
+.container {
+    width: 100%;
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    flex: 1 0 auto;
+}
+
+.card {
+    background: var(--white);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1.15rem 1.5rem 0.9rem;
+    background: var(--dy-gray-50);
+    border-bottom: 1px solid var(--dy-gray-200);
+}
+
+.card-header h2 {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    color: var(--dy-gray-900);
+    padding-bottom: 0.6rem;
+    position: relative;
+}
+
+.card-header h2::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 32px;
+    height: 2px;
+    background: var(--dy-orange);
+}
+
+.card-body {
+    padding: 1.75rem 1.5rem;
+}
+
+.card-body p {
+    margin-bottom: 0.9rem;
+}
+
+.card-body p:last-child {
+    margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Forms
+   --------------------------------------------------------------------------- */
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.form-row--value {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    margin-top: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.form-group--action {
+    justify-content: flex-end;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--dy-gray-900);
+    margin-bottom: 0.4rem;
+    display: block;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--dy-gray-900);
+    background: var(--white);
+    border: 1px solid var(--dy-gray-300);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    min-width: 0;
+}
+
+.form-control:hover {
+    border-color: var(--dy-gray-500);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--dy-orange);
+    box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.18);
+}
+
+#valueInput {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+}
+
+select.form-control {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23606060' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1.15rem;
+    padding-right: 2.4rem;
+    appearance: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Buttons — orange solid for the primary action, outlined for the rest
+   --------------------------------------------------------------------------- */
+
+.button-group {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 0.8rem 1.6rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn svg {
+    flex: 0 0 auto;
+    width: 1.05em;
+    height: 1.05em;
+}
+
+.btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.35);
+}
+
+.btn-primary {
+    background: var(--dy-orange);
+    color: var(--white);
+}
+
+.btn-primary:hover {
+    background: var(--dy-orange-hover);
+}
+
+.btn-secondary {
+    background: var(--white);
+    color: var(--dy-gray-900);
+    border-color: var(--dy-gray-300);
+}
+
+.btn-secondary:hover {
+    background: var(--dy-gray-50);
+    border-color: var(--dy-gray-900);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.88rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Validation / render errors
+   --------------------------------------------------------------------------- */
+
+.form-error {
+    margin-top: 1.25rem;
+    padding: 0.9rem 1.1rem;
+    background: var(--dy-error-tint);
+    border: 1px solid var(--dy-error-edge);
+    border-left: 4px solid var(--dy-error);
+    border-radius: var(--radius-sm);
+    color: var(--dy-error);
+    font-size: 0.9rem;
+    line-height: 1.55;
+    display: none;
+}
+
+.form-error.is-visible {
+    display: block;
+}
+
+/* ---------------------------------------------------------------------------
+   Symbology tabs
+   --------------------------------------------------------------------------- */
+
+.symbology-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--dy-gray-200);
+    flex-wrap: wrap;
+}
+
+.symbology-tab {
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dy-gray-700);
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: 2px solid transparent;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    padding: 0.7rem 1.1rem;
+    margin-bottom: -1px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.symbology-tab .tab-kind {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--dy-gray-500);
+    border: 1px solid var(--dy-gray-300);
+    border-radius: 3px;
+    padding: 0 4px;
+    line-height: 1.5;
+}
+
+.symbology-tab:hover {
+    color: var(--dy-gray-900);
+    background: var(--dy-gray-50);
+}
+
+.symbology-tab[aria-selected="true"] {
+    color: var(--dy-gray-900);
+    border-bottom-color: var(--dy-orange);
+}
+
+.symbology-tab[aria-selected="true"] .tab-kind {
+    color: var(--dy-orange-hover);
+    border-color: var(--dy-orange-edge);
+    background: var(--dy-orange-tint);
+}
+
+.symbology-tab:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.35);
+}
+
+/* Facts strip under the tabs: the handful of numbers that describe this
+   symbol, all read back from the encoder. */
+.symbology-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.fact-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 50px;
+    font-size: 0.8rem;
+    color: var(--dy-gray-700);
+}
+
+.fact-chip b {
+    font-weight: 700;
+    color: var(--dy-gray-900);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+   Diagram toolbar: legend + toggles
+   --------------------------------------------------------------------------- */
+
+.diagram-instructions {
+    font-size: 0.9rem;
+    color: var(--dy-gray-700);
+    margin-bottom: 1rem;
+}
+
+.diagram-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.9rem;
+    align-items: center;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--dy-gray-700);
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 50px;
+    padding: 0.15rem 0.5rem 0.15rem 0.35rem;
+    background: transparent;
+    font-family: inherit;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.legend-item:hover {
+    background: var(--dy-gray-50);
+    border-color: var(--dy-gray-200);
+}
+
+.legend-item.is-active {
+    background: var(--dy-orange-tint);
+    border-color: var(--dy-orange-edge);
+    color: var(--dy-gray-900);
+    font-weight: 600;
+}
+
+.legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(50, 50, 52, 0.18);
+}
+
+.legend-count {
+    color: var(--dy-gray-500);
+    font-variant-numeric: tabular-nums;
+}
+
+.diagram-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+}
+
+.toggle-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--dy-gray-700);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* `display: inline-flex` outranks the UA rule for [hidden], so the attribute
+   has to be re-asserted or the row stays visible with its attribute set. */
+.toggle-row[hidden] {
+    display: none;
+}
+
+.range-check {
+    width: 17px;
+    height: 17px;
+    accent-color: var(--dy-orange);
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------------------------
+   The diagram stage
+   --------------------------------------------------------------------------- */
+
+.diagram-stage {
+    position: relative;
+    width: 100%;
+    background: var(--white);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius-sm);
+    padding: 1.25rem;
+    overflow-x: auto;
+}
+
+/* A grid symbol is square and should not be stretched to the full width of a
+   desktop card — at 177 modules a QR Code is 177 x 177 and the module ruler
+   needs every one of those pixels. */
+.diagram-stage--grid {
+    display: flex;
+    justify-content: center;
+    background: var(--dy-gray-50);
+}
+
+.diagram {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    touch-action: manipulation;
+}
+
+.diagram-stage--grid .diagram {
+    width: min(620px, 100%);
+}
+
+/* Hit areas are transparent rects over each region: the visible geometry is
+   drawn once, and interaction is handled by these, so hover states never have
+   to restyle thousands of bar rects. */
+.region-hit {
+    fill: transparent;
+    cursor: pointer;
+    outline: none;
+}
+
+.region-hit:focus-visible {
+    stroke: var(--dy-gray-900);
+    stroke-width: 2;
+    stroke-dasharray: 4 3;
+}
+
+/* Hover = a light wash; selection = a stronger one plus an outline. Keeping
+   the two visually distinct means a pinned region is still recognisable while
+   the pointer moves around. */
+.region-highlight {
+    pointer-events: none;
+    fill: var(--dy-gray-900);
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+
+.region-highlight.is-hover {
+    opacity: 0.1;
+}
+
+.region-highlight.is-selected {
+    opacity: 0.16;
+}
+
+.region-outline {
+    pointer-events: none;
+    fill: none;
+    stroke: var(--dy-gray-900);
+    stroke-width: 1.5;
+    opacity: 0;
+}
+
+.region-outline.is-selected {
+    opacity: 0.75;
+}
+
+.diagram.is-dimmed .region-marks {
+    opacity: 0.35;
+}
+
+.region-marks {
+    transition: opacity 0.12s ease;
+}
+
+.diagram text {
+    font-family: var(--font-body);
+    fill: var(--dy-gray-900);
+    user-select: none;
+}
+
+.diagram .hri-text {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-anchor: middle;
+}
+
+.diagram .hri-text--outside {
+    font-size: 12px;
+}
+
+.diagram .ruler-text {
+    font-size: 7px;
+    fill: var(--dy-gray-500);
+    text-anchor: middle;
+    font-variant-numeric: tabular-nums;
+}
+
+.diagram .axis-text {
+    font-size: 9px;
+    fill: var(--dy-gray-500);
+}
+
+.diagram .group-divider {
+    stroke: var(--dy-gray-300);
+    stroke-width: 0.5;
+    stroke-dasharray: 3 3;
+}
+
+.diagram .bearer-bar {
+    fill: none;
+    stroke: var(--dy-gray-700);
+    stroke-width: 5;
+}
+
+.diagram .bearer-label {
+    font-size: 9px;
+    fill: var(--dy-gray-700);
+}
+
+/* A quiet zone is empty by definition, so it is drawn as a hatched band: the
+   reader has to be able to see that something is deliberately there. */
+.quiet-hatch {
+    fill: url(#quietPattern);
+}
+
+/* ---------------------------------------------------------------------------
+   Module readout — the "which module am I on" strip under the diagram
+   --------------------------------------------------------------------------- */
+
+.module-readout {
+    margin-top: 1rem;
+    padding: 0.6rem 0.85rem;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    color: var(--dy-gray-700);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.25rem;
+    align-items: baseline;
+    min-height: 2.4rem;
+}
+
+.module-readout b {
+    color: var(--dy-gray-900);
+    font-weight: 700;
+}
+
+.module-readout .readout-mono {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    word-break: break-all;
+}
+
+/* ---------------------------------------------------------------------------
+   Detail panel
+   --------------------------------------------------------------------------- */
+
+.detail-panel {
+    margin-top: 1.25rem;
+    border: 1px solid var(--dy-gray-200);
+    border-left: 4px solid var(--dy-gray-300);
+    border-radius: var(--radius-sm);
+    padding: 1.1rem 1.25rem;
+    background: var(--white);
+    min-height: 5.5rem;
+}
+
+.detail-panel.is-pinned {
+    border-left-color: var(--dy-orange);
+    background: #fffdfa;
+}
+
+.detail-empty {
+    font-size: 0.9rem;
+    color: var(--dy-gray-500);
+    font-style: italic;
+}
+
+.detail-head {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    margin-bottom: 0.6rem;
+}
+
+.detail-swatch {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    margin-top: 5px;
+    border: 1px solid rgba(50, 50, 52, 0.18);
+    background: var(--dy-gray-300);
+}
+
+.detail-title {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 400;
+    line-height: 1.3;
+    color: var(--dy-gray-900);
+}
+
+.detail-role {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--dy-gray-500);
+}
+
+.detail-description {
+    font-size: 0.95rem;
+    color: var(--dy-gray-900);
+    margin-bottom: 0.5rem;
+}
+
+.detail-detail {
+    font-size: 0.9rem;
+    color: var(--dy-gray-700);
+    margin-bottom: 0.75rem;
+}
+
+.detail-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem 1.25rem;
+    margin: 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--dy-gray-200);
+}
+
+.detail-stats div {
+    min-width: 0;
+}
+
+.detail-stats dt {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--dy-gray-500);
+}
+
+.detail-stats dd {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--dy-gray-900);
+    word-break: break-word;
+}
+
+.detail-stats dd.mono {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Tables
+   --------------------------------------------------------------------------- */
+
+.table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 0.5rem;
+}
+
+.spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.spec-table caption {
+    caption-side: top;
+    text-align: left;
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    color: var(--dy-gray-900);
+    padding-bottom: 0.6rem;
+}
+
+.spec-table th,
+.spec-table td {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--dy-gray-200);
+    vertical-align: top;
+}
+
+.spec-table thead th {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    background: var(--dy-gray-50);
+    border-bottom: 1px solid var(--dy-gray-300);
+    white-space: nowrap;
+}
+
+.spec-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.spec-table td:first-child {
+    font-weight: 600;
+}
+
+.spec-table td.kind {
+    color: var(--dy-gray-700);
+    white-space: nowrap;
+}
+
+.spec-table code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+
+/* Region table: colour chip, name, role, modules, description */
+.region-table td:first-child {
+    white-space: nowrap;
+}
+
+.region-table tr.is-active {
+    background: var(--dy-orange-tint);
+}
+
+.region-table .region-chip {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    margin-right: 0.5rem;
+    vertical-align: 0;
+    border: 1px solid rgba(50, 50, 52, 0.18);
+}
+
+.region-table .region-modules {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.region-table .region-role {
+    color: var(--dy-gray-700);
+    white-space: nowrap;
+}
+
+.region-table .region-link {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 600;
+    color: var(--dy-link);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.region-table .region-link:hover {
+    color: var(--dy-link-hover);
+}
+
+/* Character table: patterns are monospace and must not wrap mid-pattern */
+.character-table td.pattern-cell,
+.character-table td.mono-cell {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+
+.character-table td.pattern-cell .bit-1 {
+    color: var(--dy-gray-900);
+    font-weight: 700;
+}
+
+.character-table td.pattern-cell .bit-0 {
+    color: var(--dy-gray-300);
+}
+
+.character-table .char-cell {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.character-table .wide-marker {
+    display: inline-block;
+    width: 1.5em;
+    text-align: center;
+}
+
+.compare-table td:first-child {
+    white-space: nowrap;
+}
+
+.compare-table td {
+    min-width: 180px;
+}
+
+/* ---------------------------------------------------------------------------
+   QR specifics
+   --------------------------------------------------------------------------- */
+
+.qr-controls {
+    max-width: 420px;
+    margin-bottom: 1.25rem;
+}
+
+.qr-stats {
+    margin-bottom: 1.25rem;
+    padding-top: 0;
+    border-top: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Steps list
+   --------------------------------------------------------------------------- */
+
+.steps {
+    margin: 1rem 0 1.25rem;
+    padding-left: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.steps li {
+    font-size: 0.95rem;
+    color: var(--dy-gray-900);
+    line-height: 1.6;
+}
+
+.steps strong {
+    font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+   Check-value arithmetic
+   --------------------------------------------------------------------------- */
+
+.check-calc {
+    margin: 1rem 0;
+    padding: 1rem 1.15rem;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.9;
+    overflow-x: auto;
+}
+
+.check-calc .calc-row {
+    white-space: nowrap;
+}
+
+.check-calc .calc-label {
+    display: inline-block;
+    min-width: 8.5em;
+    color: var(--dy-gray-700);
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.check-calc .calc-em {
+    font-weight: 700;
+    color: var(--dy-gray-900);
+}
+
+.weight-strip {
+    display: inline-flex;
+    gap: 2px;
+    margin: 0.2rem 0;
+    flex-wrap: wrap;
+}
+
+.weight-cell {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 1.6em;
+    line-height: 1.35;
+}
+
+.weight-cell span:first-child {
+    font-family: var(--font-mono);
+    font-weight: 700;
+}
+
+.weight-cell span:last-child {
+    font-size: 0.7rem;
+    color: var(--dy-gray-500);
+    font-family: var(--font-body);
+}
+
+.weight-cell.is-check {
+    color: var(--dy-orange-hover);
+}
+
+.weight-cell.is-check span:last-child {
+    color: var(--dy-orange-hover);
+}
+
+/* ---------------------------------------------------------------------------
+   Hints and inline copy
+   --------------------------------------------------------------------------- */
+
+.hint {
+    font-size: 0.85rem;
+    color: var(--dy-gray-700);
+    margin-top: 0.75rem;
+    line-height: 1.6;
+}
+
+.hint.is-error {
+    color: var(--dy-error);
+}
+
+.hint code,
+.card-body code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+
+a {
+    color: var(--dy-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+a:hover {
+    color: var(--dy-link-hover);
+}
+
+.hint a {
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Footer
+   --------------------------------------------------------------------------- */
+
+.demo-footer {
+    flex: 0 0 auto;
+    margin-top: 3rem;
+    background: var(--dy-gray-50);
+    border-top: 1px solid var(--dy-gray-200);
+    padding: 2rem 1.5rem;
+}
+
+.demo-footer-inner {
+    max-width: var(--shell);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.demo-footer .disclaimer {
+    font-size: 0.85rem;
+    color: var(--dy-gray-700);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.demo-footer .disclaimer svg {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    color: var(--dy-orange-hover);
+}
+
+.demo-footer .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+    color: var(--dy-gray-700);
+}
+
+.demo-footer .footer-cta {
+    margin-left: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    .header-nav .nav-link {
+        display: none;
+    }
+
+    .header-nav {
+        gap: 0;
+    }
+
+    .diagram-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-intro {
+        padding: 2rem 1rem 1.5rem;
+    }
+
+    .symbology-tabs {
+        overflow-x: auto;
+        gap: 0.25rem;
+        scrollbar-width: none;
+        flex-wrap: nowrap;
+    }
+
+    .symbology-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .symbology-tab {
+        flex: 0 0 auto;
+        padding: 0.65rem 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .container {
+        padding: 0 1rem;
+    }
+
+    .card-body {
+        padding: 1.25rem 1rem;
+    }
+
+    .card-header {
+        padding: 1rem 1rem 0.75rem;
+    }
+
+    .form-row,
+    .form-row--value {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-group--action .btn {
+        width: 100%;
+    }
+
+    .diagram-stage {
+        padding: 0.75rem;
+    }
+
+    .detail-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .demo-footer .footer-cta {
+        margin-left: 0;
+    }
+
+    .spec-table {
+        font-size: 0.82rem;
+    }
+
+    .spec-table th,
+    .spec-table td {
+        padding: 0.5rem 0.5rem;
+    }
+
+    .compare-table td {
+        min-width: 150px;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-intro h1 {
+        font-size: 1.6rem;
+    }
+
+    .brand-tag,
+    .brand-product,
+    .brand-divider {
+        display: none;
+    }
+
+    .card-header h2 {
+        font-size: 1.05rem;
+    }
+
+    .form-control {
+        font-size: 0.9rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.9rem;
+    }
+
+    .detail-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Print — the diagrams are the point, so they are kept and the chrome is not
+   --------------------------------------------------------------------------- */
+
+@media print {
+
+    .site-header,
+    .demo-footer,
+    .diagram-toolbar,
+    .form-error,
+    .module-readout,
+    .page-intro p,
+    .symbology-tabs {
+        display: none;
+    }
+
+    body {
+        background: var(--white);
+    }
+
+    .card {
+        break-inside: avoid;
+    }
+
+    .diagram-stage {
+        border: none;
+        padding: 0;
+        overflow: visible;
+    }
+}

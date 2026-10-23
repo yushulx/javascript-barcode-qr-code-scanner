@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Free Online UPC Barcode Lookup</title>
+    <meta name="description"
+        content="Free online UPC and EAN barcode lookup. Decode a UPC-A, UPC-E, EAN-13 or EAN-8 symbol from an image in your browser, verify the check digit, resolve the GS1 prefix country and look the product up in open product databases — no sign-up.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/upc-barcode-lookup/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Free Online UPC Barcode Lookup | Dynamsoft Codepool Demo">
+    <meta property="og:description"
+        content="Free online UPC and EAN barcode lookup — decode the symbol in your browser, verify the check digit, resolve the GS1 prefix country and look the product up in open product databases.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/upc-barcode-lookup/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/upc-barcode-lookup/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Dynamsoft Barcode Reader bundle (decoding; camera module unused by this page) -->
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+
+</head>
+
+<body>
+
+    <div class="demo-shell">
+        <!-- Header -->
+        <header class="demo-header">
+            <div class="demo-brand">
+                <img class="brand-logo" src="dynamsoft-logo-white.svg" width="202" height="50"
+                    alt="Dynamsoft">
+                <span class="brand-divider" aria-hidden="true"></span>
+                <h1>Free UPC Barcode Lookup</h1>
+            </div>
+            <p class="subtitle">A free online UPC and EAN barcode lookup powered by Dynamsoft Barcode Reader — decode
+                the symbol, verify the check digit, then look the product up in open databases</p>
+        </header>
+
+        <main id="lookup-app">
+            <div id="tip-message">Loading the barcode reader…</div>
+
+            <!-- Camera / upload mode switch -->
+            <div class="controls-row">
+                <div id="mode-switch-container" class="mode-switch" data-active="upload">
+                    <div class="mode-options">
+                        <label class="mode-option" data-mode="camera">
+                            <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                                <path
+                                    d="M2 6a2 2 0 0 1 2-2h3l1-1h6l1 1h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" />
+                            </svg>
+                            <span>Camera</span>
+                        </label>
+                        <label class="mode-option active" data-mode="upload">
+                            <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <path d="M14 2v6h6" />
+                                <path d="M10 13l2 2 4-4" />
+                            </svg>
+                            <span>Upload</span>
+                        </label>
+                    </div>
+                    <div class="mode-slider"></div>
+                </div>
+            </div>
+
+            <!-- Live camera: the SDK mounts its own viewfinder UI here -->
+            <div id="camera-section" hidden>
+                <div id="camera-view"></div>
+            </div>
+
+            <div id="workbench" class="workbench">
+                <!-- Image column -->
+                <section class="panel" aria-label="Scan an image">
+                    <div id="upload-zone" class="upload-zone" tabindex="0" role="button"
+                        aria-label="Choose a UPC or EAN barcode image to scan">
+                        <svg class="upload-zone-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        <p class="upload-zone-title">Upload a barcode image</p>
+                        <p class="upload-zone-hint">
+                            Click to browse, drop an image here, or paste one from the clipboard with
+                            <kbd>Ctrl</kbd>&thinsp;+&thinsp;<kbd>V</kbd>
+                        </p>
+                    </div>
+                    <input type="file" id="upload-input" accept="image/*" hidden>
+
+                    <div class="sample-row" id="sample-row">
+                        <span class="sample-row-label">No barcode handy? Try a sample:</span>
+                    </div>
+                </section>
+
+                <!-- Manual entry column -->
+                <section class="panel" aria-label="Enter a barcode number">
+                    <form id="manual-form" class="manual-form">
+                        <label class="manual-label" for="manual-input">Or type the number</label>
+                        <input id="manual-input" class="manual-input" type="text" inputmode="numeric"
+                            autocomplete="off" spellcheck="false" placeholder="e.g. 3017620422003" />
+                        <p class="manual-hint">8, 12 or 13 digits — EAN-8, UPC-A / UPC-E or EAN-13</p>
+                        <button id="manual-button" class="manual-button" type="submit">Look up</button>
+                    </form>
+                </section>
+            </div>
+
+            <!-- Results -->
+            <section id="results" class="results" hidden>
+                <div class="results-header">
+                    <span id="results-title">Results</span>
+                    <button id="copy-all-button" class="text-button" type="button">Copy JSON</button>
+                </div>
+                <div id="results-content" class="results-body"></div>
+            </section>
+        </main>
+
+        <footer class="demo-footer">
+            <p>
+                Built with
+                <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
+                    Barcode Reader</a>. The hosted demo runs on a Codepool license bound to dynamsoft.com; this copy falls back to the SDK's public trial key on any other host, so add your own license for production use.
+                <a class="demo-footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
+            </p>
+            <p class="demo-footer-note">
+                Decoding runs entirely in your browser. Product data comes from
+                <a href="https://world.openfoodfacts.org/" target="_blank" rel="noopener noreferrer">Open Food
+                    Facts</a> and
+                <a href="https://world.openproductsfacts.org/" target="_blank" rel="noopener noreferrer">Open Products
+                    Facts</a> — open databases any product app can query.
+            </p>
+        </footer>
+    </div>
+
+    <!-- Loading / error overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-text">Initializing Dynamsoft Barcode Reader…</p>
+    </div>
+
+    <!-- UI, decoding, check-digit verification and product lookup -->
+    <script src="app.js"></script>
+</body>
+
+</html>

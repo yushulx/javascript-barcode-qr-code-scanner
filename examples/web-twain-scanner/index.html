@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Free Online Web TWAIN Document Scanner</title>
+  <meta name="description" content="Scan documents from TWAIN, WIA, ICA and SANE scanners. Choose resolution, color, feeder and duplex settings, preview pages and export PDF, TIFF or PNG locally.">
+  <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/web-twain-scanner/">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Free Online Web TWAIN Document Scanner">
+  <meta property="og:description" content="Connect your scanner, scan and preview pages, then save PDF, TIFF or PNG. Documents stay on your device.">
+  <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/web-twain-scanner/">
+  <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/web-twain-scanner/thumbnail.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@400;500&display=swap">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <noscript><p class="notice">Enable JavaScript to connect to your scanner.</p></noscript>
+  <header class="demo-header">
+    <div class="brand"><img src="dynamsoft-logo-white.svg" width="202" height="50" alt="Dynamsoft"><h1><span>Free Online</span> Web TWAIN Scanner</h1></div>
+    <p>Scan from your desktop scanner. Preview, rotate and save documents on your device.</p>
+    <a href="https://www.dynamsoft.com/codepool/demos/">Explore all demos →</a> ·
+    <a href="https://www.dynamsoft.com/codepool/">CodePool blog →</a>
+  </header>
+  <main class="workspace">
+    <aside class="settings" aria-label="Scanner settings">
+      <h2>1. Connect your scanner</h2>
+      <p class="help">Connect a scanner and install its driver. This demo also needs the Dynamic Web TWAIN local service.</p>
+      <button id="connect" class="primary">Connect / refresh scanners</button>
+      <details><summary>Install the local service</summary><p>Use the installer for your computer, then click Connect again. Scanning is available on desktop browsers.</p><ul>
+        <li><a href="https://unpkg.com/dwt@19.4.4/dist/dist/DynamicWebTWAINServiceSetup.msi">Windows</a></li>
+        <li><a href="https://unpkg.com/dwt@19.4.4/dist/dist/DynamicWebTWAINServiceSetup.pkg">macOS</a></li>
+        <li><a href="https://unpkg.com/dwt@19.4.4/dist/dist/DynamicWebTWAINServiceSetup.deb">Linux DEB (x64)</a> / <a href="https://unpkg.com/dwt@19.4.4/dist/dist/DynamicWebTWAINServiceSetup.rpm">RPM</a></li>
+      </ul></details>
+      <label for="scanner">Scanner</label><select id="scanner" disabled><option value="">Connect to find scanners</option></select>
+      <details id="virtual-setup" class="virtual-guide">
+        <summary>No physical scanner? Get a virtual scanner</summary>
+        <p>Install a virtual scanner to scan sample images through the same scanning workflow. Each package ships 11 sample images, so every scan returns a different picture — and a document-feeder scan returns all of them as one multi-page document.</p>
+        <a class="download-link" href="https://github.com/yushulx/virtual-scanner/releases/download/v1.0.7/VirtualScannerSetup-1.0.7.exe">Download virtual scanner — Windows x64 installer (v1.0.7)</a>
+        <p class="help"><a href="https://www.dynamsoft.com/codepool/windows-virtual-scanner-custom-images.html">Windows installation guide</a></p>
+        <details><summary>macOS / Linux installers and source code</summary>
+          <p>Prebuilt packages are attached to the release — no build tools required:</p>
+          <p><a href="https://github.com/yushulx/virtual-scanner/releases/download/v1.0.7/VirtualScanner-1.0.7.pkg">macOS package (.pkg)</a> · <a href="https://github.com/yushulx/virtual-scanner/releases/download/v1.0.7/sane-custom-scanner_1.0.7_amd64.deb">Linux DEB (x64)</a></p>
+          <p class="help">macOS: run <code>curl -fsSL https://raw.githubusercontent.com/yushulx/virtual-scanner/main/macos/Scripts/install.sh | bash</code> (one-line installer, always the latest release), then open Image Capture — or install the .pkg manually. Linux: run <code>sudo apt install ./sane-custom-scanner_1.0.7_amd64.deb</code>, then run <code>scanimage -L</code>.</p>
+          <p><a href="https://github.com/yushulx/virtual-scanner/releases">All releases</a> · <a href="https://github.com/yushulx/virtual-scanner/archive/refs/heads/main.zip">Download source ZIP</a> · <a href="https://github.com/yushulx/virtual-scanner/tree/main">View project on GitHub</a></p>
+          <p><a href="https://github.com/yushulx/virtual-scanner/blob/main/macos/README.md">macOS setup guide</a> · <a href="https://www.dynamsoft.com/codepool/linux-virtual-scanner-custom-images.html">Linux setup guide</a></p>
+        </details>
+        <p class="help">Keep the Web TWAIN local service installed. After installing the virtual scanner, click <strong>Connect / refresh scanners</strong>, select the virtual device and scan.</p>
+      </details>
+      <h2>2. Scan settings</h2>
+      <label for="resolution">Resolution</label><select id="resolution"><option value="100">100 DPI</option><option value="200" selected>200 DPI</option><option value="300">300 DPI</option><option value="600">600 DPI</option></select>
+      <label for="color">Color mode</label><select id="color"><option value="2">Color</option><option value="1">Grayscale</option><option value="0">Black &amp; white</option></select>
+      <label class="check"><input id="feeder" type="checkbox" checked> Use document feeder</label>
+      <label class="check"><input id="duplex" type="checkbox"> Scan both sides (duplex)</label>
+      <label class="check"><input id="driver-ui" type="checkbox"> Show scanner driver settings</label>
+      <p class="help">Feeder, duplex and resolution depend on your scanner. Enable driver settings if a device ignores these options.</p>
+      <button id="scan" class="primary" disabled>Scan documents</button>
+      <label for="import">Or add images from your computer</label><input id="import" type="file" accept="image/jpeg,image/png,image/bmp,image/tiff,.tif,.tiff" multiple disabled>
+      <p class="help">JPEG, PNG, BMP and TIFF. Connect the local service first; a scanner is not required to import images.</p>
+    </aside>
+    <section class="preview" aria-label="Document preview">
+      <div class="toolbar preview-heading"><h2>3. Preview &amp; save</h2><span id="count">0 pages</span>
+        <details class="preview-help"><summary>Help</summary><p>Click a thumbnail to preview a page. Use + / − to zoom and drag the enlarged image to pan. Rotation, deletion and PNG export apply to the current page; PDF and TIFF include all pages.</p></details>
+      </div>
+      <div class="toolbar document-tools" role="toolbar" aria-label="Document tools">
+        <div class="tool-group" role="group" aria-label="Page navigation">
+          <button id="previous" disabled aria-label="Previous page" title="Previous page">←</button><button id="next" disabled aria-label="Next page" title="Next page">→</button>
+        </div>
+        <div class="tool-group" role="group" aria-label="Page editing">
+          <button id="rotate" disabled aria-label="Rotate current page right" title="Rotate current page right">Rotate</button><button id="delete" disabled title="Delete current page">Delete</button><button id="clear" disabled title="Clear all pages">Clear all</button>
+        </div>
+        <div class="tool-group" role="group" aria-label="Preview zoom">
+          <button id="zoom-out" disabled aria-label="Zoom out" title="Zoom out">−</button><output id="zoom-level" aria-label="Current zoom">—</output><button id="zoom-in" disabled aria-label="Zoom in" title="Zoom in">+</button><button id="zoom-fit" disabled title="Fit image to window">Fit</button><button id="zoom-original" disabled title="Actual size (100%)">100%</button>
+        </div>
+      </div>
+      <div id="viewer"><div id="empty">Your scanned pages will appear here.</div></div>
+      <div class="toolbar export"><label for="format">Save as</label><select id="format"><option value="pdf">PDF — all pages</option><option value="tiff">TIFF — all pages</option><option value="png">PNG — current page</option></select><button id="save" class="primary" disabled>Download</button></div>
+      <p id="status" role="status" aria-live="polite">Ready to connect. Your documents are processed locally and are not uploaded.</p>
+    </section>
+  </main>
+  <footer><p>Powered by <a href="https://www.dynamsoft.com/web-twain/overview/">Dynamic Web TWAIN</a>. SDK licensing uses Dynamsoft's licensing service; document images stay on your computer.</p><p><a href="https://www.dynamsoft.com/codepool/sane-scanner-access-javascript-linux.html">Read the scanning tutorial</a> · <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dwt">Get a trial license for your own app</a></p></footer>
+</body>
+</html>
