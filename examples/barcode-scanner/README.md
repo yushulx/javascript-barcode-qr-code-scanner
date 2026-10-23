@@ -10,8 +10,8 @@ documents, video files, or a live camera stream — detection starts automatical
 - 🔍 **Dynamsoft Barcode Reader SDK** — high-performance 1D/2D barcode recognition (version `11.6.3200`)
 - 📷 **Real-time camera scanning** using native browser camera access
 - 🎬 **Video file scanning** — upload MP4/WebM/MOV and every frame is scanned automatically
-- 🎥 **Clip recorder** — record the camera stream with RecordRTC, then replay the clip through the
-  same video decoder
+- 🎥 **Clip recorder** — record the live stream with RecordRTC, then replay the clip through the
+  same video decoder to see what the reader does with the exact frames that failed
 - 📁 **Image file scanning** — upload one or many JPG/PNG/GIF/BMP/WebP images and scan instantly
 - 📄 **Multi-page PDF and TIFF** — every page is rendered and scanned, with prev/next navigation
 - 🎯 **Visual feedback** — bounding box overlay drawn on every detected barcode
@@ -19,29 +19,26 @@ documents, video files, or a live camera stream — detection starts automatical
 - 🔄 **Multiple camera support** with device selection
 - ⚙️ **Custom scan templates** — load your own Dynamsoft JSON template to tune the algorithm
 - 📊 **Benchmark mode** — measure detection count and speed across an image set
-- 🎯 **Ground truth scoring** — import `annotations.json` to compute detection rate and precision
+- 🎯 **Ground truth scoring** — import `annotations.json` to compute recall, precision, symbology
+  agreement and box overlap against the expected values
+- 🗂️ **Dataset ZIP** — drop an archive exported by the
+  [barcode generator](https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/) and it loads the images *and* their ground truth
+  in one step, including the conditions each image was captured under
 - 📤 **Exportable reports** — save benchmark results as a standalone HTML file
 - 📱 **Responsive design** that works on desktop and mobile
 - 🎨 **Modern UI** with gradient theme and smooth animations
 
-## Getting a License
+## License
 
-Dynamsoft Barcode Reader requires a license key. The demo ships with a public trial key, but it may
-expire or hit a quota — get your own
-[30-day free trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform)
-and paste it into **Settings → Dynamsoft Barcode Reader → Activate**.
+The SDK is activated automatically on page load — there is no license input in
+Settings. The key is chosen by hostname: on `dynamsoft.com` (and any subdomain)
+the demo uses the Codepool license, which is bound to that domain; on any other
+host (localhost, staging, a fork) it falls back to the SDK's public 24-hour
+trial key, so the demo still runs. The fallback is logged to the console and
+reported as a `license_fallback` event in analytics.
 
-**Activation is always manual:** the SDK is never initialized on page load. Open **Settings** (the ⚙
-button), fill in your license key and click **Activate**. The badge next to *Dynamsoft Barcode
-Reader* shows `Not Activated` until you do.
-
-The key you enter is cached in `localStorage` and pre-filled next time, so you only have to click
-**Activate**. Pasting a different key re-enables the button, so you can switch licenses at any time.
-
-> **Temporary license notice:** the bundled public key resolves to a 24-hour temporary license, and
-> Dynamsoft displays a full-screen notice on top of the page. Click the **×** on that notice to
-> dismiss it and start scanning — or paste your own 30-day trial license in Settings, in which case
-> the notice never appears.
+To use your own license, set `CODEPOOL_LICENSE_KEY` in `main.js` to your
+[30-day free trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform).
 
 ## Scan Modes
 
@@ -60,21 +57,29 @@ pages of a document are loaded.
 Pick your camera and scanning starts automatically. Detected barcodes appear in real time with
 bounding box overlays.
 
-**Clip recorder:** the button next to the camera selector records the live stream with
-[RecordRTC](https://recordrtc.org/) (fetched from jsDelivr on first click). When you stop, the clip
-appears under the preview with its duration, resolution and size:
+### 🎥 Clip Recorder
 
-- **Scan this clip** — switches to File mode and replays the recording through the ordinary video
-  decoder: same `capture()` call per frame, same overlay, same result list as an uploaded MP4.
-- **Download** — saves the clip as `camera-clip.webm`.
-- **Discard** — drops it and frees the object URL.
+Next to the camera selector, **Start recording** captures the live stream with
+[RecordRTC](https://recordrtc.org/) (loaded from jsDelivr on first click, so a visitor who never
+records never downloads it). While a take is running the button turns red and a timer counts up.
 
-A live camera keeps no history, so a missed frame is gone before you can look at it. Recording first
-turns it into a file you can replay, and because the clip travels the upload path, its decode result
-tells you whether the footage itself is readable — if it is, the live miss was timing.
+Stop it and the clip appears under the preview with its duration, resolution and file size:
 
-The clip is WebM; `MediaRecorder` writes no duration into the header, so the page measures it on
-load to make the seek bar work. Nothing leaves the tab.
+| Action | What it does |
+| --- | --- |
+| **Scan this clip** | Switches to File mode and replays the recording through the ordinary video decoder — same `CaptureVisionRouter.capture()` per frame, same overlay, same result list as an uploaded MP4 |
+| **Download** | Saves the clip as `camera-clip.webm` |
+| **Discard** | Drops it and frees the object URL |
+
+The point is diagnosis. A live camera keeps no history: by the time you see a miss, the frame is
+gone. Recording first turns that moment into a file you can replay at will, and because the clip
+goes through the upload path rather than a special case, it answers exactly one question — does the
+reader decode this footage when it is a file? If it does, the live miss was timing; if it does not,
+the frames themselves are the problem.
+
+The clip is whatever `MediaRecorder` produces — WebM/VP8 in Chrome and Edge, MP4 in Safari — and a
+WebM written that way carries no duration in its header, so the page measures it on load and the
+seek bar works. Nothing is uploaded; the recording lives in a blob in the tab until you close it.
 
 ## How PDF and TIFF are handled
 
@@ -108,13 +113,48 @@ Optionally import a ground truth file (`annotations.json`) to score accuracy:
   "images": [
     {
       "file": "sample1.jpg",
-      "barcodes": [{ "text": "9781234567897", "format": "EAN_13" }]
+      "barcodes": [
+        { "text": "9781234567897", "format": "EAN_13", "points": [[10,20],[310,20],[310,140],[10,140]] }
+      ],
+      "degradations": { "blur": 1.2, "rotate": -7 }
     }
   ]
 }
 ```
 
+`text` is what the benchmark matches on. `format` and `points` are optional and add two more
+columns. Each row's **Details** cell carries up to three labelled blocks — *Conditions*, *Decoded*,
+*Missed* — as single flowing lines capped at six entries with `+N more`; the complete text is in the
+element's tooltip, so nothing is lost but nothing is printed by default either. (An uncapped list
+next to a conditions dump of eighteen raw key/value pairs made a single row 450 px tall, which
+stretched every other column of that row into what read as enormous gaps.)
+
+| Column | Meaning |
+| --- | --- |
+| **Missed** | expected values that never came back, listed under *Details* so a miss can be acted on |
+| **Symbology** | how many correct values came back under the annotated symbology |
+| **Box IoU** | how many of those boxes overlap the annotated box (IoU ≥ 0.5), plus the mean |
+| **Unmatched decodes** | values that read but matched nothing expected — a wrong read, or a value the annotations do not cover |
+
+Symbology and box overlap are **informational**: a correct value is never downgraded because the
+reader named the symbology differently or drew the box elsewhere. The overlap maths is in
+`main.js` rather than a shared file, so this page has no cross-directory script that could fail to
+load and silently cost the column. `degradations` is shown as the
+*Conditions* line of the row, so a miss can be read against the capture conditions that caused it.
+Known naming differences are folded together before comparing (`CODE_39_EXTENDED` with `CODE_39`,
+`UPC_A` with an `EAN_13` that starts with 0, `MSI` with `MSI_CODE`); anything else is reported.
+
 Results can be exported as a standalone HTML report.
+
+### Ready-made datasets
+
+The barcode generator exports a dataset as a single ZIP — `images/*.png` plus `annotations.json` —
+and this page reads that archive directly. Drop the ZIP on the upload zone in Benchmark mode and it
+loads every image with its ground truth already attached, then **Run Benchmark** scores the set. No
+extraction, no filename matching by hand.
+
+The generator also records, per image, the degradation values that were applied to it, so a hard
+image reports why it was hard rather than only that it failed.
 
 ## Getting a Dataset
 
@@ -139,8 +179,8 @@ Usage:
 1. Download the `challenging-images` folder from that repo (or `git clone` it).
 2. In the app switch to **Benchmark** mode and upload the images (multi-select works).
 3. Click **📄 Import annotations.json** and pick the `annotations.json` from the dataset.
-4. Click **Run Benchmark** — you get per-image found/expected counts, detection rate, precision and
-   timing.
+4. Click **Run Benchmark** — you get per-image found/expected counts, recall, precision, symbology
+   agreement and box overlap, plus timing.
 
 Image file names must match the `file` entries in the annotations (they do, out of the box). If you
 use your own images, keep the same JSON shape and name the files accordingly. Ground truth is matched
@@ -153,9 +193,31 @@ In **Settings**, use **Load Template File** to import a Dynamsoft JSON template
 (`ReadBarcodes_Default` is used by default). The template is applied to image, video, camera, and
 benchmark scanning, and can be reset with the ✕ button.
 
+### What the default template does *not* read
+
+The stock `ReadBarcodes_Default` preset enables **32 of the 52 formats** the SDK knows and leaves
+`BF_DOTCODE`, both Pharmacode tracks, the postal symbologies and a few others out. DotCode and
+Pharmacode are the two that matter here, because the barcode generator produces them: benchmarking a
+dataset that contains them would report misses that are not reading failures — the reader was never
+asked. On activation the demo adds those three bits on top of the preset through the
+simplified-settings API (`getSimplifiedSettings()` → set `barcodeSettings.barcodeFormatIds` →
+`updateSettings()`), and re-applies them after any `resetSettings()`.
+
+Measured on bundle 11.6.3200: a clean DotCode and a clean one-track Pharmacode both decode once the
+bits are set, and neither decodes with the preset alone. Everything else in the generator's thirteen
+symbologies is enabled by the preset already.
+
+> Do not add these bits by hand-writing template JSON. `initSettings()` accepts a hand-rolled
+> document and `startCapturing()`/`capture()` then rejects it with
+> `[-10038] … BarcodeFormatIds: The parameter value is invalid or out of range`, blaming the format
+> list for a fault in the document around it.
+
 ## Online Demo
 
-[https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode-scanner/](https://www.dynamsoft.com/codepool/demos/barcode-scanner/)
+https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode-scanner/
+
+The recorder is written up step by step in
+[How to Record Video from a Webcam Using WebRTC and RecordRTC in JavaScript](https://www.dynamsoft.com/codepool/record-video-using-webrtc-html5.html).
 
 ## How to Run
 
@@ -174,7 +236,7 @@ Then open http://localhost:8000 in your browser.
 | File | Description |
 | --- | --- |
 | `index.html` | Page structure and SDK script tag |
-| `main.js` | Scanning logic, camera handling, clip recording, PDF/TIFF rasterization, benchmark, ground truth |
+| `main.js` | Scanning logic, camera handling, clip recording, PDF/TIFF rasterization, dataset ZIP, benchmark, ground truth |
 | `styles.css` | UI styles |
 | `utils.js` | Small UI helpers |
 | `default.png` | Placeholder preview image |

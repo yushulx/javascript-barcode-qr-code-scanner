@@ -1,16 +1,55 @@
+/* ===========================================================================
+   Online Barcode Scanner — Codepool demo styles.
+
+   Visual language follows the Dynamsoft style guide
+   (https://dynamsoft.github.io/styleguide/style-guide.html):
+     - brand orange  #FE8E14  (CTA / accent only)
+     - brand gray    #323234  (dark page surround)
+     - grays         #606060 #999999 #CCCCCC #DDDDDD #F5F5F5
+     - headings      Oswald        body copy  Open Sans
+
+   This is a live-camera scanning page, so the page surround stays DARK (brand
+   gray #323234) with light content cards sitting on top. Branding comes from
+   the orange accents and the white logo in the header.
+   =========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@300;400;500&display=swap');
+
 :root {
-    --primary-color: #4f46e5;
-    --primary-hover: #4338ca;
-    --primary-light: #eef2ff;
-    --success-color: #10b981;
-    --bg-color: #f9fafb;
-    --text-color: #1f2937;
-    --text-secondary: #6b7280;
+    /* Brand */
+    --dy-orange: #fe8e14;
+    --dy-orange-hover: #e07d0b;
+
+    /* Surfaces */
+    --dy-gray-900: #323234;
+    --dy-gray-800: #3a3a3d;
+    --dy-gray-700: #606060;
+    --dy-gray-500: #999999;
+    --dy-gray-300: #cccccc;
+    --dy-gray-200: #dddddd;
+    --dy-gray-100: #eeeeee;
+    --dy-gray-50: #f5f5f5;
+
+    --white: #ffffff;
+
+    --font-heading: 'Oswald', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'Monaco', 'Menlo', 'Consolas', monospace;
+
+    /* Legacy alias kept so the existing rules resolve to brand orange. */
+    --primary-color: var(--dy-orange);
+    --primary-hover: var(--dy-orange-hover);
+    --primary-light: #fff4e6;
+
+    --bg-color: var(--dy-gray-50);
+    --text-color: var(--dy-gray-900);
+    --text-secondary: var(--dy-gray-700);
     --container-bg: #ffffff;
-    --border-color: #e5e7eb;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --border-color: var(--dy-gray-200);
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.18);
 }
 
 * {
@@ -18,8 +57,10 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: var(--font-body);
+    /* Dark brand-gray surround; the white content cards sit on top. */
+    background: linear-gradient(180deg, var(--dy-gray-800) 0%, var(--dy-gray-900) 60%);
+    background-attachment: fixed;
     min-height: 100vh;
     color: var(--text-color);
     margin: 0;
@@ -27,27 +68,100 @@ body {
     line-height: 1.6;
 }
 
-.header {
-    text-align: center;
-    margin-bottom: 30px;
-    color: white;
+/* ---------------------------------------------------------------------------
+   Header — Dynamsoft logo lockup (logo top-left -> divider -> product name)
+   --------------------------------------------------------------------------- */
+
+.demo-header {
+    max-width: 900px;
+    /* auto on the sides centres the column; it was pinned to the left edge,
+       which left the whole app hugging one side on wide screens. */
+    margin: 0 auto 26px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding-left: 2px;
 }
 
-.header h1 {
-    margin: 0 0 10px 0;
-    font-size: 2.5rem;
-    font-weight: 700;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+.demo-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 100%;
 }
 
-.subtitle {
+.brand-logo {
+    display: block;
+    height: 22px;
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    flex: 0 0 auto;
+}
+
+/* "Free" tag in the page heading. Demos are free to use and the claim only
+   lived in <title>/<meta description>; spelling it out next to the h1 puts it
+   in front of both the reader and the crawler that ranks the visible text.
+   The orange is the brand accent — never used for body copy — and the label is
+   decorative repetition of adjacent text, so it is not announced twice. */
+.brand-tag {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 1px 7px 2px;
+    border: 1px solid rgba(254, 142, 20, 0.55);
+    border-radius: 4px;
+    background: rgba(254, 142, 20, 0.15);
+    color: var(--dy-orange, #fe8e14);
+    font-family: var(--font-heading);
+    font-size: 0.62em;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: 0.1em;
+}
+
+.demo-nav {
+    display: flex;
+    gap: 18px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+}
+
+.demo-nav a {
+    color: rgba(255, 255, 255, 0.72);
+    text-decoration: none;
+}
+
+.demo-nav a:hover {
+    color: var(--dy-orange);
+}
+
+.demo-header h1 {
     margin: 0;
-    font-size: 1.1rem;
-    opacity: 0.9;
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--white);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.demo-header .subtitle {
+    margin: 0;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.78);
 }
 
 .container {
     max-width: 900px;
+    /* auto on the sides centres the column, matching the header above. */
     margin: 0 auto 20px;
     padding: 30px;
     background-color: var(--container-bg);
@@ -73,8 +187,9 @@ body {
     margin-left: 8px;
 }
 
+/* Inline text links stay neutral — on light surfaces use style-guide Blumine. */
 .link {
-    color: var(--primary-color);
+    color: #306877;
     text-decoration: none;
     font-weight: 500;
 }
@@ -99,6 +214,8 @@ textarea {
     font-size: 1rem;
     transition: all 0.2s;
     background-color: white;
+    color: var(--text-color);
+    font-family: var(--font-body);
 }
 
 .form-input:focus,
@@ -119,6 +236,7 @@ button,
     font-weight: 600;
     transition: all 0.2s;
     white-space: nowrap;
+    font-family: var(--font-body);
 }
 
 .btn-primary {
@@ -137,15 +255,34 @@ button,
     transform: translateY(0);
 }
 
+/* Orange CTA used where a primary action is not the page-scale hero button
+   (e.g. the benchmark runner). Kept separate from .btn-primary so a hidden
+   primary control never shadows the visible brand CTA for tooling. */
+.btn-accent {
+    background-color: var(--dy-orange);
+    color: white;
+    box-shadow: var(--shadow);
+}
+
+.btn-accent:hover {
+    background-color: var(--dy-orange-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-accent:active {
+    transform: translateY(0);
+}
+
 .btn-secondary {
-    background-color: var(--surface-color);
+    background-color: var(--white);
     color: var(--text-color);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow);
 }
 
 .btn-secondary:hover {
-    background-color: var(--border-color);
+    background-color: var(--dy-gray-50);
     transform: translateY(-1px);
     box-shadow: var(--shadow-lg);
 }
@@ -165,6 +302,14 @@ button,
     margin-bottom: 20px;
 }
 
+/* Sits under the drop zone, outside the <label>, so its link can be clicked
+   without also opening the file picker. */
+.upload-hint {
+    margin-top: 12px;
+    padding-left: 2px;
+    line-height: 1.6;
+}
+
 .file-upload-label {
     display: flex;
     flex-direction: column;
@@ -175,7 +320,7 @@ button,
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s;
-    background-color: #fafafa;
+    background-color: var(--dy-gray-50);
     color: var(--text-secondary);
 }
 
@@ -280,25 +425,30 @@ button,
 }
 
 /* Clip recorder */
+.control-group-record {
+    flex: 0 0 auto;
+}
+
 .record-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    min-height: 51px;   /* matches .form-select, so the controls line up */
+    min-height: 51px;   /* matches .form-select, so the two control groups end level */
 }
 
 .btn-record {
     display: inline-flex;
     align-items: center;
     gap: 9px;
-    background-color: var(--container-bg);
+    padding: 11px 20px;
+    background-color: var(--white);
     color: var(--text-color);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow);
 }
 
 .btn-record:hover:not(:disabled) {
-    background-color: var(--border-color);
+    background-color: var(--dy-gray-50);
     transform: translateY(-1px);
     box-shadow: var(--shadow-lg);
 }
@@ -332,7 +482,7 @@ button,
 }
 
 .record-timer {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-family: var(--font-mono);
     font-size: 0.95rem;
     font-weight: 600;
     color: #b91c1c;
@@ -340,13 +490,13 @@ button,
 }
 
 .record-hint {
-    margin: 6px 0 0;
+    margin: -8px 0 18px;
 }
 
 .recording-result {
     margin-bottom: 20px;
     padding: 16px;
-    background-color: var(--container-bg);
+    background-color: var(--white);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     box-shadow: var(--shadow-sm);
@@ -362,8 +512,8 @@ button,
 }
 
 .recording-head .hint {
-    margin-left: 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    margin: 0;
+    font-family: var(--font-mono);
     font-size: 0.8rem;
 }
 
@@ -398,9 +548,9 @@ button,
 #detection_result {
     min-height: 120px;
     resize: vertical;
-    font-family: "Monaco", "Menlo", "Consolas", monospace;
+    font-family: var(--font-mono);
     font-size: 0.95rem;
-    background-color: #f9fafb;
+    background-color: var(--dy-gray-50);
     color: var(--text-color);
 }
 
@@ -454,12 +604,12 @@ button,
         padding: 20px;
     }
 
-    .header h1 {
-        font-size: 1.8rem;
+    .demo-header h1 {
+        font-size: 1.3rem;
     }
 
-    .subtitle {
-        font-size: 0.95rem;
+    .demo-header .subtitle {
+        font-size: 0.85rem;
     }
 
     .input-group {
@@ -582,7 +732,7 @@ button,
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.5);
     /* Must sit above the SDK's own license notice overlay (z-index 2147483647) */
     z-index: 2147483647;
     display: flex;
@@ -611,7 +761,9 @@ button,
 
 .modal-header h2 {
     margin: 0;
+    font-family: var(--font-heading);
     font-size: 1.25rem;
+    font-weight: 400;
 }
 
 .modal-close {
@@ -840,7 +992,7 @@ button,
 }
 
 .benchmark-table .best-count {
-    color: var(--success-color);
+    color: #16a34a;
 }
 
 .benchmark-table .time-col {
@@ -849,19 +1001,8 @@ button,
     color: var(--text-secondary);
 }
 
-.benchmark-table .barcodes-list {
-    font-family: "Monaco", "Menlo", "Consolas", monospace;
-    font-size: 0.82rem;
-    line-height: 1.5;
-    max-height: 200px;
-    overflow-y: auto;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.benchmark-table .barcodes-list li {
-    padding: 1px 0;
+.benchmark-table .detail-block.is-missed .detail-label {
+    color: #dc2626;
 }
 
 .benchmark-summary {
@@ -874,7 +1015,9 @@ button,
 
 .benchmark-summary h4 {
     margin: 0 0 8px;
+    font-family: var(--font-heading);
     font-size: 0.95rem;
+    font-weight: 500;
 }
 
 .benchmark-summary ul {
@@ -895,9 +1038,9 @@ button,
     margin: 20px 0 6px;
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--primary-color);
+    color: var(--dy-gray-700);
     padding-bottom: 4px;
-    border-bottom: 2px solid var(--primary-light);
+    border-bottom: 2px solid var(--dy-orange);
 }
 
 .benchmark-image-title:first-child {
@@ -961,6 +1104,80 @@ button,
 .gt-ok { color: #d97706; }
 .gt-poor { color: #dc2626; }
 
+/* Benchmark: ground-truth extras (conditions, decoded, missed) */
+.benchmark-table .count-col.missed-count {
+    color: #dc2626;
+}
+
+/* Three labelled blocks instead of a tall stack of list items.
+   NOTE: do NOT reach for flex or grid here. An intrinsic-width contribution
+   from a flex/grid container is not computed the way text is, so the browser
+   hands the column almost no width and the values wrap to one character per
+   line — a 450 px row became a 5362 px one. Plain inline spans inside a block
+   wrap at the cell width, which is what this needs. */
+.benchmark-table .detail-block {
+    margin-bottom: 3px;
+    line-height: 1.4;
+}
+
+.benchmark-table .detail-block:last-child {
+    margin-bottom: 0;
+}
+
+.benchmark-table .detail-label {
+    display: inline;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-right: 6px;
+}
+
+.benchmark-table .detail-values {
+    display: inline;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--dy-gray-900);
+    word-break: break-word;
+}
+
+/* Wide enough that the lists wrap in a couple of lines; the wrapper scrolls
+   horizontally either way, so width here buys height back. */
+.benchmark-table td:last-child {
+    min-width: 340px;
+    max-width: 520px;
+}
+
+/* The numbers are one or two lines; the details column decides the row height,
+   so centring the numbers stops them hugging the top of a tall row. */
+.benchmark-table tbody td {
+    vertical-align: middle;
+}
+
+.benchmark-table tbody td:last-child {
+    vertical-align: top;
+}
+
+.benchmark-table .detail-block.is-missed .detail-values {
+    color: #dc2626;
+}
+
+.benchmark-table .detail-block.is-muted .detail-values {
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-style: italic;
+}
+
+.benchmark-notice {
+    background: var(--primary-light);
+    border: 1px solid var(--dy-orange);
+    border-left: 4px solid var(--dy-orange);
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin: 4px 0 0;
+}
+
 @media (max-width: 768px) {
     .top-controls {
         flex-direction: column;
@@ -989,4 +1206,61 @@ button,
     .toggle-btn {
         padding: 10px 12px;
     }
+
+    /* The header is nowrap and every character of the product name earns its
+       place, so the tag is what gives way at the narrowest widths. */
+    .brand-tag {
+        display: none;
+    }
 }
+
+/* Demo footer: attribution, tutorial link, and trial CTA */
+.demo-footer {
+    max-width: 900px;
+    /* auto on the sides, so the footer lines up with the cards above it —
+       it was left-pinned like the header and container were. */
+    margin: 10px auto 0;
+    text-align: center;
+    color: var(--dy-gray-200);
+    font-size: 0.9rem;
+    line-height: 1.8;
+}
+
+.demo-footer a {
+    color: var(--dy-gray-200);
+    text-decoration: none;
+}
+
+.demo-footer a:hover {
+    text-decoration: underline;
+}
+
+.demo-footer .demo-footer-cta {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: var(--dy-orange);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    /* A 38px button inside a 1.8 line box overflows upward and lands on top of
+       the text before it, which is what made the footer look broken on phones. */
+    vertical-align: middle;
+}
+
+.demo-footer .demo-footer-cta:hover {
+    background: var(--dy-orange-hover);
+    text-decoration: none;
+}
+
+/* Narrow screens: the trial CTA is a 38px-tall inline-block, which on a wrapped
+   line rides up over the text before it. Give it its own centred line. */
+@media (max-width: 640px) {
+    .demo-footer .demo-footer-cta {
+        display: block;
+        width: fit-content;
+        margin: 10px auto 0;
+    }
+}
+
