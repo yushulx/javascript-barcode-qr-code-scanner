@@ -13,76 +13,37 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="Free Online Barcode Reader Parameter Tuner | Dynamsoft Codepool Demo">
     <meta property="og:description"
-        content="Free online barcode reader parameter tuner — edit every Dynamsoft Barcode Reader template parameter on a real image and inspect the intermediate result of each pipeline stage to find why a barcode was missed.">
+        content="Free online parameter tuner for Dynamsoft Barcode Reader. Edit every barcode template parameter — localization modes, deblur modes, binarization, format list, ROI — on your own image, and watch the intermediate result of each pipeline stage to find the setting that brings the barcode back.">
     <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/barcode-parameter-tuner/">
     <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/barcode-parameter-tuner/thumbnail.png">
     <meta name="twitter:card" content="summary_large_image">
 
-    <!--
-      ASSET VERSION (?v=): the site serves these files with
-      Cache-Control: max-age=86400, so browsers trust their cached copy for a
-      full day. Bump the ?v= value on EVERY change to styles.css, app.js,
-      parameters.js, dynamsoft-logo.svg, otherwise
-      returning visitors keep the stale copy for up to 24h.
-    -->
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="styles.css?v=20260921W">
+    <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
-    <script src="../image-handoff.js?v=20261008a"></script>
 
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Free Online Barcode Reader Parameter Tuner",
-      "url": "https://www.dynamsoft.com/codepool/demos/barcode-parameter-tuner/",
-      "applicationCategory": "DeveloperApplication",
-      "operatingSystem": "Any (web browser)",
-      "description": "Browser-side parameter workbench for Dynamsoft Barcode Reader. It reads the SDK's own scan template back, exposes every parameter in the barcode pipeline as an editable control, and renders the intermediate result of each pipeline stage so a failing decode can be traced to the stage that lost it. Nothing is uploaded.",
-      "featureList": [
-        "Every parameter of the loaded scan template, grouped in pipeline order",
-        "Intermediate results per stage: pre-processed images, contours, candidate zones, localized barcodes, decoded barcodes",
-        "Ten annotated photographs of genuinely difficult codes — glare, shadow, a crumpled surface, print defects, a symbol out of frame, and sheets of ten and ninety-six symbols",
-        "Expected-vs-found comparison against the dataset's annotations, with missed symbols outlined on the image",
-        "Editable barcode format list, mirror mode and confidence rules",
-        "Localization, deblur, binarization, deformation-resistance and scale mode lists with reordering",
-        "Region of interest editing with a live overlay",
-        "One-click starting-point recipes for inverted, low contrast, damaged and undersized symbols",
-        "Import, edit and export the template JSON",
-        "Runs entirely client side — nothing you scan leaves your device"
-      ],
-      "isAccessibleForFree": true,
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD",
-        "description": "Free to use on dynamsoft.com/codepool — the hosted demo carries a domain-bound license, so no account, no key and no installation are needed. Self-hosting the code requires your own Dynamsoft license. Nothing you scan or upload leaves your device."
-      },
-      "publisher": {
-        "@type": "Organization",
-        "name": "Dynamsoft",
-        "url": "https://www.dynamsoft.com/"
-      }
-    }
-    </script>
 </head>
 
 <body>
 
     <header class="site-header">
         <div class="site-header-inner">
-            <a class="brand" href="https://www.dynamsoft.com/"
+            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
                 aria-label="Dynamsoft — back to dynamsoft.com">
-                <img class="brand-logo" src="dynamsoft-logo.svg?v=20260920c" width="159" height="39" alt="Dynamsoft">
+                <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
             </a>
             <span class="brand-divider" aria-hidden="true"></span>
-            <span class="brand-product"><span class="brand-tag">Free</span>Barcode Reader Parameter Tuner</span>
+            <span class="brand-product">Free Barcode Reader Parameter Tuner</span>
             <nav class="header-nav" aria-label="Dynamsoft">
-                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/">Barcode Reader</a>
-                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/docs/">Documentation</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
+                    data-demo-cta="barcode-reader">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/docs/"
+                    data-demo-cta="docs">Documentation</a>
                 <a class="btn btn-primary"
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">30-Day Free Trial</a>
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">30-Day Free Trial</a>
             </nav>
         </div>
     </header>
@@ -370,14 +331,15 @@
             <div class="footer-links">
                 <span>
                     Built with
-                    <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft
+                    <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
                         Barcode Reader</a> — the same engine and the same templates as a shipped scanner, exposed
                     parameter by parameter.
                 </span>
-                <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/">Open the barcode scanner</a>
-                <a href="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/">Build a stress-test dataset</a>
+                <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/" data-demo-cta="scanner">Open the barcode scanner</a>
+                <a href="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/" data-demo-cta="generator">Build a stress-test dataset</a>
                 <a class="btn btn-primary footer-cta"
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">Get a 30-day free trial license</a>
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
             </div>
         </div>
     </footer>
@@ -388,9 +350,9 @@
     </div>
 
     <!-- Parameter metadata: enums, labels, help text and the pipeline table -->
-    <script src="parameters.js?v=20260921W"></script>
+    <script src="parameters.js"></script>
     <!-- Template reading, the editors, the run loop and the stage strip -->
-    <script src="app.js?v=20261008f"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>
