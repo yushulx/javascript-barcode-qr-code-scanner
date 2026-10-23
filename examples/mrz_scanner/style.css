@@ -1,15 +1,47 @@
+/* ===========================================================================
+   Online MRZ & Passport Scanner — Codepool demo styles
+
+   Brand: Dynamsoft style guide (https://dynamsoft.github.io/styleguide/style-guide.html).
+   This is a live-camera page, so the surface stays DARK on purpose — the
+   viewfinder needs a neutral surround, which is why it uses the brand gray
+   #323234 rather than the white page used by the tool-style demos. Branding
+   comes from the orange accents and the logo in the header.
+   =========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@300;400;500&display=swap');
+
 :root {
-    --bg-color: #1e1e1e;
-    --panel-bg: #252526;
-    --accent: #007acc;
-    --text: #cccccc;
-    --border: #3e3e42;
+    --dy-orange: #fe8e14;
+    --dy-orange-hover: #e07d0b;
+    --dy-gray-900: #323234;
+    --dy-gray-800: #3a3a3d;
+    --dy-gray-700: #606060;
+    --dy-gray-300: #cccccc;
+    --dy-gray-200: #dddddd;
+    --dy-gray-50: #f5f5f5;
+    --white: #ffffff;
+
+    --font-heading: 'Oswald', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Hairlines and translucent fills that read on the dark surface. */
+    --line-dark: rgba(255, 255, 255, 0.14);
+    --fill-dark: rgba(255, 255, 255, 0.07);
+
+    /* Kept so legacy functional selectors keep working; resolves to brand orange. */
+    --accent: var(--dy-orange);
+    --text: var(--dy-gray-300);
+    --border: var(--line-dark);
+    --bg-color: var(--dy-gray-900);
+    --panel-bg: var(--dy-gray-800);
 }
 
 body {
     margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background-color: var(--bg-color);
+    font-family: var(--font-body);
+    /* Brand gray, very slightly lifted at the top so the flat surface still has
+       a sense of depth behind the viewfinder. */
+    background: linear-gradient(180deg, var(--dy-gray-800) 0%, var(--dy-gray-900) 55%);
     color: var(--text);
     height: 100vh;
     /* dvh keeps the full-height layout inside the visible area on mobile
@@ -18,64 +50,163 @@ body {
     overflow: hidden;
 }
 
+/* A class-level `display` beats the user agent's [hidden] rule, so the toolbars
+   — which are flex rows — would stay on screen while hidden. Everything the
+   page toggles with the attribute relies on this. */
+[hidden] {
+    display: none !important;
+}
+
 .app-container {
     display: flex;
     flex-direction: column;
     height: 100%;
 }
 
-header {
-    padding: 10px 20px;
-    background-color: #333333;
+/* ---------------------------------------------------------------------------
+   Header — Dynamsoft logo lockup, top-left
+   --------------------------------------------------------------------------- */
+
+header,
+.demo-header {
+    padding: 10px 16px;
+    background-color: var(--dy-gray-900);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--line-dark);
 }
 
-.license-bar {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
+.demo-brand {
+    display: inline-flex;
     align-items: center;
+    gap: 10px;
+    max-width: 100%;
 }
 
-input[type="text"] {
-    padding: 5px;
+.brand-logo {
+    display: block;
+    height: 22px;
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--line-dark);
+    flex: 0 0 auto;
+}
+
+/* "Free" tag in the page heading. Demos are free to use and the claim only
+   lived in <title>/<meta description>; spelling it out next to the h1 puts it
+   in front of both the reader and the crawler that ranks the visible text.
+   The orange is the brand accent — never used for body copy — and the label is
+   decorative repetition of adjacent text, so it is not announced twice. */
+.brand-tag {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 1px 7px 2px;
+    border: 1px solid rgba(254, 142, 20, 0.55);
     border-radius: 4px;
-    border: 1px solid #555;
-    background: #1e1e1e;
-    color: white;
-    width: 250px;
-    max-width: 100%;
-    min-width: 0;
+    background: rgba(254, 142, 20, 0.15);
+    color: var(--dy-orange, #fe8e14);
+    font-family: var(--font-heading);
+    font-size: 0.62em;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: 0.1em;
+}
+
+.demo-nav {
+    display: flex;
+    gap: 18px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+}
+
+.demo-nav a {
+    color: rgba(255, 255, 255, 0.72);
+    text-decoration: none;
+}
+
+.demo-nav a:hover {
+    color: var(--dy-orange);
+}
+
+.demo-header h1 {
+    font-family: var(--font-heading);
+    font-size: 1.26rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--white);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.subtitle {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.85em;
+    text-align: right;
+    max-width: 40%;
 }
 
 button {
-    padding: 6px 12px;
-    background-color: var(--accent);
-    color: white;
-    border: none;
+    font-family: var(--font-body);
+    padding: 6px 14px;
+    background-color: var(--dy-gray-800);
+    color: var(--white);
+    border: 1px solid var(--line-dark);
     border-radius: 4px;
     cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
 }
 
-button:hover {
-    background-color: #005a9e;
+button:hover:not(:disabled) {
+    background-color: var(--dy-orange);
+    border-color: var(--dy-orange);
+    color: #fff;
 }
 
 button:disabled {
-    background-color: #555;
+    background-color: var(--dy-gray-900);
+    color: #888;
+    border-color: transparent;
     cursor: not-allowed;
 }
 
-.trial-link {
-    color: #4daafc;
+.demo-footer {
+    padding: 8px 20px;
+    background-color: var(--dy-gray-900);
+    border-top: 1px solid var(--line-dark);
+    font-size: 0.85em;
+    text-align: center;
+}
+
+.demo-footer p {
+    margin: 0;
+}
+
+.demo-footer a {
+    color: var(--dy-gray-200);
     text-decoration: none;
-    font-size: 0.9em;
-    align-self: center;
+    margin: 0 6px;
+}
+
+.demo-footer a:hover {
+    text-decoration: underline;
+}
+
+.demo-footer-cta {
+    font-weight: 600;
+    color: var(--dy-orange);
+}
+
+.demo-footer-cta:hover {
+    color: var(--dy-orange-hover);
 }
 
 main {
@@ -92,7 +223,7 @@ main {
 
 .left-panel {
     flex: 2;
-    border-right: 1px solid var(--border);
+    border-right: 1px solid var(--line-dark);
 }
 
 .right-panel {
@@ -134,8 +265,8 @@ main {
 .spinner {
     width: 50px;
     height: 50px;
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid var(--accent);
+    border: 5px solid rgba(255, 255, 255, 0.25);
+    border-top: 5px solid var(--dy-orange);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -157,13 +288,13 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 2px dashed #444;
+    border: 2px dashed rgba(255, 255, 255, 0.5);
     overflow: hidden;
 }
 
 .viewer-container.drag-over {
-    border-color: var(--accent);
-    background-color: #2d2d30;
+    border-color: var(--dy-orange);
+    background-color: rgba(254, 142, 20, 0.12);
 }
 
 #cameraView {
@@ -213,7 +344,7 @@ main {
 
 .placeholder-text {
     position: absolute;
-    color: #666;
+    color: #999;
     text-align: center;
     pointer-events: none;
 }
@@ -221,14 +352,14 @@ main {
 .result-group {
     margin-bottom: 20px;
     padding: 10px;
-    background: #2d2d30;
+    background: var(--fill-dark);
     border-radius: 6px;
 }
 
 h3 {
     margin-top: 0;
     color: white;
-    border-bottom: 1px solid #444;
+    border-bottom: 1px solid var(--line-dark);
     padding-bottom: 5px;
 }
 
@@ -237,7 +368,7 @@ h3 {
 }
 
 #faceCropCanvas {
-    border: 2px solid var(--accent);
+    border: 2px solid var(--dy-orange);
     border-radius: 4px;
     background-color: #000;
 }
@@ -275,6 +406,301 @@ h3 {
 }
 
 /* ------------------------------------------------------------------
+   Notice banner — one factual line about where uploaded files go
+   ------------------------------------------------------------------ */
+
+.notice-banner {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 12px 15px 0;
+    padding: 10px 14px;
+    background: var(--fill-dark);
+    border: 1px solid var(--line-dark);
+    border-left: 3px solid var(--dy-orange);
+    border-radius: 6px;
+    font-size: 0.85em;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.notice-banner svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--dy-orange);
+}
+
+.notice-banner strong {
+    color: var(--white);
+}
+
+/* ------------------------------------------------------------------
+   Page navigator — multi-page PDF / TIFF
+   ------------------------------------------------------------------ */
+
+.page-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.page-nav[hidden] {
+    display: none;
+}
+
+.page-nav button {
+    min-width: 40px;
+    padding: 4px 10px;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.page-nav span {
+    font-size: 0.85em;
+    color: rgba(255, 255, 255, 0.75);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------
+   Mode switch — single scan or dataset benchmark
+   ------------------------------------------------------------------ */
+
+.mode-switch {
+    display: flex;
+    gap: 4px;
+    padding: 8px 15px 0;
+    background-color: var(--dy-gray-900);
+    border-bottom: 1px solid var(--line-dark);
+}
+
+.mode-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.88rem;
+}
+
+.mode-tab svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+}
+
+.mode-tab:hover:not(:disabled) {
+    background-color: var(--fill-dark);
+    border-color: transparent;
+    color: var(--white);
+}
+
+.mode-tab.is-active {
+    background-color: var(--panel-bg);
+    border-color: var(--line-dark);
+    color: var(--white);
+    box-shadow: inset 0 -2px 0 var(--dy-orange);
+}
+
+/* ------------------------------------------------------------------
+   Benchmark
+   ------------------------------------------------------------------ */
+
+.progress {
+    margin-top: 10px;
+}
+
+.progress-track {
+    height: 6px;
+    background: var(--fill-dark);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0;
+    background: var(--dy-orange);
+    transition: width 0.2s ease;
+}
+
+.progress-text {
+    margin: 6px 0 0;
+    font-size: 0.8em;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.hint {
+    font-size: 0.82em;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.66);
+    margin: 8px 0 0;
+}
+
+.hint a {
+    color: var(--dy-orange);
+}
+
+.bench-error {
+    display: none;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    border: 1px solid rgba(254, 142, 20, 0.5);
+    border-left: 3px solid var(--dy-orange);
+    border-radius: 4px;
+    background: rgba(254, 142, 20, 0.1);
+    font-size: 0.85em;
+    line-height: 1.5;
+}
+
+.bench-error.is-visible {
+    display: block;
+}
+
+.bench-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bench-empty {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.66);
+    font-size: 0.88em;
+}
+
+.bench-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(94px, 1fr));
+    gap: 8px;
+}
+
+.bench-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--line-dark);
+    border-radius: 6px;
+}
+
+.bench-tile-value {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    color: var(--white);
+    line-height: 1.1;
+}
+
+.bench-tile-label {
+    font-size: 0.72em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.bench-table-scroll {
+    overflow-x: auto;
+}
+
+.bench-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82em;
+}
+
+.bench-table caption {
+    caption-side: top;
+    text-align: left;
+    padding-bottom: 8px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.95em;
+    line-height: 1.5;
+}
+
+.bench-table th,
+.bench-table td {
+    padding: 4px 6px;
+    text-align: left;
+    border-bottom: 1px solid var(--line-dark);
+    white-space: nowrap;
+}
+
+.bench-table thead th {
+    font-size: 0.85em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.bench-table tbody th {
+    font-weight: 600;
+    color: var(--dy-gray-200);
+    white-space: normal;
+}
+
+.bench-row {
+    cursor: pointer;
+}
+
+.bench-row:hover td {
+    background: var(--fill-dark);
+}
+
+.bench-row.is-selected td {
+    background: rgba(254, 142, 20, 0.14);
+    box-shadow: inset 2px 0 0 var(--dy-orange);
+}
+
+.bench-mark {
+    text-align: center;
+    font-weight: 700;
+}
+
+.bench-ok {
+    color: #4ec9b0;
+}
+
+.bench-bad {
+    color: #f48771;
+}
+
+.bench-missing {
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 400;
+}
+
+.bench-note {
+    margin: 8px 0 0;
+    font-size: 0.78em;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.bench-detail-table {
+    margin-top: 8px;
+}
+
+.bench-detail-table td:last-child {
+    white-space: normal;
+    color: var(--dy-gray-200);
+}
+
+.bench-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------------
    Responsive layout
    Below 768px the side-by-side panels stack vertically and the page
    scrolls, so the results panel is never squeezed into a sliver.
@@ -293,34 +719,31 @@ h3 {
         min-height: 100dvh;
     }
 
-    header {
+    header,
+    .demo-header {
         flex-direction: column;
-        align-items: stretch;
+        align-items: flex-start;
+        gap: 4px;
         padding: 12px 15px;
     }
 
-    header h1 {
+    .demo-header h1 {
         margin: 0;
         font-size: 1.35rem;
         line-height: 1.3;
     }
 
-    .license-bar {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
+    /* The header is nowrap and every character of the product name earns its
+       place, so the tag is what gives way as the header tightens. */
+    .brand-tag {
+        display: none;
     }
 
-    input[type="text"] {
-        width: 100%;
-    }
-
-    .license-bar button {
-        min-height: 40px;
-    }
-
-    .trial-link {
-        align-self: flex-start;
+    .subtitle {
+        font-size: 0.82em;
+        line-height: 1.4;
+        text-align: left;
+        max-width: 100%;
     }
 
     main {
@@ -335,7 +758,7 @@ h3 {
 
     .left-panel {
         border-right: none;
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid var(--line-dark);
     }
 
     .right-panel {
@@ -368,5 +791,29 @@ h3 {
     .data-box {
         font-size: 0.82em;
         overflow-wrap: anywhere;
+    }
+
+    .mode-switch {
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .mode-switch::-webkit-scrollbar {
+        display: none;
+    }
+
+    .mode-tab {
+        flex: 0 0 auto;
+        font-size: 0.85rem;
+    }
+
+    /* The benchmark tables carry one column per scored field; keep them
+       scrolling rather than letting the page scroll sideways. */
+    .bench-table {
+        font-size: 0.78em;
+    }
+
+    .bench-tiles {
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
     }
 }

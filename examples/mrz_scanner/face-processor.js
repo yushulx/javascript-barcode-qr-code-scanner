@@ -269,7 +269,12 @@ class FaceProcessor {
     }
 
     /**
-     * Clear stored intermediate results before a new capture.
+     * Drop this processor's own references to previously stored units.
+     *
+     * Note: this does NOT reset Dynamsoft.IdentityUtility.IdentityProcessor.
+     * That class exposes no reset/clear API (only findPortraitZone()), so it
+     * picks the intermediate results it uses on its own. Callers must not rely
+     * on this method to keep captures from leaking into one another.
      */
     clearIntermediateResults() {
         this._units = {};

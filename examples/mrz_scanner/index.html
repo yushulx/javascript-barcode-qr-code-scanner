@@ -5,36 +5,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-Powered MRZ & Passport Scanner</title>
+    <meta name="description"
+        content="Free online MRZ and passport scanner. Read passport and ID card MRZ text from an image, a PDF or a multi-page TIFF, parse structured fields such as name, nationality and expiry date, crop the portrait photo — and score a whole synthetic dataset against its ground truth, field by field, in the browser with Dynamsoft Capture Vision.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/mrz-scanner/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="AI-Powered MRZ & Passport Scanner">
+    <meta property="og:description"
+        content="Free online MRZ and passport scanner — read passport and ID card MRZ text from an image, PDF or TIFF, parse structured fields, crop the portrait photo, and benchmark a dataset against its ground truth, all in the browser.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/mrz-scanner/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/mrz-scanner/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="style.css">
     <!-- Dynamsoft Capture Vision Bundle for MRZ -->
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.6.3200/dist/dcv.bundle.min.js"></script>
     <!-- Face/Border detection powered by Dynamsoft IdentityProcessor (ReadPassportAndId template) -->
+
 </head>
 
 <body>
+
+    <div class="notice-banner" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <div>
+            <strong>Documents stay on your device.</strong>
+            An uploaded image, PDF or TIFF is decoded in this browser tab, and a multi-page
+            document is scanned page by page until the Machine Readable Zone is found. Nothing is
+            uploaded anywhere.
+        </div>
+    </div>
+
     <div class="app-container">
-        <!-- Header / License Config -->
-        <header>
-            <h1>🛂 MRZ & Passport Scanner</h1>
-            <div class="license-bar">
-                <input type="text" id="licenseKey"
-                    placeholder="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==">
-                <button id="initBtn">Initialize MRZ</button>
-                <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
-                    target="_blank" rel="noopener noreferrer" class="trial-link">Get MRZ License</a>
+        <!-- Header -->
+        <header class="demo-header">
+            <div class="demo-brand">
+                <img class="brand-logo" src="dynamsoft-logo-white.svg" width="202" height="50"
+                    alt="Dynamsoft">
+                <span class="brand-divider" aria-hidden="true"></span>
+                <h1>Free MRZ &amp; Passport Scanner</h1>
             </div>
+            <p class="subtitle">A free online MRZ and passport scanner powered by Dynamsoft Capture Vision — read MRZ data
+                and crop the portrait from a passport or ID card image, or score a whole synthetic dataset against
+                its ground truth</p>
         </header>
 
+
+        <!-- Mode switch: one document at a time, or a whole dataset scored against
+             the ground truth its generator recorded. -->
+        <div class="mode-switch" role="tablist" aria-label="Scanner modes">
+            <button id="modeTabSingle" class="mode-tab is-active" type="button" role="tab" aria-selected="true"
+                aria-controls="singleToolbar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" />
+                    <line x1="7" y1="12" x2="17" y2="12" />
+                </svg>
+                Single scan
+            </button>
+            <button id="modeTabBenchmark" class="mode-tab" type="button" role="tab" aria-selected="false"
+                aria-controls="benchToolbar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 3v18h18" />
+                    <rect x="7" y="12" width="3" height="6" />
+                    <rect x="12" y="8" width="3" height="10" />
+                    <rect x="17" y="5" width="3" height="13" />
+                </svg>
+                Dataset benchmark
+            </button>
+        </div>
 
         <!-- Main Content -->
         <main>
             <!-- Left Panel: Image Source & Display -->
             <section class="panel left-panel">
-                <div class="toolbar">
-                    <button id="btnLoad" title="Load Image" disabled>📂 Load</button>
-                    <button id="btnCamera" title="Start Camera" disabled>📷 Camera</button>
-                    <button id="btnPaste" title="Paste from Clipboard" disabled>📋 Paste</button>
+                <div class="toolbar" id="singleToolbar">
+                    <button id="btnLoad" title="Load an image, PDF or TIFF" disabled>Load</button>
+                    <button id="btnCamera" title="Start Camera" disabled>Camera</button>
+                    <button id="btnPaste" title="Paste from Clipboard" disabled>Paste</button>
                     <span id="status">Ready</span>
+                </div>
+
+                <div class="toolbar" id="benchToolbar" hidden>
+                    <button id="benchLoadBtn" title="Load a dataset ZIP exported by the MRZ generator">Load dataset
+                        ZIP</button>
+                    <button id="benchRunBtn" title="Score every image against its ground truth" disabled>Run
+                        benchmark</button>
+                    <button id="benchStopBtn" title="Stop after the image being read" hidden>Stop</button>
+                    <span id="benchStatus">No dataset loaded.</span>
                 </div>
 
                 <div class="viewer-container" id="dropZone">
@@ -46,32 +113,100 @@
                         <canvas id="overlayCanvas"></canvas>
                     </div>
                     <div class="placeholder-text" id="placeholderText">
-                        Drag & Drop Image Here<br>or Select Source
+                        Drag &amp; Drop an Image, PDF or TIFF Here<br>or Select Source
                     </div>
+                </div>
+
+                <div class="page-nav" id="pageNav" hidden>
+                    <button id="pagePrevBtn" type="button" title="Previous page" aria-label="Previous page">←</button>
+                    <span id="pageLabel">1 / 1</span>
+                    <button id="pageNextBtn" type="button" title="Next page" aria-label="Next page">→</button>
+                </div>
+
+                <div class="progress" id="benchProgress" hidden>
+                    <div class="progress-track">
+                        <div class="progress-bar" id="benchProgressBar"></div>
+                    </div>
+                    <p class="progress-text" id="benchProgressText"></p>
                 </div>
             </section>
 
             <!-- Right Panel: Results -->
             <section class="panel right-panel">
-                <div class="result-group">
-                    <h3>👤 Face Detection</h3>
-                    <div class="face-container">
-                        <canvas id="faceCropCanvas" width="150" height="150"></canvas>
+                <div id="singleResults">
+                    <div class="result-group">
+                        <h3>Face Detection</h3>
+                        <div class="face-container">
+                            <canvas id="faceCropCanvas" width="150" height="150"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="result-group">
+                        <h3>MRZ Raw Text</h3>
+                        <div id="mrzRawText" class="data-box monospace">Waiting for scan...</div>
+                    </div>
+
+                    <div class="result-group">
+                        <h3>MRZ Parsed Data</h3>
+                        <div id="mrzResults" class="data-box">Waiting for scan...</div>
                     </div>
                 </div>
 
-                <div class="result-group">
-                    <h3>📝 MRZ Raw Text</h3>
-                    <div id="mrzRawText" class="data-box monospace">Waiting for scan...</div>
-                </div>
+                <div id="benchResults" hidden>
+                    <div class="result-group">
+                        <h3>Dataset</h3>
+                        <div id="benchDataset" class="data-box">Nothing loaded yet.</div>
+                        <p class="hint">
+                            Build one in the <a href="https://www.dynamsoft.com/codepool/demos/mrz-generator/" data-demo-cta="generator">MRZ generator</a>
+                            — its <em>Test image dataset</em> mode exports a ZIP of synthetic passport, ID card and
+                            visa images plus the ground truth for every one of them.
+                        </p>
+                    </div>
 
-                <div class="result-group">
-                    <h3>📋 MRZ Parsed Data</h3>
-                    <div id="mrzResults" class="data-box">Waiting for scan...</div>
-                </div>
+                    <div class="result-group">
+                        <h3>Score</h3>
+                        <div id="benchSummary" class="bench-summary">
+                            <p class="bench-empty">Run the benchmark to score this dataset.</p>
+                        </div>
+                    </div>
 
+                    <div class="result-group">
+                        <h3>Per image</h3>
+                        <div class="bench-table-scroll">
+                            <table class="bench-table">
+                                <caption id="benchTableCaption">No results yet.</caption>
+                                <thead>
+                                    <tr id="benchHeadRow"></tr>
+                                </thead>
+                                <tbody id="benchRows"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="result-group">
+                        <h3>Selected image</h3>
+                        <div id="benchDetail" class="data-box">Click a row to see what was read and what was
+                            expected.</div>
+                        <div class="bench-actions">
+                            <button id="benchExportJsonBtn" disabled>results.json</button>
+                            <button id="benchExportCsvBtn" disabled>results.csv</button>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
+
+        <footer class="demo-footer">
+            <p>
+                Built with <a href="https://www.dynamsoft.com/capture-vision/overview/"
+                    data-demo-cta="capture-vision">Dynamsoft Capture Vision</a>. This page is free because it activates a Codepool license bound to dynamsoft.com; the sample
+            code on GitHub is a separate thing and needs your own license to run.
+                <a href="https://www.dynamsoft.com/codepool/demos/mrz-generator/" data-demo-cta="generator">Generate a test dataset</a>
+                <a class="demo-footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
+            </p>
+        </footer>
     </div>
 
     <!-- Loading Spinner -->
@@ -81,6 +216,9 @@
 
     <script src="face-processor.js"></script>
     <script src="script.js"></script>
+    <!-- Dataset benchmark: reads the ZIP the MRZ generator exports, scores every
+         image against the ground truth it carries, and reports per-field accuracy. -->
+    <script src="benchmark.js"></script>
 </body>
 
 </html>
