@@ -1,0 +1,67 @@
+:root { color-scheme: light; --orange: #fe8e14; --dark: #323234; }
+body { background: var(--dark); font-family: 'Open Sans', 'Segoe UI', sans-serif; height: 100dvh; }
+button, input, select, textarea { font: inherit; }
+h1, h2, h3 { font-family: Oswald, 'Segoe UI', sans-serif; font-weight: 500; letter-spacing: .01em; }
+a { color: #a85100; }
+header.demo-header { box-sizing: border-box; flex: none; background: var(--dark); color: white; text-align: left; padding: 18px 3%; border-bottom: 3px solid var(--orange); }
+.brand { display: flex; align-items: center; gap: 24px; }
+.brand img { max-width: 35%; height: auto; }
+.brand h1 { margin: 0; padding-left: 24px; border-left: 1px solid #666; color: white; font-size: 28px; }
+.brand h1 span { display: block; color: var(--orange); font-size: 15px; }
+.demo-header p { color: #ccc; font-size: 13px; margin: 8px 0 4px; }
+.demo-header a, .demo-footer a { color: #ffac54; font-size: 12px; }
+main { width: 94%; max-width: 1600px; margin: 16px 0; padding: 0; min-height: 0; }
+.workspace-help { flex: none; margin: 0; padding: 12px 18px; font-size: 12px; color: #62626a; background: #fff7ed; }
+#controls { padding: 12px 16px; gap: 10px; }
+.button { box-shadow: none; font-size: 13px; min-height: 38px; }
+.button:hover { transform: none; box-shadow: none; }
+.button.btn-primary, .button.btn-success, .button.primary { background: var(--orange); color: #222; }
+.button.btn-primary:hover, .button.btn-success:hover, .button.primary:hover { background: #e07d0b; box-shadow: none; }
+.button.btn-edit { background: #fff1df; color: #8a4300; border: 1px solid #f1cca0; }
+.button.btn-edit:hover { background: #ffe2bd; box-shadow: none; }
+.button.btn-secondary, .button.secondary { background: #eeeef0; color: #34343a; border: 1px solid #ccc; }
+.button.btn-secondary:hover, .button.secondary:hover { background: #dddde0; box-shadow: none; }
+.button:disabled { opacity: .45; cursor: not-allowed; }
+.icon { display: block; width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#controls .btn-icon-only { box-sizing: border-box; width: 40px; height: 40px; min-height: 40px; padding: 0; justify-content: center; align-items: center; line-height: 1; border: 1px solid transparent; }
+#controls .btn-edit { border-color: #f1cca0; }
+#controls .btn-secondary { border-color: #ccc; }
+#controls .controls-divider { height: 28px; }
+.info-icon-label.icon { width: 24px; height: 24px; }
+:focus-visible { outline: 3px solid #b65b00; outline-offset: 3px; }
+.demo-footer { flex: none; width: 94%; text-align: center; color: #ccc; font-size: 11px; padding: 0 0 12px; }
+.demo-footer p { margin: 3px 0; }
+.modal-content { box-sizing: border-box; max-width: calc(100vw - 24px); max-height: 90dvh; overflow: auto; }
+.modal-content input, .modal-content select { box-sizing: border-box; max-width: 100%; }
+#crop-modal { width: 360px; }
+.modal-overlay.non-blocking { justify-content: flex-end; align-items: flex-end; padding: 16px; box-sizing: border-box; }
+#crop-modal .modal-body p { font-size: 12px; line-height: 1.6; }
+.crop-coordinates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.crop-coordinates label { display: grid; gap: 4px; font-size: 12px; }
+.crop-coordinates input { width: 100%; padding: 8px; border: 1px solid #bbb; border-radius: 4px; }
+.crop-coordinates input[aria-invalid=true] { border-color: #b32b2b; }
+#crop-error { color: #a51e1e; min-height: 18px; }
+.crop-dimensions { position: absolute; top: -28px; left: 50%; transform: translateX(-50%); background: #323234; color: white; padding: 3px 6px; border-radius: 3px; font-size: 12px; pointer-events: none; white-space: nowrap; }
+.thumbnail.active, .thumbnail.dragging { border-color: var(--orange); }
+.thumbnail.drag-over { border-top-color: var(--orange); }
+#viewer-panel.drop-zone-active::after { color: #a85100; outline-color: var(--orange); background: #fe8e141a; }
+.empty-workspace { text-align: center; padding: 32px 20px; color: #666; }
+.empty-workspace h2 { font-size: 24px; color: #444; margin: 0 0 12px; }
+.empty-workspace p { font-size: 13px; margin: 0; }
+@media (max-width: 640px) {
+    header.demo-header { padding: 12px; }
+    .brand { gap: 12px; }
+    .brand h1 { padding-left: 12px; font-size: 21px; }
+    .brand h1 span { font-size: 12px; }
+    .demo-header p { font-size: 11px; }
+    main { width: 100%; margin: 8px 0; }
+    #controls { gap: 6px; padding: 8px; }
+    #thumbnails-panel { width: 80px; padding: 6px; }
+    .thumbnail { height: 100px; padding: 4px; }
+    .controls-group { gap: 4px; }
+    .controls-divider { display: none; }
+    .workspace-help { padding: 8px 12px; }
+    .demo-footer { font-size: 10px; }
+    .modal-overlay.non-blocking { padding: 8px; }
+    #crop-modal { width: 300px; padding: 12px; }
+}

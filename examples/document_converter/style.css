@@ -86,6 +86,9 @@ main {
     padding: 10px 16px;
     font-size: 0.95rem;
     font-weight: 500;
+    /* <button> does not inherit line-height from the body; <a> does.
+       Without this the two render at different heights side by side. */
+    line-height: 1.4;
     color: #fff;
     background-color: #007bff;
     border: none;
@@ -328,6 +331,125 @@ label[title]:hover::before {
     margin-bottom: 15px;
 }
 
+/* Scanner modal form layout */
+.scan-field {
+    margin-bottom: 16px;
+}
+
+.scan-field:last-child {
+    margin-bottom: 0;
+}
+
+.scan-label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #333;
+}
+
+.scan-label em {
+    font-style: normal;
+    font-weight: 400;
+    color: #777;
+}
+
+.scan-install {
+    background: #f6f7f8;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.scan-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.scan-btn {
+    text-decoration: none;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.scan-linux {
+    position: relative;
+    /* Stretch the <button> to the same height as the sibling <a> buttons */
+    display: flex;
+}
+
+.scan-linux .scan-btn {
+    flex: 1;
+}
+
+.scan-linux-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 4px 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    min-width: 200px;
+}
+
+.scan-linux-menu a {
+    display: block;
+    padding: 7px 12px;
+    text-decoration: none;
+    color: #333;
+    font-size: 0.85rem;
+}
+
+.scan-linux-menu a:hover {
+    background: #f0f0f0;
+}
+
+.scan-row {
+    display: flex;
+    gap: 10px;
+}
+
+.scan-row select {
+    flex: 1;
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.scan-options {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.scan-option-col {
+    flex: 1;
+    min-width: 0;
+}
+
+.scan-option-col select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.scan-adf-col {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Align the checkbox row with the select box next to it */
+    padding-top: 33px;
+}
+
+.scan-adf-col input {
+    margin: 0;
+}
+
 .slider-container {
     display: flex;
     flex-direction: column;
@@ -432,7 +554,9 @@ label[title]:hover::before {
 /* Crop Overlay */
 .crop-overlay {
     position: absolute;
-    border: 2px dashed #00ff00;
+    border: 2px dashed #fe8e14;
+    box-sizing: border-box;
+    touch-action: none;
     box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
     cursor: move;
 }
@@ -441,7 +565,7 @@ label[title]:hover::before {
     position: absolute;
     width: 10px;
     height: 10px;
-    background: #00ff00;
+    background: #fe8e14;
     border: 1px solid white;
 }
 
@@ -503,7 +627,7 @@ label[title]:hover::before {
     border: 2px solid transparent;
     cursor: pointer;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: border-color 0.2s;
+    transition: all 0.2s;
     background-color: white;
     display: flex;
     flex-direction: column;
@@ -532,12 +656,6 @@ label[title]:hover::before {
 }
 
 /* Thumbnail dragging styles */
-.thumbnail {
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: all 0.2s;
-}
-
 .thumbnail.dragging {
     opacity: 0.5;
     border: 2px dashed #007bff;
@@ -545,11 +663,6 @@ label[title]:hover::before {
 
 .thumbnail.drag-over {
     border-top: 2px solid #007bff;
-}
-
-/* Zoom Controls */
-.zoom-controls {
-    margin-left: auto;
 }
 
 #hidden-container {
@@ -581,6 +694,29 @@ label[title]:hover::before {
     z-index: 1000;
     pointer-events: none;
     margin: 0;
+}
+
+/* Loading Overlay */
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.loading-content {
+    text-align: center;
+    color: white;
+}
+
+.loading-content i {
+    margin-bottom: 15px;
 }
 
 @media print {
@@ -626,26 +762,4 @@ label[title]:hover::before {
         pointer-events: none;
         white-space: nowrap;
     }
-
-    /* Loading Overlay */
-    #loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.7);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2000;
-    }
-
-    .loading-content {
-        text-align: center;
-        color: white;
-    }
-
-    .loading-content i {
-        margin-bottom: 15px;
-    }
+}
