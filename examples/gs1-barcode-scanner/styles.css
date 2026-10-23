@@ -1,0 +1,1214 @@
+/* ===========================================================================
+   Online GS1 Barcode Scanner — styles
+
+   Brand: Dynamsoft style guide (https://dynamsoft.github.io/styleguide/style-guide.html).
+   This is a live-camera page, so the surface stays DARK on purpose — the
+   viewfinder needs a neutral surround, which is why it uses the brand gray
+   #323234 rather than the white page the tool-style demos use. Branding comes
+   from the orange accents and the logo in the header.
+   =========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@300;400;500&display=swap');
+
+:root {
+    --dy-orange: #fe8e14;
+    --dy-orange-hover: #e07d0b;
+    --dy-gray-900: #323234;
+    --dy-gray-800: #3a3a3d;
+    --dy-gray-700: #606060;
+    --dy-gray-300: #cccccc;
+    --dy-gray-200: #dddddd;
+    --dy-gray-50: #f5f5f5;
+    --white: #ffffff;
+
+    --font-heading: 'Oswald', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+
+    /* Hairlines and translucent fills that read on the dark surface. */
+    --line-dark: rgba(255, 255, 255, 0.14);
+    --fill-dark: rgba(255, 255, 255, 0.07);
+
+    /* Inline text links inside the white results panel. Brand orange stays
+       reserved for CTAs, so links use the style guide's Blumine. */
+    --dy-link: #306877;
+    --dy-link-hover: #27555f;
+
+    /* A red that reads on white for the failed-check-digit state. */
+    --dy-error: #b3261e;
+    --dy-error-tint: #fdf2f1;
+    --dy-ok: #1e7a4b;
+    --dy-ok-tint: #eef8f2;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    /* Fallback for browsers without dvh support. */
+    height: 100%;
+    /* 100dvh follows the visible viewport, so mobile browser chrome does not
+       push the camera out of view. */
+    height: 100dvh;
+}
+
+body {
+    font-family: var(--font-body);
+    /* Brand gray, very slightly lifted at the top so the flat surface still has
+       a sense of depth behind the viewfinder. */
+    background: linear-gradient(180deg, var(--dy-gray-800) 0%, var(--dy-gray-900) 55%);
+    color: var(--white);
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.demo-shell {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding: calc(8px + env(safe-area-inset-top)) 12px calc(8px + env(safe-area-inset-bottom));
+    gap: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Header — Dynamsoft logo lockup, top-left over the viewfinder
+   --------------------------------------------------------------------------- */
+
+.demo-header {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    /* Logo sits top-left, matching every other Codepool demo. */
+    align-items: flex-start;
+    gap: 3px;
+    padding-left: 2px;
+}
+
+.demo-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 100%;
+}
+
+.brand-logo {
+    display: block;
+    height: 22px;
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--line-dark);
+    flex: 0 0 auto;
+}
+
+.demo-header h1 {
+    font-family: var(--font-heading);
+    font-size: 1.26rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--white);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.demo-header .subtitle {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.72);
+    text-align: left;
+}
+
+/* ---------------------------------------------------------------------------
+   Scanner
+   --------------------------------------------------------------------------- */
+
+#scanner-app {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    min-height: 0;
+    gap: 8px;
+}
+
+#tip-message {
+    flex: 0 0 auto;
+    max-width: 100%;
+    font-size: 0.9rem;
+    color: #fff;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 0.5rem 1.1rem;
+    border-radius: 25px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    z-index: 5;
+}
+
+#tip-message.is-error {
+    background: rgba(179, 38, 30, 0.92);
+}
+
+/* ---------------------------------------------------------------------------
+   Mode switch + format scope
+   --------------------------------------------------------------------------- */
+
+.controls-row {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+}
+
+.mode-switch {
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50px;
+    padding: 4px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.mode-options {
+    display: flex;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+}
+
+.mode-option {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 46px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+    font-size: 0.9rem;
+    -webkit-user-select: none;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.mode-option.active {
+    color: #fff;
+    font-weight: 600;
+}
+
+.mode-icon {
+    fill: currentColor;
+    stroke: currentColor;
+    stroke-width: 2;
+    transition: all 0.3s ease;
+    flex: 0 0 auto;
+}
+
+.mode-slider {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background: var(--dy-orange);
+    border-radius: 42px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 16px rgba(254, 142, 20, 0.3);
+}
+
+.mode-switch[data-active="upload"] .mode-slider {
+    transform: translateX(100%);
+}
+
+.mode-switch[data-active="upload"] .mode-option[data-mode="upload"] {
+    color: #fff;
+    font-weight: 600;
+}
+
+.mode-switch[data-active="upload"] .mode-option[data-mode="camera"] {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+/* The Formats control is a real setting, not decoration: it decides whether
+   the reader chases a GS1 DataBar or any Code 39 in the frame. */
+.scope-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px 4px 12px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+.scope-select svg {
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    opacity: 0.85;
+}
+
+.scope-label {
+    font-weight: 600;
+}
+
+.scope-select select {
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.35);
+    border: none;
+    border-radius: 40px;
+    padding: 0.42rem 1.6rem 0.42rem 0.7rem;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.45rem center;
+    background-size: 1rem;
+}
+
+.scope-select select:focus-visible {
+    outline: 2px solid var(--dy-orange);
+    outline-offset: 2px;
+}
+
+.scope-select option {
+    color: #111;
+    background: #fff;
+}
+
+/* Camera / image view */
+#main-container {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    /* min-height:0 lets the flex item shrink, keeping the view in the viewport. */
+    min-height: 0;
+    width: min(100%, 680px);
+    position: relative;
+}
+
+/* `display:flex` would otherwise beat the [hidden] attribute. */
+#main-container[hidden] {
+    display: none;
+}
+
+#camera-view {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------------------------------------------------------------------------
+   Upload drop zone
+   Replaces the SDK's own image picker so switching to Upload mode never opens
+   the OS file dialog on its own.
+   --------------------------------------------------------------------------- */
+
+.upload-zone {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: min(100%, 680px);
+    min-height: 0;
+    padding: 24px;
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.18);
+    color: #fff;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.upload-zone[hidden] {
+    display: none;
+}
+
+.upload-zone:hover,
+.upload-zone:focus-visible,
+.upload-zone.dragover {
+    border-color: var(--dy-orange);
+    background: rgba(254, 142, 20, 0.18);
+    outline: none;
+}
+
+.upload-zone-icon {
+    width: 42px;
+    height: 42px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.9;
+}
+
+.upload-zone-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.upload-zone-hint {
+    margin: 0;
+    max-width: 36ch;
+    font-size: 0.83rem;
+    line-height: 1.5;
+    opacity: 0.9;
+}
+
+.upload-zone kbd {
+    padding: 1px 5px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.85em;
+}
+
+/* Bundled sample symbols, so the page is usable with no camera and no file. */
+.sample-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 6px;
+    max-width: 46ch;
+}
+
+.sample-row[hidden] {
+    display: none;
+}
+
+.sample-row-label {
+    width: 100%;
+    font-size: 0.78rem;
+    opacity: 0.8;
+}
+
+.sample-chip {
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 40px;
+    padding: 0.42rem 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.sample-chip:hover,
+.sample-chip:focus-visible {
+    background: rgba(254, 142, 20, 0.25);
+    border-color: var(--dy-orange);
+    outline: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Footer
+   --------------------------------------------------------------------------- */
+
+.demo-footer {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    background-color: var(--fill-dark);
+    border: 1px solid var(--line-dark);
+    border-radius: 6px;
+    font-size: 0.8em;
+    text-align: center;
+}
+
+.demo-footer p {
+    margin: 0;
+}
+
+.demo-footer a {
+    color: var(--dy-gray-200);
+    text-decoration: none;
+    margin: 0 3px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.demo-footer a:hover {
+    color: var(--dy-orange);
+    border-bottom-color: var(--dy-orange);
+}
+
+/* ---------------------------------------------------------------------------
+   Results overlay
+   --------------------------------------------------------------------------- */
+
+.results-container {
+    display: none;
+    flex-direction: column;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(94vw, 760px);
+    max-height: min(86vh, 86dvh);
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.results-container.is-open {
+    display: flex;
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    padding: 0.75rem 1.25rem;
+    background: var(--dy-gray-900);
+    color: var(--white);
+    font-family: var(--font-heading);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    font-size: 15px;
+}
+
+.results-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.text-button {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--white);
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 4px;
+    padding: 0.32rem 0.7rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.text-button:hover {
+    background: rgba(255, 255, 255, 0.26);
+}
+
+.close-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.results-header .close-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.results-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 1.25rem;
+    color: var(--dy-gray-900);
+}
+
+/* ---------------------------------------------------------------------------
+   Result card
+   --------------------------------------------------------------------------- */
+
+.barcode-card {
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 8px;
+    padding: 1rem 1.1rem 1.1rem;
+    margin-bottom: 1.25rem;
+}
+
+.barcode-card:last-child {
+    margin-bottom: 0;
+}
+
+.barcode-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 0.7rem;
+    margin-bottom: 0.9rem;
+    border-bottom: 1px solid var(--dy-gray-200);
+}
+
+.barcode-index {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--dy-gray-700);
+}
+
+.format-chip {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--dy-gray-900);
+}
+
+.gs1-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-orange-hover);
+    background: #fff6ea;
+    border: 1px solid #f6d3a3;
+    border-radius: 3px;
+    padding: 2px 7px;
+}
+
+.gs1-badge.is-plain {
+    color: var(--dy-gray-700);
+    background: var(--dy-gray-50);
+    border-color: var(--dy-gray-300);
+}
+
+/* The GTIN deduplication notice: one product read from several symbols —
+   the Sunrise 2027 packaging pattern. Sits above the per-barcode cards. */
+.dedup-note {
+    margin: 0 0 1rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.83rem;
+    line-height: 1.55;
+    color: var(--dy-gray-900);
+    background: #fff6ea;
+    border: 1px solid #f6d3a3;
+}
+
+.dedup-note .dedup-line {
+    margin: 0;
+}
+
+.dedup-note .dedup-line + .dedup-line {
+    margin-top: 0.35rem;
+}
+
+.mm-confidence {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+}
+
+.field-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    margin-bottom: 0.25rem;
+}
+
+/* The bracketed AI notation GS1 prints under a symbol. */
+.hri-block {
+    font-family: var(--font-mono);
+    font-size: 0.86rem;
+    line-height: 1.6;
+    color: var(--dy-gray-900);
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-left: 3px solid var(--dy-orange);
+    border-radius: 4px;
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 1rem;
+    overflow-wrap: anywhere;
+}
+
+.card-note {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--dy-gray-700);
+    margin-bottom: 0.7rem;
+}
+
+.mono-block {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 4px;
+    padding: 0.6rem 0.75rem;
+    overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------------------
+   AI table
+   --------------------------------------------------------------------------- */
+
+.ai-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    margin-bottom: 0.9rem;
+}
+
+.ai-table th,
+.ai-table td {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--dy-gray-200);
+    vertical-align: top;
+}
+
+.ai-table thead th {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    background: var(--dy-gray-50);
+    border-bottom: 1px solid var(--dy-gray-300);
+    white-space: nowrap;
+}
+
+.ai-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.ai-table tr.is-invalid td {
+    background: var(--dy-error-tint);
+}
+
+.ai-table .col-ai {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.ai-code {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--dy-gray-900);
+}
+
+.ai-table .col-value {
+    overflow-wrap: anywhere;
+}
+
+.ai-value {
+    font-weight: 600;
+    color: var(--dy-gray-900);
+}
+
+.ai-raw {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--dy-gray-700);
+    margin-top: 2px;
+}
+
+.tag-variable,
+.tag-ok,
+.tag-bad,
+.tag-note {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-top: 4px;
+    margin-right: 4px;
+}
+
+.tag-variable {
+    color: var(--dy-gray-700);
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.tag-ok {
+    color: var(--dy-ok);
+    background: var(--dy-ok-tint);
+    border: 1px solid #bfe3d0;
+}
+
+.tag-bad {
+    color: var(--dy-error);
+    background: var(--dy-error-tint);
+    border: 1px solid #f0c9c6;
+}
+
+.tag-note {
+    color: var(--dy-gray-700);
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+}
+
+/* ---------------------------------------------------------------------------
+   Facts list and diagnostics
+   --------------------------------------------------------------------------- */
+
+.facts {
+    display: grid;
+    grid-template-columns: minmax(120px, max-content) 1fr;
+    gap: 0.3rem 1rem;
+    font-size: 0.84rem;
+    margin-bottom: 0.2rem;
+}
+
+.facts dt {
+    font-weight: 600;
+    color: var(--dy-gray-700);
+}
+
+.facts dd {
+    color: var(--dy-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.facts dd.mono {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+}
+
+.results-body a {
+    color: var(--dy-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    overflow-wrap: anywhere;
+}
+
+.results-body a:hover {
+    color: var(--dy-link-hover);
+}
+
+.note-list {
+    list-style: none;
+    margin: 0.8rem 0 0;
+    padding: 0.6rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.83rem;
+    line-height: 1.55;
+}
+
+.note-list li {
+    padding-left: 1rem;
+    position: relative;
+}
+
+.note-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+}
+
+.note-list.is-warn {
+    color: #7a4a05;
+    background: #fff8ee;
+    border: 1px solid #f6d3a3;
+}
+
+.note-list.is-error {
+    color: var(--dy-error);
+    background: var(--dy-error-tint);
+    border: 1px solid #f0c9c6;
+}
+
+/* The scanned image, so the result can be checked against what was read. */
+.source-preview {
+    margin: 0 0 1.25rem;
+    text-align: center;
+}
+
+.source-preview img {
+    max-width: 100%;
+    max-height: 220px;
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 6px;
+    background: #fff;
+}
+
+.source-preview figcaption {
+    margin-top: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+}
+
+/* ---------------------------------------------------------------------------
+   Where each symbol was found — markers over the scanned image
+
+   The results panel lists every decoded symbol, but with several symbols in
+   one image the text alone never says which line came from which code. Each
+   symbol's reported quad is outlined in place and numbered to match its card:
+   hover either side and the pair lights up, tap a marker to jump to its card.
+   Orange is the annotation accent here, the same role it plays in the header.
+   --------------------------------------------------------------------------- */
+
+.preview-stage {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+    max-width: 100%;
+}
+
+.preview-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.preview-marker {
+    position: absolute;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.preview-marker:focus-visible {
+    outline: 2px solid var(--dy-orange);
+    outline-offset: 2px;
+}
+
+.preview-marker svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    /* The quad runs to the edge of its box, so half the stroke would be
+       clipped without this. */
+    overflow: visible;
+}
+
+.preview-marker polygon {
+    fill: rgba(254, 142, 20, 0.14);
+    stroke: #fe8e14;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    transition: fill 0.15s ease;
+}
+
+.preview-marker-tag {
+    position: absolute;
+    transform: translate(-50%, calc(-100% - 5px));
+    padding: 1px 6px 2px;
+    border-radius: 4px;
+    background: #fe8e14;
+    color: var(--white);
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.preview-marker-tag.is-below {
+    transform: translate(-50%, 5px);
+}
+
+/* The pair lights up together: marker in the image, card in the list. */
+.preview-marker:hover polygon,
+.preview-marker:focus-visible polygon,
+.preview-marker.is-active polygon {
+    fill: rgba(254, 142, 20, 0.32);
+    stroke-width: 3;
+}
+
+.preview-marker:hover .preview-marker-tag,
+.preview-marker:focus-visible .preview-marker-tag,
+.preview-marker.is-active .preview-marker-tag {
+    background: var(--dy-orange-hover);
+}
+
+.barcode-card {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.barcode-card.is-active {
+    border-color: #fe8e14;
+    box-shadow: 0 0 0 1px #fe8e14;
+}
+
+/* ---------------------------------------------------------------------------
+   Loading / error overlay
+   --------------------------------------------------------------------------- */
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.loading-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.loading-overlay p {
+    max-width: 520px;
+    text-align: center;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--white);
+    white-space: pre-line;
+}
+
+.spinner {
+    width: 46px;
+    height: 46px;
+    border: 5px solid rgba(255, 255, 255, 0.25);
+    border-top-color: var(--dy-orange);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
+
+@media only screen and (max-width: 768px) {
+    .demo-header h1 {
+        font-size: 1.2rem;
+    }
+
+    .demo-header .subtitle {
+        font-size: 0.78rem;
+    }
+
+    .mode-option {
+        padding: 0.6rem 1.1rem;
+        font-size: 0.85rem;
+        gap: 0.4rem;
+    }
+
+    .mode-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    #main-container {
+        width: 100%;
+    }
+
+    .results-container {
+        width: 100%;
+    }
+
+    /* Stack the AI table into label/value pairs rather than a squeezed grid. */
+    .ai-table thead {
+        display: none;
+    }
+
+    .ai-table,
+    .ai-table tbody,
+    .ai-table tr,
+    .ai-table td {
+        display: block;
+        width: auto;
+    }
+
+    .ai-table tr {
+        padding: 0.6rem 0;
+        border-bottom: 1px solid var(--dy-gray-200);
+    }
+
+    .ai-table tr:last-child {
+        border-bottom: none;
+    }
+
+    .ai-table td {
+        padding: 0;
+        border: none;
+    }
+
+    .ai-table .col-ai {
+        width: auto;
+    }
+
+    .ai-table td:not(.col-ai) {
+        margin-top: 3px;
+    }
+
+    .facts {
+        grid-template-columns: 1fr;
+        gap: 0.15rem;
+    }
+
+    .facts dt {
+        margin-top: 0.5rem;
+    }
+}
+
+@media only screen and (max-width: 480px) {
+    .demo-shell {
+        padding: calc(6px + env(safe-area-inset-top)) 8px calc(6px + env(safe-area-inset-bottom));
+        gap: 6px;
+    }
+
+    /* The camera is the point of this demo, so trim the header on phones. */
+    .demo-header .subtitle {
+        display: none;
+    }
+
+    .demo-header h1 {
+        font-size: 1.05rem;
+    }
+
+    #scanner-app {
+        gap: 6px;
+    }
+
+    .controls-row {
+        gap: 6px;
+    }
+
+    .mode-switch {
+        flex: 1 1 auto;
+        max-width: 300px;
+    }
+
+    .mode-option {
+        padding: 0.5rem 0.7rem;
+        font-size: 0.8rem;
+    }
+
+    .scope-select {
+        padding: 3px 5px 3px 10px;
+        font-size: 0.76rem;
+    }
+
+    .scope-select select {
+        font-size: 0.76rem;
+        padding: 0.36rem 1.45rem 0.36rem 0.6rem;
+        background-size: 0.9rem;
+        background-position: right 0.4rem center;
+    }
+
+    #tip-message {
+        font-size: 0.78rem;
+        padding: 0.4rem 0.8rem;
+    }
+
+    .demo-footer {
+        font-size: 0.7em;
+        padding: 5px 8px;
+    }
+
+    /* Bottom sheet so the camera stays visible behind the results. */
+    .results-container {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        transform: none;
+        width: 100%;
+        max-height: 88dvh;
+        border-radius: 16px 16px 0 0;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .results-body {
+        padding: 0.9rem;
+    }
+
+    .barcode-card {
+        padding: 0.85rem 0.85rem 0.95rem;
+    }
+
+    .mm-confidence {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+/* Landscape phones: every pixel of height counts. */
+@media only screen and (max-height: 460px) and (orientation: landscape) {
+
+    .demo-header .subtitle,
+    .demo-footer {
+        display: none;
+    }
+
+    .demo-header h1 {
+        font-size: 1rem;
+    }
+
+    #tip-message {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.7rem;
+    }
+
+    .mode-option {
+        padding: 0.35rem 0.85rem;
+        font-size: 0.75rem;
+    }
+}
