@@ -30,7 +30,7 @@
   /*
    * Issuer Identification Numbers assigned by AAMVA
    * (https://aamva.org/identity/issuer-identification-numbers-(iin)).
-   * Columns: code, name, iin, country, sample city, postal, licence-number
+   * Columns: code, name, iin, country, sample city, postal, license-number
    * pattern. In the pattern, '#' is a random digit, 'A' a random uppercase
    * letter and 'X' a random alphanumeric character. The patterns are
    * illustrative samples, not an authoritative per-jurisdiction spec.
@@ -160,7 +160,7 @@
           country: JURISDICTIONS[i][3],
           city: JURISDICTIONS[i][4],
           postal: JURISDICTIONS[i][5],
-          licencePattern: JURISDICTIONS[i][6]
+          licensePattern: JURISDICTIONS[i][6]
         };
       }
     }
@@ -224,7 +224,7 @@
       middleName: pick(MIDDLE_NAMES),
       lastName: pick(LAST_NAMES),
       suffix: '',
-      licenceNumber: randomFromPattern(j.licencePattern),
+      licenseNumber: randomFromPattern(j.licensePattern),
       birthDate: birth,
       issueDate: issue,
       expiryDate: expiry,
@@ -263,7 +263,7 @@
       elements.push(code + value);
     }
 
-    add('DAQ', s.licenceNumber);
+    add('DAQ', s.licenseNumber);
     add('DCS', s.lastName);
     add('DDE', 'N');
     add('DAC', s.firstName);

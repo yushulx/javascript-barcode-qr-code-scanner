@@ -94,7 +94,7 @@
     ctx.closePath();
   }
 
-  /* Jurisdiction accent colours used for the card header band. */
+  /* Jurisdiction accent colors used for the card header band. */
   var ACCENTS = {
     USA: ['#1d3f8f', '#3a6fd8'],
     CAN: ['#8f1d2b', '#d83a4a'],
@@ -193,7 +193,7 @@
     ctx.font = 'bold 30px Arial, sans-serif';
     ctx.fillText(s.jurisdiction.country === 'USA'
       ? 'DRIVER LICENSE'
-      : (s.cardType === 'ID' ? 'IDENTIFICATION CARD' : 'DRIVER LICENCE'), x + 32, y + 44);
+      : (s.cardType === 'ID' ? 'IDENTIFICATION CARD' : 'DRIVER LICENSE'), x + 32, y + 44);
     ctx.font = '18px Arial, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.fillText(s.jurisdiction.name.toUpperCase() + '  ·  ' + s.jurisdiction.code
@@ -242,7 +242,7 @@
       ctx.fillText(truncate(ctx, value, maxWidth || 300), cx, cy + 24);
     }
 
-    field('LICENCE NO.', s.licenceNumber, col1, rowY);
+    field('LICENSE NO.', s.licenseNumber, col1, rowY);
     field('CLASS', s.vehicleClass, col2, rowY);
     field('LAST NAME', s.lastName, col1, rowY + rowGap);
     field('RESTRICTIONS', s.restrictions, col2, rowY + rowGap);
@@ -295,7 +295,7 @@
 
     ctx.fillStyle = '#16233a';
     ctx.font = 'bold 17px "Courier New", monospace';
-    ctx.fillText('LIC ' + s.licenceNumber, x + 32, y + 132);
+    ctx.fillText('LIC ' + s.licenseNumber, x + 32, y + 132);
     ctx.fillText('DOB ' + displayDate(s.birthDate) + '   EXP ' + displayDate(s.expiryDate), x + 32, y + 160);
     ctx.fillText('CLASS ' + s.vehicleClass + '   REST ' + s.restrictions + '   END ' + s.endorsements,
       x + 32, y + 188);
@@ -331,10 +331,10 @@
     // Work in logical units; the transform handles the device-pixel scale.
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-    ctx.fillStyle = '#f1f5f9';
+    ctx.fillStyle = '#f5f5f5';
     ctx.fillRect(0, 0, SHEET_W, SHEET_H);
 
-    ctx.fillStyle = '#64748b';
+    ctx.fillStyle = '#606060';
     ctx.font = 'bold 14px Arial, sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText('FRONT', CARD_X, FRONT_Y - 16);
@@ -353,9 +353,9 @@
    * ------------------------------------------------------------------ */
   function populateJurisdictions() {
     var groups = [
-      { label: '🇺🇸 United States', country: 'USA' },
-      { label: '🇨🇦 Canada', country: 'CAN' },
-      { label: '🇲🇽 Mexico', country: 'MEX' }
+      { label: 'United States', country: 'USA' },
+      { label: 'Canada', country: 'CAN' },
+      { label: 'Mexico', country: 'MEX' }
     ];
     var list = window.AamvaGenerator.JURISDICTIONS;
     groups.forEach(function (group) {
@@ -377,7 +377,7 @@
     els.last_name.value = s.lastName;
     els.first_name.value = s.firstName;
     els.middle_name.value = s.middleName;
-    els.licence_number.value = s.licenceNumber;
+    els.license_number.value = s.licenseNumber;
     els.sex.value = s.sexCode;
     els.height.value = s.height;
     els.birth_date.value = toDateInputValue(s.birthDate);
@@ -404,7 +404,7 @@
       middleName: els.middle_name.value.trim().toUpperCase(),
       lastName: els.last_name.value.trim().toUpperCase(),
       suffix: '',
-      licenceNumber: els.licence_number.value.trim().toUpperCase(),
+      licenseNumber: els.license_number.value.trim().toUpperCase(),
       birthDate: parseDateInput(els.birth_date.value),
       issueDate: parseDateInput(els.issue_date.value),
       expiryDate: parseDateInput(els.expiry_date.value),
@@ -498,13 +498,22 @@
   function copyPayload() {
     analytics.action('copy_payload');
     var text = lastPayload;
+    // The label lives in its own span so the button's icon survives the
+    // temporary "Copied" / "Copy blocked" swap.
+    var label = els.copyBtn.querySelector('.btn-label');
+    if (!label) {
+      return;
+    }
+    var reset = els.copyBtn.getAttribute('data-label') || label.textContent;
+    function flash(message) {
+      label.textContent = message;
+      setTimeout(function () { label.textContent = reset; }, 1600);
+    }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function () {
-        els.copyBtn.textContent = '✅ Copied';
-        setTimeout(function () { els.copyBtn.textContent = '📋 Copy Raw Payload'; }, 1600);
+        flash('Copied');
       }, function () {
-        els.copyBtn.textContent = '⚠️ Copy blocked';
-        setTimeout(function () { els.copyBtn.textContent = '📋 Copy Raw Payload'; }, 1600);
+        flash('Copy blocked');
       });
     }
   }
@@ -520,7 +529,7 @@
 
     els.jurisdiction.addEventListener('change', function () {
       // Refresh only the jurisdiction-derived fields — city, postal code, the
-      // licence-number format and the class/restriction codes — so the card
+      // license-number format and the class/restriction codes — so the card
       // stays consistent without discarding the entered personal details.
       var j = window.AamvaGenerator.findJurisdiction(els.jurisdiction.value);
       var fresh = window.AamvaGenerator.randomSample(els.jurisdiction.value, els.card_type.value);
@@ -530,7 +539,7 @@
       els.postal.value = fresh.postal.trim();
       els.vehicle_class.value = fresh.vehicleClass;
       els.restrictions.value = fresh.restrictions;
-      els.licence_number.value = fresh.licenceNumber;
+      els.license_number.value = fresh.licenseNumber;
       generate('internal');
     });
 
@@ -553,7 +562,7 @@
     [
       'jurisdiction', 'card_type', 'aamva_version', 'iin', 'country_of_issue',
       'jurisdiction_version', 'last_name', 'first_name', 'middle_name',
-      'licence_number', 'sex', 'height', 'birth_date', 'issue_date',
+      'license_number', 'sex', 'height', 'birth_date', 'issue_date',
       'expiry_date', 'eye_color', 'hair_color', 'weight', 'street', 'city',
       'postal', 'vehicle_class', 'restrictions', 'randomBtn', 'generateBtn',
       'downloadBtn', 'copyBtn', 'preview', 'output_payload', 'decode_status'
@@ -564,7 +573,7 @@
     els.formFields = function () {
       return [
         els.jurisdiction, els.card_type, els.aamva_version, els.jurisdiction_version,
-        els.last_name, els.first_name, els.middle_name, els.licence_number,
+        els.last_name, els.first_name, els.middle_name, els.license_number,
         els.sex, els.height, els.birth_date, els.issue_date, els.expiry_date,
         els.eye_color, els.hair_color, els.weight, els.street, els.city,
         els.postal, els.vehicle_class, els.restrictions
