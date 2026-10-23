@@ -41,7 +41,18 @@ class FaceProcessor {
         }
 
         try {
-            return await identityProcessor.findPortraitZone();
+            // Capture Vision 3.6 took the CVR instance as the argument and reads
+            // the portrait from that instance's intermediate results; without it
+            // the SDK throws "Cannot read properties of undefined (reading
+            // '_instanceID')". 3.4 ignored the argument, so passing it is safe
+            // on both versions.
+            const zone = await identityProcessor.findPortraitZone(this.cvr || undefined);
+            if (!zone) {
+                return null;
+            }
+            // 3.6 returns { portraitZone, isBlankPortrait } reduced to the zone
+            // itself, but guard against a wrapper shape anyway.
+            return zone.points ? zone : (zone.portraitZone || null);
         } catch (e) {
             console.warn('IdentityProcessor.findPortraitZone() failed:', e);
             return null;
