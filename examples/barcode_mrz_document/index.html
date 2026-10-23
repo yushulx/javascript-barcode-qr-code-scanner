@@ -4,47 +4,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Online Barcode, MRZ and Document Scanner | Dynamsoft Codepool Demo</title>
+    <meta name="description"
+        content="Free online scanner built with Dynamsoft Capture Vision. Decode barcodes, parse passport and ID card MRZ strings, and detect or rectify document boundaries from an uploaded image or a live camera.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/barcode-mrz-document-scanner/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Free Online Barcode, MRZ and Document Scanner | Dynamsoft Codepool Demo">
+    <meta property="og:description"
+        content="Free online scanner built with Dynamsoft Capture Vision. Decode barcodes, parse passport and ID card MRZ strings, and detect or rectify document boundaries from an uploaded image or a live camera.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/barcode-mrz-document-scanner/">
+    <meta property="og:image"
+        content="https://www.dynamsoft.com/codepool/demos/barcode-mrz-document-scanner/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.6.3200/dist/dcv.bundle.min.js"></script>
     <script src="utils.js"></script>
-    <title>Dynamsoft Vision SDKs</title>
+
 </head>
 
 <body>
+
     <div id="loading-indicator" class="loading-indicator">
         <div class="spinner"></div>
     </div>
 
-    <header>
-        <h1>📱 Vision Scanner</h1>
-        <p class="subtitle">Scan Barcode, Document and Machine-readable Zone (MRZ)</p>
+    <header class="demo-header">
+        <div class="demo-brand">
+            <img class="brand-logo" src="dynamsoft-logo-white.svg" width="202" height="50"
+                alt="Dynamsoft">
+            <span class="brand-divider" aria-hidden="true"></span>
+            <h1>Free Barcode, MRZ and Document Scanner</h1>
+        </div>
+        <p class="subtitle">A free online scanner running on dynamsoft.com — decode barcode, document and machine-readable zone (MRZ) data</p>
     </header>
 
     <div class="main-container">
-        <!-- License Activation Card -->
-        <div class="card license-card">
-            <h2>🔑 Activate SDK</h2>
-            <p class="info-text">
-                Get a License key from <a
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
-                    target="_blank">here</a>
-            </p>
-            <div class="input-group">
-                <input type="text" id="license_key"
-                    value="DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=="
-                    placeholder="Enter your license key">
-                <button onclick="activate()" class="btn-primary">Activate</button>
-            </div>
-        </div>
-
         <!-- Controls Card -->
         <div class="card controls-card">
             <div class="controls-grid">
                 <div class="control-group">
                     <label class="control-label">Input Source</label>
                     <select onchange="selectChanged()" id="dropdown" class="select-modern">
-                        <option value="file">📁 File</option>
-                        <option value="camera">📷 Camera</option>
+                        <option value="file">File</option>
+                        <option value="camera">Camera</option>
                     </select>
                 </div>
 
@@ -53,15 +60,15 @@
                     <form id="modeSelector" class="mode-selector">
                         <label class="radio-card">
                             <input type="radio" name="scanMode" value="barcode" checked>
-                            <span class="radio-label">📊 Barcode</span>
+                            <span class="radio-label">Barcode</span>
                         </label>
                         <label class="radio-card">
                             <input type="radio" name="scanMode" value="mrz">
-                            <span class="radio-label">🛂 MRZ</span>
+                            <span class="radio-label">MRZ</span>
                         </label>
                         <label class="radio-card">
                             <input type="radio" name="scanMode" value="document">
-                            <span class="radio-label">📄 Document</span>
+                            <span class="radio-label">Document</span>
                         </label>
                     </form>
                 </div>
@@ -70,12 +77,19 @@
 
         <!-- Image File -->
         <div class="card" id="file_container">
-            <h2>📂 Image Upload</h2>
+            <h2>Image Upload</h2>
             <div class="view-container" id="view_container">
                 <!-- Upload View -->
                 <div class="upload-area" id="upload_area">
                     <label for="pick_file" class="file-label">
-                        <div class="upload-icon">📤</div>
+                        <div class="upload-icon">
+                            <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                        </div>
                         <span>Click to upload or drag & drop an image</span>
                         <input type="file" id="pick_file" accept="image/*" />
                     </label>
@@ -102,12 +116,12 @@
 
         <!-- Camera Stream -->
         <div class="card" id="camera_container">
-            <h2>📹 Live Camera</h2>
+            <h2>Live Camera</h2>
             <div class="camera-controls">
                 <label class="control-label">Camera Source</label>
                 <select onchange="cameraChanged()" id="camera_source" class="select-modern">
                 </select>
-                <button onclick="capture()" id="capture_button" class="btn-capture">📸 Capture Document</button>
+                <button onclick="capture()" id="capture_button" class="btn-capture">Capture Document</button>
             </div>
 
             <div class="video-wrapper">
@@ -127,14 +141,14 @@
     <div id="document_editor" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📝 Document Editor</h2>
+                <h2>Document Editor</h2>
                 <button onclick="closeEditor()" class="close-btn">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="editor-controls">
-                    <button onclick="edit()" class="btn-secondary">✏️ Edit</button>
-                    <button onclick="rectify()" class="btn-secondary">🔄 Rectify</button>
-                    <button onclick="save()" id="save_button" class="btn-primary">💾 Save</button>
+                    <button onclick="edit()" class="btn-secondary">Edit</button>
+                    <button onclick="rectify()" class="btn-secondary">Rectify</button>
+                    <button onclick="save()" id="save_button" class="btn-save">Save</button>
                 </div>
                 <div class="editor-view">
                     <div class="imageview" id="edit_view">
@@ -148,6 +162,16 @@
             </div>
         </div>
     </div>
+
+    <footer class="demo-footer">
+        <p>
+            Built with <a href="https://www.dynamsoft.com/capture-vision/" data-demo-cta="capture-vision">Dynamsoft
+                Capture Vision</a>. The hosted demo runs on a Codepool license bound to dynamsoft.com; this copy falls back to the SDK's public trial key on any other host, so add your own license for production use.
+            <a class="demo-footer-cta"
+                href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                data-demo-cta="trial">Get a 30-day free trial license</a>
+        </p>
+    </footer>
 
     <script src="main.js"></script>
 </body>

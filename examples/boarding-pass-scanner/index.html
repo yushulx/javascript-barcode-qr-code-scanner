@@ -2,35 +2,49 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Free Online Boarding Pass Scanner &amp; Parser | Dynamsoft Codepool Demo</title>
   <meta name="description"
-    content="Read the IATA BCBP barcode on a boarding pass with Dynamsoft Barcode Reader and parse it into passenger, flight, seat and baggage fields.">
-  <meta name="keywords" content="boarding pass scanner, IATA BCBP, PDF417 boarding pass, parse boarding pass barcode">
-  <title>Boarding Pass Scanner — Read and Parse IATA BCBP Barcodes</title>
+    content="Free online boarding pass scanner. Read the IATA BCBP barcode on a boarding pass — PDF417, Aztec Code, QR Code or Data Matrix — with your camera or from an image, then parse it into passenger, PNR, route, flight, seat, baggage and frequent flyer fields as structured data.">
   <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/boarding-pass-scanner/">
+  <meta name="robots" content="index, follow">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Boarding Pass Scanner — IATA BCBP">
+  <meta property="og:title" content="Free Online Boarding Pass Scanner &amp; Parser | Dynamsoft Codepool Demo">
   <meta property="og:description"
-    content="Read the IATA BCBP barcode on a boarding pass and parse it into passenger, flight, seat and baggage fields.">
+    content="Free online boarding pass scanner. Read the IATA BCBP barcode on a boarding pass — PDF417, Aztec Code, QR Code or Data Matrix — with your camera or from an image, then parse it into passenger, PNR, route, flight, seat, baggage and frequent flyer fields as structured data.">
   <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/boarding-pass-scanner/">
   <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/boarding-pass-scanner/thumbnail.png">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="styles.css">
+  <!-- Dynamsoft Barcode Reader bundle: DBR (decoding) + DCE (camera) + CVR.
+       The Reader decodes the symbol; the IATA BCBP layout is then read by
+       bcbp.js. -->
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+  <!-- IATA BCBP codec — the same file the boarding pass generator encodes with,
+       so the generator's "expected scanner output" is a prediction rather than
+       a second implementation of the same spec. -->
+  <script src="../boarding-pass-generator/bcbp.js"></script>
+
 </head>
 
 <body>
+
   <div class="demo-shell">
     <header class="demo-header">
       <div class="demo-brand">
         <img class="brand-logo" src="dynamsoft-logo-white.svg" width="202" height="50" alt="Dynamsoft">
         <span class="brand-divider" aria-hidden="true"></span>
-        <h1>Boarding Pass Scanner</h1>
+        <h1>Free Boarding Pass Scanner</h1>
       </div>
       <p class="subtitle">
-        Read the IATA BCBP barcode on a boarding pass and parse it into passenger, flight, seat and
-        baggage fields, in the browser.
+        A free online boarding pass scanner powered by Dynamsoft Barcode Reader — read the IATA BCBP
+        barcode and parse it into passenger, flight, seat and baggage fields
       </p>
     </header>
 
@@ -109,13 +123,17 @@
     <footer class="demo-footer">
       <p>
         Built with
-        <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft Barcode Reader</a>.
-        The Reader locates and decodes the symbol; the IATA BCBP field layout is then read by
-        <code>bcbp.js</code>, the Resolution 792 parser shared with the generator.
+        <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
+          Barcode Reader</a>. The Reader locates and decodes the symbol; the IATA BCBP field layout is
+        then read by <code>bcbp.js</code>, the Resolution 792 parser shared with the generator.
+        The hosted demo runs on a Codepool license bound to dynamsoft.com; this copy falls back to the SDK's public trial key on any other host, so add your own license for production use.
+        <a class="demo-footer-cta"
+          href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+          data-demo-cta="trial">Get a 30-day free trial license</a>
       </p>
       <p class="demo-footer-note">
         No pass to scan?
-        <a href="../boarding-pass-generator/">Generate a synthetic boarding pass</a>
+        <a href="https://www.dynamsoft.com/codepool/demos/boarding-pass-generator/" data-demo-cta="generator">Generate a synthetic boarding pass</a>
         and scan it with this demo.
       </p>
     </footer>
@@ -139,43 +157,11 @@
     <div class="results-body" id="results-content"></div>
   </div>
 
-  <!-- License setup. Deliberately the last overlay so it sits above the shell:
-       this example asks for your own key, while the hosted Codepool copy of this
-       page activates a domain-bound license automatically and has no such
-       screen. -->
-  <div id="license-setup" class="license-setup">
-    <div class="license-container">
-      <h2>Dynamsoft License Setup</h2>
-      <p>Enter your Dynamsoft Barcode Reader license key to continue</p>
-
-      <div class="license-input-group">
-        <label for="license-key">License key</label>
-        <textarea id="license-key" placeholder="Paste your license key here…" rows="3"></textarea>
-      </div>
-
-      <div class="license-actions">
-        <button id="license-submit" class="license-btn primary" type="button">Initialize Scanner</button>
-        <button id="use-trial" class="license-btn secondary" type="button">Use Trial License</button>
-      </div>
-
-      <div class="license-info">
-        <p><strong>Need a license?</strong></p>
-        <p>Get a free trial license at
-          <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
-            target="_blank" rel="noopener">Dynamsoft Trial License</a>
-        </p>
-      </div>
-    </div>
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="spinner" aria-hidden="true"></div>
+    <p id="loading-text">Starting the boarding pass scanner…</p>
   </div>
 
-  <!-- Dynamsoft Barcode Reader bundle: DBR (decoding) + DCE (camera) + CVR.
-       The Reader decodes the symbol; the IATA BCBP layout is then read by
-       bcbp.js. -->
-  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
-  <!-- IATA BCBP codec — the same file the boarding pass generator encodes with,
-       so the generator's "expected scanner output" is a prediction rather than
-       a second implementation of the same spec. -->
-  <script src="../boarding-pass-generator/bcbp.js"></script>
   <script src="app.js"></script>
 </body>
 

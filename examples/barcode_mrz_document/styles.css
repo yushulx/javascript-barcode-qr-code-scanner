@@ -1,6 +1,38 @@
-/* ============================================
-   MODERN RESPONSIVE DESIGN
-   ============================================ */
+/* ===========================================================================
+   Online Barcode, MRZ and Document Scanner — Codepool demo styles
+
+   Brand: Dynamsoft style guide (https://dynamsoft.github.io/styleguide/style-guide.html).
+   This is a live-camera demo, so the surface stays DARK on purpose — the
+   viewfinder needs a neutral surround, which is why it uses the brand gray
+   #323234 rather than the white page used by the tool-style demos. Branding
+   comes from the orange accents and the logo in the header. The card layout
+   is the demo's own functional structure; only the chrome (colors, fonts,
+   header lockup, button/accent styling) is rebranded. The scanned image and
+   the overlays drawn onto it are content, not chrome, and are left alone.
+   =========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@300;400;500&display=swap');
+
+:root {
+    --dy-orange: #fe8e14;
+    --dy-orange-hover: #e07d0b;
+
+    --dy-gray-900: #323234;
+    --dy-gray-800: #3a3a3d;
+    --dy-gray-700: #606060;
+    --dy-gray-300: #cccccc;
+    --dy-gray-200: #dddddd;
+    --dy-gray-50: #f5f5f5;
+    --white: #ffffff;
+
+    --font-heading: 'Oswald', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'Courier New', Courier, monospace;
+
+    /* Hairlines and translucent fills that read on the dark surface. */
+    --line-dark: rgba(255, 255, 255, 0.14);
+    --fill-dark: rgba(255, 255, 255, 0.07);
+}
 
 /* Reset and Base Styles */
 * {
@@ -10,31 +42,99 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: var(--font-body);
+    /* Brand gray, very slightly lifted at the top so the flat surface still
+       has a sense of depth behind the camera view. */
+    background: linear-gradient(180deg, var(--dy-gray-800) 0%, var(--dy-gray-900) 55%);
     min-height: 100vh;
     padding: 20px;
-    color: #333;
+    color: var(--white);
 }
 
-/* Header */
-header {
-    text-align: center;
-    color: white;
-    margin-bottom: 30px;
-    animation: fadeInDown 0.6s ease-out;
+/* ---------------------------------------------------------------------------
+   Header — Dynamsoft logo lockup, top-left over the page
+   --------------------------------------------------------------------------- */
+
+.demo-header {
+    max-width: 1200px;
+    margin: 0 auto 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding-left: 2px;
 }
 
-header h1 {
-    font-size: clamp(1.8rem, 5vw, 3rem);
-    font-weight: 700;
-    margin-bottom: 10px;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+.demo-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 100%;
 }
 
-.subtitle {
+.brand-logo {
+    display: block;
+    height: 22px;
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--line-dark);
+    flex: 0 0 auto;
+}
+
+.demo-nav {
+    display: flex;
+    gap: 18px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+}
+
+.demo-nav a {
+    color: rgba(255, 255, 255, 0.72);
+    text-decoration: none;
+}
+
+.demo-nav a:hover {
+    color: var(--dy-orange);
+}
+
+.demo-header h1 {
+    font-family: var(--font-heading);
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--white);
+    line-height: 1.2;
+}
+
+/* "Free" tag in the page heading. Demos are free to use and the claim only
+   lived in <title>/<meta description>; spelling it out next to the h1 puts it
+   in front of both the reader and the crawler that ranks the visible text.
+   The orange is the brand accent — never used for body copy — and the label is
+   decorative repetition of adjacent text, so it is not announced twice. */
+.brand-tag {
+    display: inline-block;
+    margin-right: 10px;
+    padding: 1px 8px 3px;
+    border: 1px solid rgba(254, 142, 20, 0.55);
+    border-radius: 4px;
+    background: rgba(254, 142, 20, 0.15);
+    color: var(--dy-orange, #fe8e14);
+    font-family: var(--font-heading);
+    font-size: 0.5em;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: 0.18em;
+}
+
+.demo-header .subtitle {
     font-size: clamp(0.9rem, 2vw, 1.1rem);
-    opacity: 0.95;
+    color: rgba(255, 255, 255, 0.72);
     font-weight: 300;
 }
 
@@ -46,135 +146,56 @@ header h1 {
 
 /* Card Styles */
 .card {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    background: var(--fill-dark);
+    border: 1px solid var(--line-dark);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
     padding: clamp(20px, 4vw, 30px);
     margin-bottom: 25px;
-    animation: fadeInUp 0.6s ease-out;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: box-shadow 0.3s ease;
 }
 
 .card:hover {
-    /* transform: translateY(-2px); */
-    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.35);
 }
 
 .controls-card {
-    animation: none;
     transition: none;
 }
 
 .controls-card:hover {
-    transform: none;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
 }
 
 .card h2 {
-    color: #667eea;
-    font-size: clamp(1.3rem, 3vw, 1.8rem);
-    margin-bottom: 20px;
-    font-weight: 600;
+    color: var(--white);
+    font-family: var(--font-heading);
+    font-size: clamp(1.2rem, 3vw, 1.6rem);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line-dark);
+    position: relative;
+}
+
+/* Orange accent rule under each card heading. */
+.card h2::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: 32px;
+    height: 2px;
+    background: var(--dy-orange);
 }
 
 .card h3 {
-    color: #555;
+    color: var(--dy-gray-300);
+    font-family: var(--font-heading);
     font-size: clamp(1rem, 2.5vw, 1.2rem);
+    font-weight: 400;
     margin-bottom: 12px;
-    font-weight: 500;
-}
-
-/* License Card */
-.info-text {
-    color: #666;
-    margin-bottom: 15px;
-    font-size: 0.95rem;
-}
-
-.info-text a {
-    color: #667eea;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.3s ease;
-}
-
-.info-text a:hover {
-    color: #764ba2;
-    text-decoration: underline;
-}
-
-/* Input Group */
-.input-group {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.input-group input {
-    flex: 1;
-    min-width: 200px;
-    padding: 12px 16px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.input-group input:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-/* Buttons */
-button {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-}
-
-.btn-primary:active {
-    transform: translateY(0);
-}
-
-.btn-secondary {
-    background: #f8f9fa;
-    color: #667eea;
-    border: 2px solid #667eea;
-}
-
-.btn-secondary:hover {
-    background: #667eea;
-    color: white;
-}
-
-.btn-capture {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-    box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
-    display: none;
-}
-
-.btn-capture:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(245, 87, 108, 0.5);
 }
 
 /* Controls */
@@ -192,26 +213,34 @@ button {
 
 .control-label {
     font-weight: 600;
-    color: #555;
-    font-size: 0.9rem;
+    color: var(--dy-gray-300);
+    font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
+/* Selects */
 .select-modern {
-    padding: 12px 16px;
-    border: 2px solid #e0e0e0;
+    padding: 12px 38px 12px 16px;
+    border: 1px solid var(--dy-gray-700);
     border-radius: 8px;
     font-size: 0.95rem;
-    background: white;
+    font-family: inherit;
+    color: var(--white);
+    background-color: var(--dy-gray-900);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1.1rem;
     cursor: pointer;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    appearance: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .select-modern:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--dy-orange);
+    box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.25);
 }
 
 /* Mode Selector */
@@ -240,27 +269,27 @@ button {
     justify-content: center;
     min-height: 48px;
     padding: 12px 16px;
-    background: #f8f9fa;
-    border: 2px solid #e0e0e0;
+    background: var(--fill-dark);
+    border: 1px solid var(--dy-gray-700);
     border-radius: 8px;
     text-align: center;
     font-weight: 500;
-    transition: all 0.3s ease;
+    color: var(--dy-gray-300);
+    transition: all 0.2s ease;
     width: 100%;
     flex: 1;
     line-height: 1.5;
 }
 
 .radio-card input[type="radio"]:checked+.radio-label {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-color: #667eea;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    background: var(--dy-orange);
+    color: var(--white);
+    border-color: var(--dy-orange);
+    box-shadow: 0 4px 15px rgba(254, 142, 20, 0.3);
 }
 
 .radio-card:hover .radio-label {
-    border-color: #667eea;
-    transform: translateY(-2px);
+    border-color: var(--dy-orange);
 }
 
 /* Upload Area */
@@ -291,45 +320,38 @@ button {
     align-items: center;
     justify-content: center;
     padding: 40px;
-    border: 3px dashed #d0d0d0;
+    border: 2px dashed var(--dy-gray-700);
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    background: #fafafa;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .file-label:hover {
-    border-color: #667eea;
-    background: #f0f4ff;
+    border-color: var(--dy-orange);
+    background: rgba(254, 142, 20, 0.08);
 }
 
 .upload-area.drag-over .file-label {
-    border-color: #667eea;
-    background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+    border-color: var(--dy-orange);
+    background: rgba(254, 142, 20, 0.12);
     transform: scale(1.02);
-    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
-    animation: pulse 1s ease-in-out infinite;
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        border-color: #667eea;
-    }
-
-    50% {
-        border-color: #764ba2;
-    }
+    box-shadow: 0 8px 30px rgba(254, 142, 20, 0.25);
 }
 
 .upload-icon {
-    font-size: 3rem;
+    color: var(--dy-gray-300);
     margin-bottom: 10px;
 }
 
+.upload-icon svg {
+    display: block;
+    width: 42px;
+    height: 42px;
+}
+
 .file-label span {
-    color: #666;
+    color: var(--dy-gray-300);
     font-size: 0.95rem;
     font-weight: 500;
 }
@@ -342,9 +364,9 @@ button {
     width: 100%;
     max-width: 100%;
     aspect-ratio: 1 / 1;
-    border: 2px solid #e0e0e0;
+    border: 1px solid var(--dy-gray-700);
     border-radius: 12px;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: #1b1b1d;
     position: relative;
     overflow: hidden;
 }
@@ -403,18 +425,73 @@ textarea {
     width: 100%;
     min-height: 120px;
     padding: 16px;
-    border: 2px solid #e0e0e0;
+    border: 1px solid var(--dy-gray-700);
     border-radius: 8px;
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 0.9rem;
     resize: vertical;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    color: var(--dy-gray-200);
+    background: var(--dy-gray-900);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 textarea:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--dy-orange);
+    box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.25);
+}
+
+textarea::placeholder {
+    color: var(--dy-gray-500);
+}
+
+/* Buttons — orange solid for the primary action, outlined for the rest */
+button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-save {
+    background: var(--dy-orange);
+    color: var(--white);
+    box-shadow: 0 4px 15px rgba(254, 142, 20, 0.4);
+}
+
+.btn-save:hover {
+    background: var(--dy-orange-hover);
+}
+
+.btn-save:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--white);
+    border: 1px solid var(--dy-gray-300);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--white);
+}
+
+.btn-capture {
+    background: var(--dy-orange);
+    color: var(--white);
+    box-shadow: 0 4px 15px rgba(254, 142, 20, 0.4);
+    display: none;
+}
+
+.btn-capture:hover {
+    background: var(--dy-orange-hover);
+    transform: translateY(-1px);
 }
 
 /* Loading Indicator */
@@ -434,8 +511,8 @@ textarea:focus {
 .spinner {
     width: 60px;
     height: 60px;
-    border: 6px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #667eea;
+    border: 6px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--dy-orange);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -462,11 +539,12 @@ textarea:focus {
 }
 
 .modal-content {
-    background: white;
+    background: var(--dy-gray-900);
     margin: auto;
     max-width: 900px;
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    border: 1px solid var(--line-dark);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
     animation: slideIn 0.3s ease-out;
 }
 
@@ -475,19 +553,22 @@ textarea:focus {
     justify-content: space-between;
     align-items: center;
     padding: 20px 30px;
-    border-bottom: 2px solid #f0f0f0;
+    border-bottom: 1px solid var(--line-dark);
 }
 
 .modal-header h2 {
     margin: 0;
-    color: #667eea;
+    color: var(--white);
+    font-family: var(--font-heading);
+    font-weight: 400;
+    letter-spacing: 0.02em;
 }
 
 .close-btn {
     background: none;
     border: none;
     font-size: 2rem;
-    color: #999;
+    color: var(--dy-gray-300);
     cursor: pointer;
     padding: 0;
     width: 40px;
@@ -496,12 +577,12 @@ textarea:focus {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .close-btn:hover {
-    background: #f0f0f0;
-    color: #333;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
 }
 
 .modal-body {
@@ -540,30 +621,6 @@ textarea:focus {
     }
 }
 
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 @keyframes slideIn {
     from {
         opacity: 0;
@@ -594,14 +651,6 @@ textarea:focus {
         flex-direction: column;
     }
 
-    .input-group {
-        flex-direction: column;
-    }
-
-    .input-group input {
-        width: 100%;
-    }
-
     #videoview {
         height: 40vh;
         min-height: 250px;
@@ -628,8 +677,15 @@ textarea:focus {
 }
 
 @media (max-width: 480px) {
-    header h1 {
-        font-size: 1.5rem;
+    .demo-header h1 {
+        font-size: 1.4rem;
+    }
+
+    /* The header is a single line and the product name is what identifies the
+       page, so the tag is what gives way at the narrowest widths. The claim is
+       still in the meta description and the JSON-LD offer. */
+    .brand-tag {
+        display: none;
     }
 
     .subtitle {
@@ -649,7 +705,42 @@ textarea:focus {
         padding: 30px 20px;
     }
 
-    .upload-icon {
-        font-size: 2rem;
+    .upload-icon svg {
+        width: 32px;
+        height: 32px;
     }
+}
+
+/* Demo footer: attribution, tutorial link, and trial CTA */
+.demo-footer {
+    max-width: 1200px;
+    margin: 30px auto 0;
+    text-align: center;
+    color: var(--dy-gray-300);
+    font-size: 0.9rem;
+    line-height: 1.8;
+}
+
+.demo-footer a {
+    color: var(--dy-gray-200);
+    text-decoration: none;
+}
+
+.demo-footer a:hover {
+    text-decoration: underline;
+}
+
+.demo-footer .demo-footer-cta {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: var(--dy-orange);
+    color: var(--white);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.demo-footer .demo-footer-cta:hover {
+    background: var(--dy-orange-hover);
 }

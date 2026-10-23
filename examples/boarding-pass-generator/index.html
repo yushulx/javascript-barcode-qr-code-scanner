@@ -4,51 +4,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boarding Pass Generator | IATA BCBP PDF417, Aztec &amp; QR Code</title>
+    <title>Free Online Boarding Pass Generator | Dynamsoft Codepool Demo</title>
     <meta name="description"
-        content="Build a synthetic IATA BCBP boarding pass barcode in the browser. Choose the carrier, route, flight, seat and baggage, render it as PDF417, Aztec Code, QR Code or Data Matrix on a printed or mobile pass, and download a PNG with the exact fields a conformant scanner should return.">
+        content="Free online boarding pass generator. Build a synthetic IATA BCBP barcode — passenger, PNR, route, flight, seat, baggage — render it as PDF417, Aztec Code, QR Code or Data Matrix on a printed or mobile pass, and download a PNG together with the exact fields a scanner should return.">
     <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/boarding-pass-generator/">
     <meta name="robots" content="index, follow">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Boarding Pass Generator | IATA BCBP Barcode">
+    <meta property="og:title" content="Free Online Boarding Pass Generator | Dynamsoft Codepool Demo">
     <meta property="og:description"
-        content="Build a synthetic IATA BCBP boarding pass barcode and download a realistic pass image to test a boarding pass scanner.">
+        content="Free online boarding pass generator. Build a synthetic IATA BCBP barcode — passenger, PNR, route, flight, seat, baggage — render it as PDF417, Aztec Code, QR Code or Data Matrix on a printed or mobile pass, and download a PNG together with the exact fields a scanner should return.">
     <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/boarding-pass-generator/">
     <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/boarding-pass-generator/thumbnail.png">
     <meta name="twitter:card" content="summary_large_image">
 
+
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
     <!-- Barcode encoder (bwip-js / BWIPP) — the only third-party dependency -->
     <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js.min.js"></script>
-    <!-- BCBP codec: IATA Resolution 792 encode + parse, with no dependencies.
-         The boarding pass scanner loads this same file, so the generator's
-         "expected scanner output" is a prediction rather than a second
-         implementation of the same spec. -->
+    <!-- IATA BCBP codec: Resolution 792 encode + parse, no dependencies. The
+         boarding pass scanner loads this same file, so the "expected scanner
+         output" table below is a prediction rather than a second implementation. -->
     <script src="bcbp.js"></script>
+
 </head>
 
 <body>
+
     <header class="site-header">
         <div class="site-header-inner">
-            <a class="brand" href="https://www.dynamsoft.com/" aria-label="Dynamsoft — back to dynamsoft.com">
+            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
+                aria-label="Dynamsoft — back to dynamsoft.com">
                 <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
             </a>
             <span class="brand-divider" aria-hidden="true"></span>
-            <span class="brand-product">Boarding Pass Generator</span>
+            <span class="brand-product">Free Boarding Pass Generator</span>
             <nav class="header-nav" aria-label="Dynamsoft">
-                <a class="nav-link" href="../boarding-pass-scanner/">Scanner</a>
-                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/">Barcode Reader</a>
-                <a class="nav-link" href="https://www.dynamsoft.com/docs/">Documentation</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/codepool/demos/boarding-pass-scanner/" data-demo-cta="scanner">Scanner</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
+                    data-demo-cta="barcode-reader">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/" data-demo-cta="docs">Documentation</a>
                 <a class="btn btn-primary"
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">30-Day
-                    Free Trial</a>
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">30-Day Free Trial</a>
             </nav>
         </div>
     </header>
 
     <div class="page-intro">
-        <h1>Boarding pass generator</h1>
+        <h1>Free boarding pass generator</h1>
         <p>
             Build a synthetic IATA BCBP barcode and download a boarding pass image to test a
             boarding pass scanner.
@@ -367,20 +373,21 @@
                 </svg>
                 Generated locally on an HTML5 canvas — synthetic sample data only, nothing is uploaded and no
                 licence key is required.
+                Running this page is free because it activates the Codepool license bound to dynamsoft.com.
+                The source on GitHub is a separate thing — self-hosting it needs your own Dynamsoft license.
             </p>
             <div class="footer-links">
                 <span>
                     Built with plain JavaScript and
-                    <a href="https://github.com/metafloor/bwip-js">bwip-js</a>. Read the
+                    <a href="https://github.com/metafloor/bwip-js" data-demo-cta="bwip-js">bwip-js</a>. Read the
                     symbols back with
-                    <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft Barcode Reader</a>.
+                    <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
+                        Barcode Reader</a>.
                 </span>
-                <a href="../boarding-pass-scanner/">Open the boarding pass scanner</a>
-                <a href="https://www.dynamsoft.com/codepool/generate-boarding-pass-barcode-javascript.html">Read
-                    the tutorial</a>
+                <a href="https://www.dynamsoft.com/codepool/demos/boarding-pass-scanner/" data-demo-cta="scanner">Open the boarding pass scanner</a>
                 <a class="btn btn-primary footer-cta"
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">Get
-                    a 30-day free trial license</a>
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
             </div>
         </div>
     </footer>

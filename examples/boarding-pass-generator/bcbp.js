@@ -22,8 +22,10 @@
  *
  * Both directions live in this file on purpose: the generator encodes a record
  * and then parses its own output with decode(), which is the same code path the
- * scanner uses. That makes the "expected scanner output" table a real check of
- * what was written rather than a restatement of the form.
+ * boarding pass scanner uses. That makes the "expected scanner output" table a
+ * real check of what was written rather than a restatement of the form, and it
+ * is why the scanner loads this file from this folder instead of keeping a
+ * second copy.
  *
  * No dependencies, no build step. Exposes window.Bcbp.
  */

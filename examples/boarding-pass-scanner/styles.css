@@ -1,4 +1,4 @@
-/* Boarding Pass Scanner — styles.
+/* Online Boarding Pass Scanner — Codepool demo styles.
 
    Visual language follows the Dynamsoft style guide
    (https://dynamsoft.github.io/styleguide/style-guide.html):
@@ -120,6 +120,22 @@ body {
     width: 1px;
     height: 24px;
     background: var(--line-dark);
+}
+
+.demo-nav {
+    display: flex;
+    gap: 18px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+}
+
+.demo-nav a {
+    color: rgba(255, 255, 255, 0.72);
+    text-decoration: none;
+}
+
+.demo-nav a:hover {
+    color: var(--dy-orange);
 }
 
 .demo-header h1 {
@@ -558,137 +574,6 @@ body {
 .demo-footer-cta {
     color: var(--dy-orange) !important;
     border-bottom-color: rgba(254, 142, 20, 0.6) !important;
-    font-weight: 600;
-}
-
-/* ---------------------------------------------------------------------------
-   License setup (this example only)
-
-   The hosted Codepool copy activates a domain-bound license and has no such
-   screen; here it is an opaque overlay above the shell, so the shell is already
-   laid out when the camera opens and the viewfinder gets the right size.
-   --------------------------------------------------------------------------- */
-
-.license-setup {
-    position: fixed;
-    inset: 0;
-    z-index: 150;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    overflow-y: auto;
-    background: linear-gradient(180deg, var(--dy-gray-800) 0%, var(--dy-gray-900) 55%);
-}
-
-.license-container {
-    width: 100%;
-    max-width: 520px;
-    background: #fff;
-    border-radius: 8px;
-    padding: 1.75rem 1.9rem 1.6rem;
-    color: var(--dy-gray-900);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-}
-
-.license-container h2 {
-    font-family: var(--font-heading);
-    font-size: 1.3rem;
-    font-weight: 400;
-    letter-spacing: 0.02em;
-    margin-bottom: 0.35rem;
-}
-
-.license-container > p {
-    margin-bottom: 1.1rem;
-    font-size: 0.88rem;
-    color: var(--dy-gray-700);
-}
-
-.license-input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 1.1rem;
-}
-
-.license-input-group label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--dy-gray-700);
-}
-
-.license-input-group textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--dy-gray-300);
-    border-radius: 6px;
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    resize: vertical;
-}
-
-.license-input-group textarea:focus {
-    outline: 2px solid rgba(254, 142, 20, 0.45);
-    outline-offset: 1px;
-    border-color: var(--dy-orange);
-}
-
-.license-actions {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 1.1rem;
-}
-
-.license-btn {
-    flex: 1;
-    padding: 10px 16px;
-    border-radius: 6px;
-    border: 1px solid transparent;
-    font-family: inherit;
-    font-size: 0.92rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-}
-
-.license-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.license-btn.primary {
-    background: var(--dy-orange);
-    color: #fff;
-}
-
-.license-btn.primary:hover:not(:disabled) {
-    background: var(--dy-orange-hover);
-}
-
-.license-btn.secondary {
-    background: #fff;
-    color: var(--dy-gray-900);
-    border-color: var(--dy-gray-300);
-}
-
-.license-btn.secondary:hover:not(:disabled) {
-    background: var(--dy-gray-50);
-}
-
-.license-info {
-    padding-top: 1rem;
-    border-top: 1px solid var(--dy-gray-200);
-    font-size: 0.84rem;
-    color: var(--dy-gray-700);
-}
-
-.license-info p {
-    margin: 0 0 3px;
-}
-
-.license-info a {
-    color: var(--dy-link);
     font-weight: 600;
 }
 
@@ -1224,6 +1109,40 @@ body {
    --------------------------------------------------------------------------- */
 
 @media (max-width: 720px) {
+    /* Layout defect fix — the viewfinder must never be squeezed by the content
+       around it. The one-screen flex layout gives #main-container whatever
+       height is left after the header, the controls and the long footer have
+       taken theirs, so on a phone in portrait the camera area shrinks to a
+       short band and a portrait stream inside it renders tiny. On phones the
+       page becomes a normal scrolling document instead: the viewfinder gets a
+       fixed, guaranteed height and the footer is reached by scrolling. */
+    html,
+    body {
+        height: auto;
+        min-height: 100%;
+    }
+
+    body {
+        overflow: visible;
+    }
+
+    .demo-shell {
+        height: auto;
+        min-height: 100dvh;
+    }
+
+    /* The guaranteed viewfinder size: at least 340px, otherwise 68% of the
+       small viewport (the address bar visible — the worst case), capped so
+       tablets do not get a viewfinder taller than the screen. svh does not
+       jump when the browser chrome hides while scrolling. The plain-vh line
+       first is the fallback for browsers without small-viewport units. */
+    #main-container,
+    .upload-zone {
+        flex: 0 0 auto;
+        height: min(68vh, 580px);
+        height: clamp(340px, 68svh, 580px);
+    }
+
     .demo-header .subtitle {
         display: none;
     }
@@ -1267,6 +1186,77 @@ body {
     }
 
     .field-head {
+        display: none;
+    }
+}
+
+/* Phones in portrait: the viewfinder is the point of the page, and the header,
+   the wrapped controls and the long footer are what squeeze it flat — on a
+   720x1280 portrait stream a short-wide viewfinder renders as a narrow pillar
+   under object-fit contain. Trim everything that is not the camera. */
+@media (max-width: 480px) {
+    .demo-shell {
+        padding: calc(6px + env(safe-area-inset-top)) 8px calc(6px + env(safe-area-inset-bottom));
+        gap: 6px;
+    }
+
+    .demo-header h1 {
+        font-size: 1rem;
+    }
+
+    .brand-logo {
+        height: 22px;
+    }
+
+    #scanner-app {
+        gap: 6px;
+    }
+
+    .controls-row {
+        gap: 6px;
+    }
+
+    .mode-option {
+        padding: 0.5rem 0.7rem;
+        font-size: 0.8rem;
+    }
+
+    .scope-select {
+        padding: 3px 5px 3px 10px;
+        font-size: 0.76rem;
+    }
+
+    .scope-select select {
+        font-size: 0.76rem;
+        padding: 0.36rem 1.45rem 0.36rem 0.6rem;
+        background-size: 0.9rem;
+        background-position: right 0.4rem center;
+    }
+
+    .signature-toggle {
+        padding: 5px 10px;
+        font-size: 0.76rem;
+    }
+
+    .signature-toggle input {
+        width: 12px;
+        height: 12px;
+    }
+
+    #tip-message {
+        font-size: 0.78rem;
+        padding: 0.4rem 0.8rem;
+    }
+
+    /* The footer paragraph runs ~8 lines at full width; it is the single
+       biggest thief of viewfinder height. Tighten the type and drop the
+       secondary note; the essential links stay. */
+    .demo-footer {
+        font-size: 0.7em;
+        padding: 5px 8px;
+    }
+
+    .demo-footer-note {
         display: none;
     }
 }

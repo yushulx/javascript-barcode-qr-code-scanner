@@ -1,5 +1,5 @@
 /* Share the tuner's brand, typography, header, cards and controls. */
-@import url('parameter-tuner/styles.css?v=20260921W');
+@import url('parameter-tuner/styles.css');
 .container{max-width:1400px;width:100%;margin:0 auto;padding:0 1.5rem 2rem}
 .toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:1rem}
 .form-group{min-width:180px;flex:1}

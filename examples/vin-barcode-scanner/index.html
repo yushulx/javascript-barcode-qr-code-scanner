@@ -4,41 +4,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Online VIN Barcode Scanner | Dynamsoft</title>
+    <title>Free Online VIN Barcode Scanner | Dynamsoft Codepool Demo</title>
     <meta name="description"
-        content="Online VIN barcode scanner. Decode VIN barcodes — Code 39, Code 128, QR Code or Data Matrix — from a camera or an image, strip the 18-character import prefix, verify the North American check digit and parse the WMI, model year and plant code. Barcodes only: the SDK does not OCR the stamped VIN characters.">
+        content="Free online VIN barcode scanner. Decode VIN barcodes — Code 39, Code 128, QR Code or Data Matrix — from a camera or an image, strip the 18-character import prefix, verify the North American check digit and parse the WMI, model year and plant code. Barcodes only: the SDK does not OCR the stamped VIN characters.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/vin-barcode-scanner/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Free Online VIN Barcode Scanner | Dynamsoft Codepool Demo">
+    <meta property="og:description"
+        content="Free online VIN barcode scanner. Decode VIN barcodes — Code 39, Code 128, QR Code or Data Matrix — from a camera or an image, strip the 18-character import prefix, verify the North American check digit and parse the WMI, model year and plant code. Barcodes only: the SDK does not OCR the stamped VIN characters.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/vin-barcode-scanner/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/vin-barcode-scanner/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
 
-    <!--
-      ASSET VERSION (?v=): the site serves these files with
-      Cache-Control: max-age=86400, so browsers trust their cached copy for a
-      full day. Bump the ?v= value on EVERY change to styles.css, app.js,
-      vin-model.js or sample-images/, otherwise returning visitors keep the
-      stale copy for up to 24h.
-    -->
-    <link rel="icon" href="favicon.svg?v=20261010a" type="image/svg+xml">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="styles.css?v=20261010a">
+    <link rel="stylesheet" href="styles.css">
     <!-- Dynamsoft Barcode Reader bundle (decoding; camera module used by live scan) -->
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
     <!-- Shared VIN model: import-prefix strip, check digit, structure parse -->
-    <script src="vin-model.js?v=20261010a"></script>
+    <script src="vin-model.js"></script>
+
 </head>
 
 <body>
+
     <div class="demo-shell">
         <!-- Header -->
         <header class="demo-header">
             <div class="demo-brand">
-                <img class="brand-logo" src="dynamsoft-logo-white.svg?v=20261010a" width="202" height="50"
+                <img class="brand-logo" src="dynamsoft-logo-white.svg" width="202" height="50"
                     alt="Dynamsoft">
                 <span class="brand-divider" aria-hidden="true"></span>
-                <h1>VIN Barcode Scanner</h1>
+                <h1>Free VIN Barcode Scanner</h1>
             </div>
-            <nav class="demo-nav" aria-label="Dynamsoft">
-                <a href="https://www.dynamsoft.com/barcode-reader/overview/">Barcode Reader</a>
-                <a href="https://www.dynamsoft.com/docs/">Documentation</a>
-            </nav>
             <p class="subtitle">Scan a VIN barcode from a label, windshield sticker or paperwork — and see the
                 check digit verified, the WMI, model year and plant code decoded</p>
         </header>
@@ -141,7 +142,7 @@
             <aside class="crosslink-banner" role="note">
                 <p>
                     <strong>No VIN barcode at hand?</strong> The
-                    <a href="https://www.dynamsoft.com/codepool/demos/vin-barcode-generator/">online VIN barcode
+                    <a href="https://www.dynamsoft.com/codepool/demos/vin-barcode-generator/" data-demo-cta="vin-generator">online VIN barcode
                         generator</a> renders a valid VIN — check digit included — as Code 39, Code 128, QR
                     Code or Data Matrix, ready to download and scan.
                 </p>
@@ -151,15 +152,18 @@
         <footer class="demo-footer">
             <p>
                 Built with
-                <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft
-                    Barcode Reader</a>. Running this example needs your own Dynamsoft license — on any other
-                host the page falls back to the SDK trial key.
+                <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
+                    Barcode Reader</a>. The hosted demo runs on a Codepool license bound to dynamsoft.com; this copy falls back to the SDK's public trial key on any other host, so add your own license for production use.
                 <a class="demo-footer-cta"
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">Get
-                    a 30-day free trial license</a>
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
             </p>
             <p class="demo-footer-note">
-                Decoding runs entirely in your browser. Remember it reads barcodes only, not OCR.
+                Decoding runs entirely in your browser. Remember it reads barcodes only, not OCR — and if you
+                need other barcode types, open the
+                <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/" data-demo-cta="barcode-scanner">online barcode scanner</a>.
+                Curious how the decoding pipeline is built?
+.
             </p>
         </footer>
     </div>
@@ -171,7 +175,7 @@
     </div>
 
     <!-- UI, scan pipeline and VIN parse -->
-    <script src="app.js?v=20261010a"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>

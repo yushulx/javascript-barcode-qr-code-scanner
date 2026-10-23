@@ -1,11 +1,65 @@
-const DEFAULT_LICENSE_KEY = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
-const TEMPLATE_PATH = "./DBR_and_DDN_detect_PresetTemplates.json";
+/*
+ * License selection.
+ *
+ * The demo is hosted at www.dynamsoft.com/codepool/demos/, and its license is
+ * bound to the dynamsoft.com domain, so it only activates there. When the demo
+ * is served from anywhere else (localhost, staging, a fork) we fall back to the
+ * SDK's public 24-hour trial key, which is accepted on localhost, so the page
+ * still runs instead of failing to activate.
+ */
+const BOUND_HOSTS = ["dynamsoft.com"];
+const CODEPOOL_LICENSE_KEY = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAwLTEwMTY0ODQ5MCIsIm1haW5TZXJ2ZXJVUkwiOiJodHRwczovL21sdHMuZHluYW1zb2Z0LmNvbS8iLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMCIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NsdHMuZHluYW1zb2Z0LmNvbS8iLCJjaGVja0NvZGUiOjE0MDA4MDY1Mjl9";
+const TRIAL_LICENSE_KEY = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+
+function isBoundHost() {
+    const host = window.location.hostname.toLowerCase();
+    return BOUND_HOSTS.some((bound) => host === bound || host.endsWith("." + bound));
+}
+
+function resolveLicenseKey() {
+    if (isBoundHost()) {
+        return CODEPOOL_LICENSE_KEY;
+    }
+    console.info("[demo] Using the SDK trial license: the Codepool license is bound to "
+        + BOUND_HOSTS.join(", ") + ' and cannot activate on "' + window.location.hostname + '".');
+    analytics.action("license_fallback", { host: window.location.hostname });
+    return TRIAL_LICENSE_KEY;
+}
+
+/* Asset version: app.js is loaded as app.js?v=<n> (see index.html). Reuse that
+   value so the template JSON is cache-busted by the same bump. */
+const ASSET_V = (function () {
+    const src = document.currentScript ? document.currentScript.src : "";
+    const i = src.indexOf("?v=");
+    return i === -1 ? "" : src.slice(i);
+})();
+const TEMPLATE_PATH = "./DBR_and_DDN_detect_PresetTemplates.json" + ASSET_V;
 const DETECT_TEMPLATE = "DetectDocumentBoundaries_Default";
 const NORMALIZE_TEMPLATE = "NormalizeDocument_Default";
 
-const licenseScreen = document.getElementById("license-screen");
-const licenseInput = document.getElementById("license-input");
-const activateBtn = document.getElementById("activate-btn");
+/* Capture-progress shim, same degrade-gracefully idea as the analytics one
+   below: if demos/shared/scanner-feedback.js fails to load, capture still
+   works, it just runs without the progress animation. */
+const feedback = window.ScannerFeedback || {
+    begin: function () { },
+    end: function () { },
+    isBusy: function () { return false; },
+    run: function (label, factory) {
+        return Promise.resolve(typeof factory === 'function' ? factory() : factory);
+    }
+};
+
+/* Analytics shim: keeps the demo running even if the shared tracker fails
+   to load, so a tracking outage can never break scanning. */
+const analytics = window.DemoAnalytics || {
+    ready: function () { },
+    error: function () { },
+    start: function () { },
+    success: function () { },
+    fail: function () { },
+    action: function () { }
+};
+
 const initOverlay = document.getElementById("init-overlay");
 const initStatus = document.getElementById("init-status");
 const scannerScreen = document.getElementById("scanner-screen");
@@ -1046,7 +1100,12 @@ async function normalizeDocument(frameCanvas, points) {
         settings.roiMeasuredInPercentage = 0;
         await cvr.updateSettings(NORMALIZE_TEMPLATE, settings);
 
-        const normalizedResult = await cvr.capture(frameCanvas, NORMALIZE_TEMPLATE);
+        // Single-frame capture on a cold engine is the slowest step in this
+        // demo, and it used to run with no feedback at all. The shared pill
+        // appears before the call and clears when it settles.
+        const normalizedResult = await feedback.run("Normalizing document…", () =>
+            cvr.capture(frameCanvas, NORMALIZE_TEMPLATE)
+        );
         for (const item of normalizedResult.items || []) {
             if (item.toCanvas && typeof item.toCanvas === "function") {
                 return item.toCanvas();
@@ -1079,6 +1138,10 @@ async function performCapture({ autoCaptured = false, quadPoints = null } = {}) 
         }
 
         addPage(resultCanvas, { originalCanvas: frameCanvas, quadPoints: quadPoints });
+        analytics.success(quadPoints ? "camera" : "camera-untrimmed", autoCaptured ? "auto" : "manual", {
+            page_count: pages.length,
+            normalized: !!resultCanvas && quadPoints !== null
+        });
         if (autoCaptured) showAutoCaptureIndicator();
     } catch (error) {
         console.error(error);
@@ -1101,7 +1164,9 @@ async function processGalleryFile(file) {
     baseCanvas.getContext("2d").drawImage(bitmap, 0, 0);
 
     try {
-        const detectResult = await cvr.capture(baseCanvas, DETECT_TEMPLATE);
+        const detectResult = await feedback.run("Detecting document boundary…", () =>
+            cvr.capture(baseCanvas, DETECT_TEMPLATE)
+        );
         let quad = null;
         for (const item of detectResult.items || []) {
             if (item.location && item.location.points && item.location.points.length === 4) {
@@ -1519,6 +1584,7 @@ function downloadDataUrl(dataUrl, fileName) {
 
 function exportImages() {
     if (!pages.length) return;
+    analytics.action("export_images");
     const stamp = Date.now();
     pages.forEach((page, i) => {
         const canvas = buildFilteredCanvas(page);
@@ -1529,6 +1595,7 @@ function exportImages() {
 
 async function exportLongImage() {
     if (!pages.length) return;
+    analytics.action("export_long_image");
 
     try {
         showToast("Stitching images\u2026", 6000);
@@ -1558,6 +1625,7 @@ async function exportLongImage() {
 
 async function exportPdf() {
     if (!pages.length || !window.jspdf) return;
+    analytics.action("export_pdf");
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "pt", format: "a4" });
 
@@ -1720,35 +1788,27 @@ async function bootstrap() {
     bindSettingRanges();
     wireEvents();
 
+    // No license screen: the scanner starts directly with the domain-bound key.
     const startScanner = async () => {
-        const key = (licenseInput.value || "").trim() || DEFAULT_LICENSE_KEY;
-        activateBtn.disabled = true;
-        licenseScreen.classList.add("hidden");
         initOverlay.classList.remove("hidden");
+        const startedAt = (window.performance && performance.now) ? performance.now() : Date.now();
 
         try {
-            await initSDK(key);
+            await initSDK(resolveLicenseKey());
+            analytics.ready(((window.performance && performance.now) ? performance.now() : Date.now()) - startedAt);
             initOverlay.classList.add("hidden");
             showScannerScreen();
             startScanning();
         } catch (error) {
             console.error(error);
+            analytics.error("init_failed", error?.message || "unknown");
             updateInitStatus(`Initialization failed: ${error?.message || "Unknown error"}`);
             initOverlay.classList.add("hidden");
-            licenseScreen.classList.remove("hidden");
-            showToast("Initialization failed. Check your license key.", 3200);
-        } finally {
-            activateBtn.disabled = false;
+            showToast("Failed to start the scanner. Please refresh and try again.", 5000);
         }
     };
 
-    pointerTap(activateBtn, startScanner);
-    licenseInput.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            startScanner();
-        }
-    });
+    await startScanner();
 }
 
 bootstrap();

@@ -1,4 +1,36 @@
 let dropdown = document.getElementById("dropdown");
+
+/* Asset version: this script is loaded as main.js?v=<n> (see index.html).
+   Reuse that value so ./full.json is cache-busted by the same bump, instead of
+   keeping a second version string in sync. */
+const ASSET_V = (function () {
+    const src = document.currentScript ? document.currentScript.src : "";
+    const i = src.indexOf("?v=");
+    return i === -1 ? "" : src.slice(i);
+})();
+
+/* Analytics shim: keeps the demo running even if the shared tracker fails
+   to load, so a tracking outage can never break scanning. */
+/* Shared capture-progress feedback (demos/shared/scanner-feedback.js). Same
+   degrade-gracefully pattern as analytics above: if the shared file did not
+   load, capture still works, it just shows no animation. */
+var feedback = window.ScannerFeedback || {
+    begin: function () { },
+    end: function () { },
+    isBusy: function () { return false; },
+    run: function (label, factory) {
+        return Promise.resolve(typeof factory === 'function' ? factory() : factory);
+    }
+};
+
+var analytics = window.DemoAnalytics || {
+    ready: function () { },
+    error: function () { },
+    start: function () { },
+    success: function () { },
+    fail: function () { },
+    action: function () { }
+};
 let barcodeCheckbox = document.getElementById("barcode_checkbox");
 let mrzCheckbox = document.getElementById("mrz_checkbox");
 let documentCheckbox = document.getElementById("document_checkbox");
@@ -188,27 +220,28 @@ function loadImage2Canvas(base64Image) {
         toggleLoading(true);
 
         let selectedMode = document.querySelector('input[name="scanMode"]:checked').value;
+        analytics.start(selectedMode, 'file');
 
         let context = overlayCanvas.getContext('2d');
         context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         try {
+            // Each capture must be awaited: the loader is turned off after this
+            // block, and firing them off without awaiting hid it while the
+            // decode was still running — which is what made the page look stuck.
             if (selectedMode == "barcode") {
                 await cvr.resetSettings();
-                cvr.capture(img.src, "ReadBarcodes_Default").then((result) => {
-                    showFileResult(selectedMode, context, result, img, Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE);
-                });
+                const result = await cvr.capture(img.src, "ReadBarcodes_Default");
+                showFileResult(selectedMode, context, result, img, Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE);
             }
             else if (selectedMode == "mrz") {
-                await cvr.initSettings("./full.json");
-                cvr.capture(img.src, "ReadMRZ").then((result) => {
-                    showFileResult(selectedMode, context, result, img, Dynamsoft.Core.EnumCapturedResultItemType.CRIT_TEXT_LINE);
-                });
+                await cvr.initSettings("./full.json" + ASSET_V);
+                const result = await cvr.capture(img.src, "ReadMRZ");
+                showFileResult(selectedMode, context, result, img, Dynamsoft.Core.EnumCapturedResultItemType.CRIT_TEXT_LINE);
             }
             else if (selectedMode == "document") {
                 await cvr.resetSettings();
-                cvr.capture(img.src, "DetectDocumentBoundaries_Default").then((result) => {
-                    showFileResult(selectedMode, context, result, img, Dynamsoft.Core.EnumCapturedResultItemType.CRIT_DETECTED_QUAD);
-                });
+                const result = await cvr.capture(img.src, "DetectDocumentBoundaries_Default");
+                showFileResult(selectedMode, context, result, img, Dynamsoft.Core.EnumCapturedResultItemType.CRIT_DETECTED_QUAD);
             }
         }
         catch (ex) {
@@ -224,6 +257,7 @@ async function showFileResult(selectedMode, context, result, img, type) {
     let detection_result = document.getElementById('detection_result');
     detection_result.innerHTML = "";
     let txts = [];
+    let detectedFormat = '';
     let items = result.items;
     if (items.length > 0) {
         for (var i = 0; i < items.length; ++i) {
@@ -250,6 +284,7 @@ async function showFileResult(selectedMode, context, result, img, type) {
             context.stroke();
 
             if (selectedMode == "barcode") {
+                detectedFormat = item.formatString || '';
                 if (txts.length > 0) {
                     detection_result.innerHTML += txts.join('\n') + '\n\n';
                 }
@@ -275,9 +310,19 @@ async function showFileResult(selectedMode, context, result, img, type) {
 
 
         }
+        if (txts.length > 0) {
+            analytics.success(selectedMode, 'file', {
+                result_count: txts.length,
+                barcode_format: detectedFormat
+            });
+        }
+        else {
+            analytics.fail(selectedMode, 'file');
+        }
     }
     else {
         detection_result.innerHTML += "Nothing found\n";
+        analytics.fail(selectedMode, 'file');
     }
 }
 
@@ -297,10 +342,40 @@ document.addEventListener('paste', (event) => {
     }
 });
 
+let activationStartedAt = 0;
+
+function now() {
+    return (window.performance && performance.now) ? performance.now() : Date.now();
+}
+
+/* License selection: the demo hosted under /codepool/demos/ uses a license bound
+   to dynamsoft.com; anywhere else (localhost, staging, a fork) we fall back to
+   the SDK's public 24-hour trial key, which is accepted on localhost. */
+const BOUND_HOSTS = ['dynamsoft.com'];
+const CODEPOOL_LICENSE_KEY = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAwLTEwMTY0ODQ5MCIsIm1haW5TZXJ2ZXJVUkwiOiJodHRwczovL21sdHMuZHluYW1zb2Z0LmNvbS8iLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMCIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NsdHMuZHluYW1zb2Z0LmNvbS8iLCJjaGVja0NvZGUiOjE0MDA4MDY1Mjl9';
+const TRIAL_LICENSE_KEY = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==';
+
+function isBoundHost() {
+    const host = window.location.hostname.toLowerCase();
+    return BOUND_HOSTS.some((bound) => host === bound || host.endsWith('.' + bound));
+}
+
+function resolveLicenseKey() {
+    if (isBoundHost()) {
+        return CODEPOOL_LICENSE_KEY;
+    }
+    console.info('[demo] Using the SDK trial license: the Codepool license is bound to '
+        + BOUND_HOSTS.join(', ') + ' and cannot activate on "' + window.location.hostname + '".');
+    if (window.DemoAnalytics && window.DemoAnalytics.action) {
+        window.DemoAnalytics.action('license_fallback', { host: window.location.hostname });
+    }
+    return TRIAL_LICENSE_KEY;
+}
+
 async function activate() {
     toggleLoading(true);
-    let divElement = document.getElementById("license_key");
-    let licenseKey = divElement.value == "" ? divElement.placeholder : divElement.value;
+    activationStartedAt = now();
+    const licenseKey = resolveLicenseKey();
 
     try {
         await Dynamsoft.License.LicenseManager.initLicense(
@@ -336,9 +411,11 @@ async function activate() {
         });
 
         isSDKReady = true;
+        analytics.ready(now() - activationStartedAt);
     }
     catch (ex) {
         console.error(ex);
+        analytics.error('activate_failed', (ex && (ex.message || ex)) || 'unknown');
     }
 
     toggleLoading(false);
@@ -378,31 +455,6 @@ function openEditor(image) {
     edit();
 }
 
-function originalImageToDataURL(imageData) {
-    if (!imageData || !imageData.bytes || !imageData.width || !imageData.height) {
-        throw new Error('Invalid original image data.');
-    }
-
-    const width = imageData.width;
-    const height = imageData.height;
-    const stride = imageData.stride || width * 4;
-    const sourceBytes = new Uint8ClampedArray(imageData.bytes);
-    const copiedBytes = new Uint8ClampedArray(width * height * 4);
-
-    for (let row = 0; row < height; row++) {
-        const sourceOffset = row * stride;
-        const targetOffset = row * width * 4;
-        copiedBytes.set(sourceBytes.subarray(sourceOffset, sourceOffset + width * 4), targetOffset);
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext('2d');
-    context.putImageData(new ImageData(copiedBytes, width, height), 0, 0);
-    return canvas.toDataURL();
-}
-
 async function closeEditor() {
     documentEditor.style.display = "none";
     if (dropdown.value === 'camera') {
@@ -426,10 +478,12 @@ async function rectify() {
     rectifyView.style.display = "block";
     editView.style.display = "none";
     saveButton.style.display = "block";
+    analytics.action('rectify');
 }
 
 async function save() {
     let imageUrl = rectifiedImage.src;
+    analytics.action('save');
 
     // Generate filename based on timestamp
     const timestamp = new Date().getTime();
@@ -576,6 +630,7 @@ async function startScanning() {
     }
 
     let selectedMode = document.querySelector('input[name="scanMode"]:checked').value;
+    analytics.start(selectedMode, 'camera');
 
     if (selectedMode == "mrz") {
         let scanRegion = {
@@ -595,7 +650,7 @@ async function startScanning() {
     cvr.setInput(cameraEnhancer);
 
     if (selectedMode == "mrz") {
-        await cvr.initSettings("./full.json");
+        await cvr.initSettings("./full.json" + ASSET_V);
         cvr.startCapturing("ReadMRZ");
     }
     else if (selectedMode == "barcode") {
@@ -744,12 +799,32 @@ async function cameraChanged() {
 }
 
 // Show camera result in the UI
+/* The camera result receiver fires per processed frame, so reporting every
+   result would flood GA4. Throttle to one report per mode per 3 seconds. */
+let lastCameraReportAt = {};
+
+function cameraReport(mode, succeeded, extra) {
+    let t = now();
+    if (lastCameraReportAt[mode] && (t - lastCameraReportAt[mode]) < 3000) {
+        return;
+    }
+    lastCameraReportAt[mode] = t;
+
+    if (succeeded) {
+        analytics.success(mode, 'camera', extra);
+    }
+    else {
+        analytics.fail(mode, 'camera');
+    }
+}
+
 async function showCameraResult(result) {
     let selectedMode = document.querySelector('input[name="scanMode"]:checked').value;
     let items = result.items;
     let scan_result = document.getElementById('scan_result');
     scan_result.innerHTML = "";
     let txts = [];
+    let detectedFormat = '';
 
     // clearOverlay(cameraEnhancer);
 
@@ -772,6 +847,7 @@ async function showCameraResult(result) {
                 globalPoints = item.location.points;
 
                 if (selectedMode == "barcode") {
+                    detectedFormat = item.formatString || '';
                     if (txts.length > 0) {
                         scan_result.innerHTML += txts.join('\n') + '\n\n';
                     }
@@ -798,20 +874,25 @@ async function showCameraResult(result) {
             else if (items[i].type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_ORIGINAL_IMAGE) {
                 if (selectedMode == "document") {
                     if (isCaptured) {
-                        // const capturedImage = originalImageToDataURL(item.imageData);
                         isCaptured = false;
                         await stopScanning();
                         targetCanvas.width = resolution.width;
                         targetCanvas.height = resolution.height;
-                        openEditor(item.toCanvas().toDataURL());
+                        openEditor(item.imageData.toCanvas().toDataURL());
                     }
                 }
             }
         }
 
+        cameraReport(selectedMode, txts.length > 0, {
+            result_count: txts.length,
+            barcode_format: detectedFormat
+        });
+
     }
     else {
         scan_result.innerHTML += "Nothing found\n";
+        cameraReport(selectedMode, false, { result_count: 0 });
     }
 }
 
@@ -852,3 +933,5 @@ function extractMrzInfo(result) {
     parseResultInfo["Date of Expiry (YYYY-MM-DD)"] = expiryYear + "-" + expiryMonth + "-" + expiryDay;
     return parseResultInfo;
 }
+
+activate();
