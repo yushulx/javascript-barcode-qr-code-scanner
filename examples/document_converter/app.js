@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let scannerObject = null;
     let scannerConnection = null;
     let scannerDevices = [];
-    const scannerVersion = '19.4.4';
+    const scannerVersion = '19.5.0';
 
     let pages = []; // Array of { id, width, height, sourceFile, thumbnailDataUrl }
     let currentPageIndex = -1;
