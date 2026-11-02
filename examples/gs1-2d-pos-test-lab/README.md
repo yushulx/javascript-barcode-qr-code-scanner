@@ -7,7 +7,6 @@ the normalized GTIN and the rule behind every cart decision.
 The lesson is the one that breaks during a GS1 2D rollout: **de-duplicate reads
 from one package presentation, never de-duplicate a GTIN across the basket**.
 
-[Run this example](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/gs1-2d-pos-test-lab/) ·
 [Hosted demo](https://www.dynamsoft.com/codepool/demos/gs1-2d-pos-test-lab/)
 
 ## What it demonstrates
