@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta
+      name="viewport"
+      content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-camera-enhancer@3.3.4/dist/dce.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.20/dist/dbr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
+    <title>QR Code Scanner in React-Native-WebView</title>
+    <style>
+      .scanner {
+        display: none;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .scanner.active {
+        display: block;
+      }
+
+      .controls button {
+        width: 10em;
+        height: 10em;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: space-around;
+        position: fixed;
+        top: calc(35% - 5em);
+        left: 50%;
+        width: 100%;
+        transform: translate(-50%);
+      }
+      .app {
+        position: fixed;
+        top: 0;
+        top: env(safe-area-inset-top);
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="controls">
+        <button onclick="startScan();">Scan From Camera</button>
+        <input type="file" onchange="readFromImage();" name="file" accept=".jpg,.jpeg,.png,.bmp" id="file" style="display:none">
+        <button onclick="document.getElementById('file').click()" >Read From Image</button>
+      </div>
+      <div class="status"></div>
+    </div>
+    <div class="scanner">
+    </div>
+    <script>
+      let enhancer;
+      let reader;
+      let interval;
+      let processing = false;
+      init();
+      async function init(){
+        updateStatus("Initializing...");
+        if (getUrlParam("startScan") === "true") {
+          hideControls();
+        }
+        await requestCameraPermission();
+        
+        if (getUrlParam("license")) {
+          Dynamsoft.DBR.BarcodeScanner.license = getUrlParam("license");
+        }else{
+          Dynamsoft.DBR.BarcodeScanner.license = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=='; // one-day trial
+        }
+        
+        reader = await Dynamsoft.DBR.BarcodeScanner.createInstance();
+        enhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance();
+        enhancer.on("played", (playCallbackInfo) => {
+          console.log("camera started");
+          startProcessingLoop();
+        });
+        enhancer.on("cameraClose", playCallBackInfo => {
+          stopScan();
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage("");
+          }
+        });
+        await enhancer.setUIElement(Dynamsoft.DCE.CameraEnhancer.defaultUIElementURL);
+        let container = document.getElementsByClassName("scanner")[0];
+        container.appendChild(enhancer.getUIElement());
+        updateStyleForiOS();
+        updateStatus("");
+        if (getUrlParam("startScan") === "true") {
+          startScan();
+        }
+      }
+
+      function updateStyleForiOS(){
+        document.getElementsByClassName("dce-sel-camera")[0].parentElement.style = "position: absolute;left: 0;top: 0;top: env(safe-area-inset-top);";
+        document.getElementsByClassName("dce-btn-close")[0].style = "position: absolute;right: 0;top: 0;top: env(safe-area-inset-top);";
+      }
+
+      function hideControls(){
+        document.getElementsByClassName("controls")[0].style.display = "none";
+      }
+
+      function startProcessingLoop(isBarcode){
+        stopProcessingLoop();
+        interval = setInterval(captureAndDecode,100); // read barcodes
+      }
+
+      function stopProcessingLoop(){
+        if (interval) {
+          clearInterval(interval);
+          interval = undefined;
+        }
+        processing = false;
+      }
+
+      async function captureAndDecode() {
+        if (!enhancer || !reader) {
+          return
+        }
+        if (enhancer.isOpen() === false) {
+          return;
+        }
+        if (processing == true) {
+          return;
+        }
+        processing = true; // set processing to true so that the next frame will be skipped if the processing has not completed.
+        let frame = enhancer.getFrame();
+        if (frame) {  
+          let results = await reader.decode(frame);
+          if (results.length > 0) {
+            updateStatus("Found "+results.length+((results.length>1)?" results":" result"));
+            stopScan();
+            if (window.ReactNativeWebView) {
+              window.ReactNativeWebView.postMessage(JSON.stringify(results));
+            }
+          }
+          processing = false;
+        }
+      };
+
+      function startScan(){
+        if (!enhancer || !reader) {
+          alert("Please wait for the initialization of Dynamsoft Barcode Reader");
+          return;
+        }
+        document.getElementsByClassName("scanner")[0].classList.add("active");
+        enhancer.open(true); //start the camera
+      }
+        
+      function stopScan(){
+        stopProcessingLoop();
+        enhancer.close(true);
+        document.getElementsByClassName("scanner")[0].classList.remove("active");
+      }
+
+      async function readFromImage(){
+        let fileInput = document.getElementById("file");
+        if (fileInput.files.length > 0) {
+          let file = fileInput.files[0];
+          let results = await reader.decode(file);
+          updateStatus("Found "+results.length+((results.length>1)?" results":" result"));
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify(results));
+          }
+        }
+      }
+
+      function updateStatus(info){
+        document.getElementsByClassName("status")[0].innerText = info;
+      }
+
+      async function requestCameraPermission() {
+        const constraints = {video: true, audio: false};
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const tracks = stream.getTracks();
+        for (let i=0;i<tracks.length;i++) {
+          const track = tracks[i];
+          track.stop();  // stop the opened camera
+        }
+      }
+
+      function getUrlParam(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r != null) return unescape(r[2]); return null;
+      }
+    </script>
+  </body>
+</html>

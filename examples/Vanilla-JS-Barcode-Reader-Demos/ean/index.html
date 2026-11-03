@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EAN/UPC Scanner</title>
+  <style>
+  h2 {
+    text-align: center;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #cameraView {
+    width: 100%;
+    height: 60vh;
+  }
+  </style>
+</head>
+<html>
+<body>
+  <div id="app">
+    <h2>EAN/UPC Scanner</h2>
+    <button id="startScanBtn">Start Scanning</button>
+    <div id="status">Loading...</div>
+    <div id="cameraView"></div>
+    <div id="result"></div>
+  </div>
+  <script>
+    let cvRouter;
+    let cameraEnhancer;
+    let initialized = false;
+    document.getElementById("startScanBtn").addEventListener("click",function(){
+      if (initialized) {
+        toggleScanning();
+      }else{
+        alert("Please wait for the initialization.");
+      }
+    });
+    
+    window.onload = function(){
+      initBarcodeScanner();
+    }
+
+    async function initBarcodeScanner(){
+      Dynamsoft.License.LicenseManager.initLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9");
+      Dynamsoft.Core.CoreModule.loadWasm(["dbr"]);
+      cvRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+
+      let cameraView = await Dynamsoft.DCE.CameraView.createInstance();
+      cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
+      document.querySelector("#cameraView").append(cameraView.getUIElement());
+      cvRouter.setInput(cameraEnhancer);
+
+      const resultsContainer = document.querySelector("#results");
+      cvRouter.addResultReceiver({ onDecodedBarcodesReceived: (result) => {
+        console.log(result);
+        displayResults(result);
+      }});
+
+      let filter = new Dynamsoft.Utility.MultiFrameResultCrossFilter();
+      filter.enableResultCrossVerification("barcode", true);
+      filter.enableResultDeduplication("barcode", true);
+      await cvRouter.addResultFilter(filter);
+      await updateSettingsForEAN();
+      document.getElementById("status").remove();
+      initialized = true;
+    }
+
+    function displayResults(result){
+      if (result.barcodeResultItems.length > 0) {
+        let container = document.getElementById("result");
+        let item = result.barcodeResultItems[0];
+        container.innerText = `${item.formatString}: ${item.text}`;
+      }
+    }
+
+    async function toggleScanning() {
+      let btn = document.getElementById("startScanBtn");
+      if (btn.innerText === "Start Scanning") {
+        await cameraEnhancer.open();
+        await cvRouter.startCapturing("ReadBarcodes_Balance");
+        btn.innerText = "Stop Scanning";
+      }else{
+        await cvRouter.stopCapturing();
+        await cameraEnhancer.close();
+        btn.innerText = "Start Scanning";
+      }
+    }
+
+    async function updateSettingsForEAN(){
+      let settings = await cvRouter.outputSettings();
+      let formatOptionsArray = settings.BarcodeFormatSpecificationOptions;
+      for (let index = 0; index < formatOptionsArray.length; index++) {
+        const options = formatOptionsArray[index];
+        options["EnableAddOnCode"] = 1;
+      }
+      let barcodeOptionsArray = settings.BarcodeReaderTaskSettingOptions;
+      console.log(barcodeOptionsArray)
+      for (let index = 0; index < barcodeOptionsArray.length; index++) {
+        const options = barcodeOptionsArray[index];
+        options["BarcodeFormatIds"] = ["BF_EAN_8","BF_EAN_13","BF_UPC_A","BF_UPC_E"];
+      }
+      await cvRouter.initSettings(settings);
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.5000/dist/dbr.bundle.js"></script>
+</body>
+</html>
