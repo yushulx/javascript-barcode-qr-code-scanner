@@ -1,5 +1,5 @@
 // Capture Vision 3.x resolves the engine and the MRZ models from these two paths.
-const DCV_BUNDLE = "https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.6.3200/dist/";
+const DCV_BUNDLE = "https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.6.5000/dist/";
 const DCV_DATA = "https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-data@1.2.2/";
 
 let initiazlied = false;

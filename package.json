@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "dynamsoft-capture-vision-bundle": "^3.6.3200",
+    "dynamsoft-capture-vision-bundle": "^3.6.5000",
     "next": "15.0.3",
     "react": "19.0.0-rc-66855b96-20241106",
     "react-dom": "19.0.0-rc-66855b96-20241106"
