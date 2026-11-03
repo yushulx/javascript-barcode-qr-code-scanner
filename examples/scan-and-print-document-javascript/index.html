@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Document Scanning via Camera</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0" />
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.6.5000/dist/dcv.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-document-viewer@5.0.1/dist/ddv.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-document-viewer@5.0.1/dist/plugins/ddv-plugin-annotation.js"></script>
+  <script type="module">
+    import { BlackwhiteFilter } from 'https://cdn.jsdelivr.net/npm/image-filter-js/dist/image-filter.js';
+    window.BlackwhiteFilter = BlackwhiteFilter;
+  </script>
+  <script src="detectionHandler.js"></script>
+  <script src="filterHandler.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dynamsoft-document-viewer@5.0.1/dist/ddv.css">
+  <style>
+    #container {
+      max-width: 100%;
+      height: 480px;
+    }
+
+    .modal {
+      display: flex;
+      align-items: flex-start;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      min-width: 250px;
+      border: 1px solid gray;
+      border-radius: 5px;
+      background: white;
+      z-index: 99;
+      padding: 10px;
+      visibility: hidden;
+    }
+
+    .download-modal.active {
+      visibility: inherit;
+    }
+
+    .resize-modal.active {
+      visibility: inherit;
+    }
+
+    .info-modal.active {
+      visibility: inherit;
+    }
+
+    .ddv-button-menu {
+      background-image: url("menu.svg");
+      background-position: center;
+      background-size: contain;
+      background-repeat: no-repeat;
+      height: 1.5em !important;
+      filter: invert(1);
+    }
+
+    .menu {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      min-height: 100px;
+      background: white;
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .menu.active {
+      display: flex;
+    }
+
+    .menu-item {
+      padding: 10px;
+      background: white;
+      width: calc(100% - 30px);
+      border: 1px solid;
+      margin-left: 5px;
+      margin-right: 5px;
+      cursor: pointer;
+      text-align: center;
+      border-radius: 10px;
+    }
+
+    .setting-item {
+      padding: 10px 0;
+    }
+
+    .ddv-filter-item {
+      max-width: 100px;
+      width: auto!important;
+    }
+  </style>  
+</head>
+<body>
+  <h2>Document Scanning via Camera</h2>
+  <label>
+    Camera:
+    <select id="select-camera"></select>
+  </label>
+  <label>
+    Resolution:
+    <select id="select-resolution">
+      <option value="640x480">640x480</option>
+      <option value="1280x720">1280x720</option>
+      <option value="1920x1080" selected>1920x1080</option>
+      <option value="3840x2160">3840x2160</option>
+    </select>
+  </label>
+  <button onclick="startScanning();">Start</button>
+  <div id="container"></div>
+  <div class="modal download-modal">
+    <div>
+      <div>Please select which page size to use for the exported PDF.</div>
+      <div class="setting-item">
+        <label>
+          Page Size:
+          <select id="page-size-select">
+            <option value="page/default">Default</option>
+            <option value="page/a4">A4</option>
+            <option value="page/a3">A3</option>
+            <option value="page/letter">Letter</option>
+          </select>
+        </label>
+      </div>
+      <button onclick="downloadAsPDF();">Download as PDF</button>
+      <button onclick="hideDownloadModal();">Cancel</button>
+    </div>
+  </div>
+  <div class="modal resize-modal">
+    <div>
+      <div>Please set how to fit the image for printing.</div>
+      <div class="setting-item">
+        Page Size:
+        <div>
+          <label>
+            Width (mm):
+            <input type="number" id="pageWidth" value="210" />
+          </label>
+        </div>
+        <div>
+          <label>
+            Height (mm):
+            <input type="number" id="pageHeight" value="297" />
+          </label>
+        </div>
+      </div>
+      <div class="setting-item">
+        Document size:
+        <div>
+          <label>
+            Width (mm):
+            <input type="number" id="docWidth" value="89" />
+          </label>
+        <div>
+        </div>
+          <label>
+            Height (mm):
+            <input type="number" id="docHeight" value="51" />
+          </label>
+        </div>
+        <div>
+          <label>
+            Directly resize the image:
+            <input type="checkbox" id="directResize" checked />
+          </label>
+        </div>
+      </div>
+      <button onclick="resize();">Resize</button>
+      <button onclick="hideResizeModal();">Cancel</button>
+    </div>
+  </div>
+  <div class="modal info-modal">
+    <pre id="info"></pre>
+    <button onclick="hideInfoModal();">Close</button>
+  </div>
+  <div class="menu">
+    <div class="menu-item">Download as PDF</div>
+    <div class="menu-item">Download as JPEG</div>
+    <div class="menu-item">Resize the Image for Printing</div>
+    <div class="menu-item">Check Image Info</div>
+    <div class="menu-item">Cancel</div>
+  </div>
+  <script type="text/javascript">
+    let cameras = [];
+    window.onload = async function(){
+      await initMobileWebCapture();
+      await requestCameraPermission();
+      await listCameras();
+      document.getElementsByClassName("menu")[0].addEventListener("click",function(e){
+        if (e.target.innerText == "Download as PDF"){
+          showDownloadModal();
+        } else if (e.target.innerText == "Resize the Image for Printing"){
+          showResizeModal();
+        }else if (e.target.innerText == "Download as JPEG"){
+          downloadAsJPEG();
+        }else if (e.target.innerText == "Check Image Info"){
+          checkImageInfo();
+        }
+        hideActionMenu();
+      });
+    }
+
+    async function checkImageInfo(){
+      let pageUid = editViewer.getCurrentPageUid();
+      let pageData = await editViewer.currentDocument.getPageData(pageUid);
+      console.log(pageData);
+      let normalizedWidth = 210;
+      let normalizedHeight = normalizedWidth / (pageData.display.width / pageData.display.height);
+      let info = {
+        "Width": pageData.display.width,
+        "Height": pageData.display.height,
+        "Ratio": normalizedWidth + "x" + normalizedHeight
+      };
+      document.getElementById("info").innerText = JSON.stringify(info,null,2);
+      showInfoModal();
+    }
+
+    async function initMobileWebCapture(){
+      Dynamsoft.Core.CoreModule.loadWasm();
+      Dynamsoft.DDV.Core.loadWasm();
+
+      // Initialize DDN
+      const license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+      await Dynamsoft.License.LicenseManager.initLicense(license, { executeNow: true });
+      Dynamsoft.DDV.Core.license = license;
+      Dynamsoft.DDV.use(Dynamsoft.DDV.AnnotationPlugin);
+      // Initialize DDV
+      await Dynamsoft.DDV.Core.init();
+      
+      // Configure document boundaries function
+      await initDocDetectModule(Dynamsoft.DDV, Dynamsoft.CVR);
+
+      // Configure image filter feature which is in edit viewer
+      setImageFilterHandler();
+      const captureViewerUiConfig = {
+          type: Dynamsoft.DDV.Elements.Layout,
+          flexDirection: "column",
+          children: [
+              {
+                  type: Dynamsoft.DDV.Elements.Layout,
+                  className: "ddv-capture-viewer-header-mobile",
+                  children: [
+                      {
+                          type: "CameraResolution",
+                          className: "ddv-capture-viewer-resolution",
+                      },
+                      Dynamsoft.DDV.Elements.Flashlight,
+                  ],
+              },
+              Dynamsoft.DDV.Elements.MainView,
+              {
+                  type: Dynamsoft.DDV.Elements.Layout,
+                  className: "ddv-capture-viewer-footer-mobile",
+                  children: [
+                      Dynamsoft.DDV.Elements.AutoDetect,
+                      Dynamsoft.DDV.Elements.AutoCapture,
+                      {
+                          type: "Capture",
+                          className: "ddv-capture-viewer-captureButton",
+                      },
+                      {
+                          // Bind click event to "ImagePreview" element
+                          // The event will be registered later.
+                          type: Dynamsoft.DDV.Elements.ImagePreview,
+                          events:{ 
+                              click: "showPerspectiveViewer"
+                          }
+                      },
+                      Dynamsoft.DDV.Elements.CameraConvert,
+                  ],
+              },
+          ],
+      };
+
+
+      const perspectiveUiConfig = {
+          type: Dynamsoft.DDV.Elements.Layout,
+          flexDirection: "column",
+          children: [
+              {
+                  type: Dynamsoft.DDV.Elements.Layout,
+                  className: "ddv-perspective-viewer-header-mobile",
+                  children: [
+                      {
+                          // Add a "Back" button in perspective viewer's header and bind the event to go back to capture viewer.
+                          // The event will be registered later.
+                          type: Dynamsoft.DDV.Elements.Button,
+                          className: "ddv-button-back",
+                          events:{
+                              click: "backToCaptureViewer"
+                          }
+                      },
+                      Dynamsoft.DDV.Elements.Pagination,
+                      {   
+                          // Bind event for "PerspectiveAll" button to show the edit viewer
+                          // The event will be registered later.
+                          type: Dynamsoft.DDV.Elements.PerspectiveAll,
+                          events:{
+                              click: "showEditViewer"
+                          }
+                      },
+                  ],
+              },
+              Dynamsoft.DDV.Elements.MainView,
+              {
+                  type: Dynamsoft.DDV.Elements.Layout,
+                  className: "ddv-perspective-viewer-footer-mobile",
+                  children: [
+                      Dynamsoft.DDV.Elements.FullQuad,
+                      Dynamsoft.DDV.Elements.RotateLeft,
+                      Dynamsoft.DDV.Elements.RotateRight,
+                      Dynamsoft.DDV.Elements.DeleteCurrent,
+                      Dynamsoft.DDV.Elements.DeleteAll,
+                  ],
+              },
+          ],
+      };
+
+      const editViewerUiConfig = {
+          type: Dynamsoft.DDV.Elements.Layout,
+          flexDirection: "column",
+          className: "ddv-edit-viewer-mobile",
+          children: [
+              {
+                  type: Dynamsoft.DDV.Elements.Layout,
+                  className: "ddv-edit-viewer-header-mobile",
+                  children: [
+                      {
+                          // Add a "Back" buttom to header and bind click event to go back to the perspective viewer
+                          // The event will be registered later.
+                          type: Dynamsoft.DDV.Elements.Button,
+                          className: "ddv-button-back",
+                          events:{
+                              click: "backToPerspectiveViewer"
+                          }
+                      },
+                      Dynamsoft.DDV.Elements.Pagination,
+                      {
+                          type: Dynamsoft.DDV.Elements.Button,
+                          className: "ddv-button-menu",
+                          events:{
+                              click: "menu"
+                          }
+                      }
+                  ],
+              },
+              Dynamsoft.DDV.Elements.MainView,
+              {
+                  type: Dynamsoft.DDV.Elements.Layout,
+                  className: "ddv-edit-viewer-footer-mobile",
+                  children: [
+                      Dynamsoft.DDV.Elements.DisplayMode,
+                      Dynamsoft.DDV.Elements.RotateLeft,
+                      Dynamsoft.DDV.Elements.Crop,
+                      Dynamsoft.DDV.Elements.Filter,
+                      Dynamsoft.DDV.Elements.Undo,
+                      Dynamsoft.DDV.Elements.Delete,
+                      Dynamsoft.DDV.Elements.Load,
+                      Dynamsoft.DDV.Elements.AnnotationSet,
+                  ],
+              },
+          ],
+      };
+      // Create a capture viewer
+      captureViewer = new Dynamsoft.DDV.CaptureViewer({
+          container: "container",
+          uiConfig: captureViewerUiConfig,
+          viewerConfig: {
+              acceptedPolygonConfidence: 60,
+              enableAutoDetect: false,
+          }
+      });
+
+      // Register an event in `captureViewer` to show the perspective viewer
+      captureViewer.on("showPerspectiveViewer",() => {
+          switchViewer(0,1,0);
+      });
+
+      // Create a perspective viewer
+      perspectiveViewer = new Dynamsoft.DDV.PerspectiveViewer({
+          container: "container",
+          groupUid: captureViewer.groupUid,
+          uiConfig: perspectiveUiConfig,
+          viewerConfig: {
+              scrollToLatest: true,
+          }
+      });
+
+      perspectiveViewer.hide();
+
+      // Register an event in `perspectiveViewer` to go back the capture viewer
+      perspectiveViewer.on("backToCaptureViewer",() => {
+          switchViewer(1,0,0);
+          captureViewer.play().catch(err => {alert(err.message)});
+      });
+
+      // Register an event in `perspectiveViewer` to show the edit viewer
+      perspectiveViewer.on("showEditViewer",() => {
+          switchViewer(0,0,1)
+      });
+      
+      // Create an edit viewer
+      editViewer = new Dynamsoft.DDV.EditViewer({
+          container: "container",
+          groupUid: captureViewer.groupUid,
+          uiConfig: editViewerUiConfig
+      });
+
+      editViewer.hide();
+
+      // Register an event in `editViewer` to go back the perspective viewer
+      editViewer.on("backToPerspectiveViewer",() => {
+          switchViewer(0,1,0);
+      });
+
+      editViewer.on("menu",() => {
+        console.log("download");
+        showActionMenu();
+      });
+
+      // Define a function to control the viewers' visibility
+      const switchViewer = (c,p,e) => {
+        captureViewer.hide();
+        perspectiveViewer.hide();
+        editViewer.hide();
+
+        if(c) {
+          captureViewer.show();
+        } else {
+          captureViewer.stop();
+        }
+        
+        if(p) perspectiveViewer.show();
+        if(e) editViewer.show();
+      };
+    }
+
+    function showActionMenu(){
+      document.getElementsByClassName("menu")[0].classList.add("active");
+    }
+
+    function hideActionMenu(){
+      document.getElementsByClassName("menu")[0].classList.remove("active");
+    }
+
+    function showResizeModal(){
+      document.getElementsByClassName("resize-modal")[0].classList.add("active");
+    }
+
+    function hideResizeModal(){
+      document.getElementsByClassName("resize-modal")[0].classList.remove("active");
+    }
+
+    function showInfoModal(){
+      document.getElementsByClassName("info-modal")[0].classList.add("active");
+    }
+
+    function hideInfoModal(){
+      document.getElementsByClassName("info-modal")[0].classList.remove("active");
+    }
+
+    function showDownloadModal(){
+      document.getElementsByClassName("download-modal")[0].classList.add("active");
+    }
+
+    function hideDownloadModal(){
+      document.getElementsByClassName("download-modal")[0].classList.remove("active");
+    }
+
+    async function resize(){
+      let pageWidth = document.getElementById("pageWidth").value;
+      let pageHeight = document.getElementById("pageHeight").value;
+      let docWidth = document.getElementById("docWidth").value;
+      let docHeight = document.getElementById("docHeight").value;
+      let DPI = 300;
+      let pageUid = editViewer.getCurrentPageUid();
+      let pageWidthPx = pageWidth * DPI / 25.4;
+      let pageHeightPx = pageHeight * DPI / 25.4;
+      let docWidthPx = docWidth * DPI / 25.4;
+      let docHeightPx = docHeight * DPI / 25.4;
+      let directResize = document.getElementById("directResize").checked;
+      if (directResize){
+        let docImageBlob = (await editViewer.currentDocument.getPageData(pageUid)).display.data;
+        let img = document.createElement("img");
+        img.onload = async function(){
+          let resizedDocBlob = await resizeImage(img,docWidthPx,docHeightPx);
+          await editViewer.currentDocument.updatePage(pageUid, resizedDocBlob);
+        };
+        img.src = URL.createObjectURL(docImageBlob);
+      } else {
+        let pageBlob = await createEmptyPage(pageWidthPx,pageHeightPx);
+        let docImageBlob = (await editViewer.currentDocument.getPageData(pageUid)).display.data;
+        let img = document.createElement("img");
+        img.onload = async function(){
+          let resizedDocBlob = await resizeImage(img,docWidthPx,docHeightPx);
+          await editViewer.currentDocument.updatePage(pageUid, pageBlob);
+          let newPageData = await editViewer.currentDocument.getPageData(pageUid);
+          let ratio = newPageData.cropBox.width / newPageData.display.width;
+          const rect = {
+            x: 50,
+            y: 50,
+            width: docWidthPx * ratio,
+            height: docHeightPx * ratio
+          };
+          const options = {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+            stamp: resizedDocBlob 
+          };
+          const stamp = await Dynamsoft.DDV.annotationManager.createAnnotation(pageUid, "stamp", options);
+          console.log(stamp);
+          hideResizeModal();
+        }
+        img.src = URL.createObjectURL(docImageBlob);
+      }
+    }
+
+    function resizeImage(image, width, height) {
+      return new Promise((resolve, reject) => {
+        let canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        let ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0, width, height);
+        canvas.toBlob(blob => {
+          resolve(blob);
+        });
+      });
+    }
+
+    function createEmptyPage(width,height){
+      return new Promise((resolve, reject) => {
+        let canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        let ctx = canvas.getContext("2d");
+        ctx.fillStyle = "white";
+        ctx.fillRect(0,0,width,height);
+        canvas.toBlob(blob => {
+          resolve(blob);
+        });  
+      })
+    }
+
+    async function downloadAsPDF(){
+      let pageSize = document.getElementById("page-size-select").selectedOptions[0].value;
+      const pdfSettings = {
+        compression: "pdf/jpeg",
+        pageType: pageSize
+      };
+      const blob = await editViewer.currentDocument.saveToPdf(pdfSettings);
+      downloadBlob(blob,"document.pdf");
+      hideDownloadModal();
+    };
+
+    async function downloadAsJPEG(){
+      let index = editViewer.getCurrentPageIndex();
+      let blob = await editViewer.currentDocument.saveToJpeg(index, {quality: 100,saveAnnotation: true});
+      downloadBlob(blob,"document.jpg");
+    }
+
+    function downloadBlob(blob,filename){
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+    }
+
+    async function listCameras(){
+      let cameraSelect = document.getElementById("select-camera");
+      let allDevices = await navigator.mediaDevices.enumerateDevices();
+      for (let i = 0; i < allDevices.length; i++){
+        let device = allDevices[i];
+        if (device.kind == 'videoinput'){
+          cameras.push(device);
+          cameraSelect.appendChild(new Option(device.label,device.deviceId));
+        }
+      }
+    }
+
+    async function requestCameraPermission() {
+      try {
+        const constraints = {video: true, audio: false};
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        closeStream(stream);
+      } catch (error) {
+        console.log(error);
+        throw error;
+      }
+    }
+    function closeStream(stream){
+      if (stream) {
+        const tracks = stream.getTracks();
+        for (let i=0;i<tracks.length;i++) {
+          const track = tracks[i];
+          track.stop();  // stop the opened tracks
+        }
+      }
+    }
+
+    async function startScanning(){
+      let selectedCamera = cameras[document.getElementById("select-camera").selectedIndex];
+      await captureViewer.selectCamera(selectedCamera.deviceId);
+      let selectedResolution = document.getElementById("select-resolution").selectedOptions[0].value;
+      let width = parseInt(selectedResolution.split("x")[0]);
+      let height = parseInt(selectedResolution.split("x")[1]);
+      // Play video stream in 1080P
+      captureViewer.play({
+        resolution: [width,height],
+      }).catch(err => {
+        alert(err.message)
+      });
+    }
+  </script>
+</body>
+</html>
