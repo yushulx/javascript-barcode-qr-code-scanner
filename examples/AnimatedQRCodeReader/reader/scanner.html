@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0" />
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.5000/dist/dbr.bundle.js"></script>
+<style>
+
+.statistics-container{
+    position:absolute;
+    left:50%;
+    bottom:0;
+    transform:translate(-50%,0);
+    text-align: center;
+    color: white;
+    text-shadow: 1px 1px black;
+}
+
+.statistics-container-scanned{
+    color: black;
+}
+
+
+</style>
+</head>
+<body>
+    <div id="scanner" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:#000;">
+        <div class="dce-video-container" style="position:absolute;left:0;top:0;width:100%;height:100%;background:#000;">
+            <video id="video" autoplay playsinline style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;"></video>
+            <canvas id="overlay" style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;pointer-events:none;z-index:2;"></canvas>
+        </div>
+        <div id="received" style="display:none;position:absolute;left:50%;top:56px;transform:translateX(-50%);color:#00e5ff;text-shadow:1px 1px black;font-size:20px;font-weight:bold;z-index:9;"></div>
+        <div style="position: absolute;left: 0;top: 0;z-index:3;">
+            <select class="dce-sel-camera" style="display: block;"></select>
+        </div>
+        <input type="button" value="Stop" onclick="stop();"  style="position:absolute;right:0;top:0;z-index:3;"/>
+    </div>
+    <div id="transferNotice" style="display:none;position:fixed;top:0;left:0;right:0;padding:14px;background:#16a34a;color:#ffffff;font-size:16px;z-index:10;text-align:center;font-weight:bold;"></div>
+    <div id="home">
+        <h1>Animated QR Code Reader</h1>
+        <input type="button" value="Start Scanning" onclick="startScanning();" />
+        </br>
+        <input type="checkbox" id="scanRegionChk" value="Region">
+        <label for="scanRegionChk">Regional Scanning</label>
+        </br>
+        Decode file:
+        <input type="file" id="file" onchange="decodefile()"/>
+    </div>
+    <div id="statistics" class="statistics-container">
+        <pre id="statisticsPre">
+        </pre>
+    </div>
+    <div id="decodedResults">
+        Results:
+        <ol id="decodedList">
+        </ol>
+    </div>
+  <script>
+    const LICENSE_KEY = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==';
+    let startTime = 0;
+    let framesRead = 0;
+    let successNum =0;
+    let code_results = {};
+    let total = 0;
+    let cvr = null;
+    let stream = null;
+    let scanning = false;
+    let lastDetected = 0;
+    let videoEl, overlayCanvas, overlayCtx, captureCanvas, captureCtx;
+
+    init();
+
+    async function init(){
+        await Dynamsoft.License.LicenseManager.initLicense(LICENSE_KEY, true);
+        await Dynamsoft.Core.CoreModule.loadWasm(['DBR']);
+        cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+        videoEl = document.getElementById('video');
+        overlayCanvas = document.getElementById('overlay');
+        overlayCtx = overlayCanvas.getContext('2d');
+        captureCanvas = document.createElement('canvas');
+        captureCtx = captureCanvas.getContext('2d');
+        console.log("init done");
+    }
+
+    async function startScanning(){
+        if (cvr==null || cvr==undefined){
+            alert("Please wait for the initialization of the scanner.")
+            return;
+        }
+        document.getElementById("transferNotice").style.display = "none";
+        var received = document.getElementById("received");
+        received.style.display = "none";
+        resetResults();
+        var scannerContainer = document.getElementById("scanner");
+        scannerContainer.style.display = "";
+        var homeContainer = document.getElementById("home");
+        homeContainer.style.display = "none";
+        var statisticsContainer = document.getElementById("statistics");
+        statisticsContainer.className="statistics-container";
+        var decodedResultsContainer = document.getElementById("decodedResults");
+        decodedResultsContainer.style.display = "none";
+        var decodedList = document.getElementById("decodedList");
+        decodedList.innerHTML="";
+        framesRead = 0;
+        successNum = 0;
+        lastDetected = 0;
+        startTime = performance.now();
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'environment',
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                }
+            });
+            videoEl.srcObject = stream;
+            await videoEl.play();
+        } catch (e) {
+            alert("Camera access failed: " + e.message +
+                "\n\nNote: the camera API requires HTTPS or localhost. If you opened this file directly (file://), serve it with a local web server instead, e.g. 'python -m http.server' in this folder, or use the online demo.");
+            stop();
+            return;
+        }
+        scanning = true;
+        try {
+            await updateSettings(cvr,false);
+        } catch (e) {
+            console.error("updateSettings failed:", e);
+        }
+        scanLoop();
+    }
+
+    const scanLoop = async () => {
+        if (!scanning) return;
+        if (videoEl.readyState >= 2 && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+            if (captureCanvas.width !== videoEl.videoWidth || captureCanvas.height !== videoEl.videoHeight) {
+                captureCanvas.width = videoEl.videoWidth;
+                captureCanvas.height = videoEl.videoHeight;
+                overlayCanvas.width = videoEl.videoWidth;
+                overlayCanvas.height = videoEl.videoHeight;
+            }
+            captureCtx.drawImage(videoEl, 0, 0, captureCanvas.width, captureCanvas.height);
+            try {
+                const result = await cvr.capture(captureCanvas, 'ReadBarcodes_Default');
+                if (scanning) onFrameRead(result);
+            } catch(e){
+                console.error(e);
+            }
+        }
+        if (scanning) requestAnimationFrame(scanLoop);
+    };
+
+    async function stop(){
+        scanning = false;
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+        var scannerContainer = document.getElementById("scanner");
+        scannerContainer.style.display = "none";
+        var homeContainer = document.getElementById("home");
+        homeContainer.style.display = "";
+        var statisticsContainer = document.getElementById("statistics");
+        statisticsContainer.className="statistics-container-scanned";
+        var decodedResultsContainer = document.getElementById("decodedResults");
+        decodedResultsContainer.style.display = "";
+        document.getElementById("received").style.display = "none";
+    }
+
+    function onFrameRead(result){
+        framesRead = framesRead + 1;
+        const items = (result.items || []).filter(it => it.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE);
+        lastDetected = items.length;
+        overlayCtx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height);
+        if (items.length > 0) {
+            successNum = successNum + 1;
+            var decoded = [];
+            for (const item of items){
+                // Guard the overlay drawing: some results may carry an incomplete
+                // location, and a throw here would break the whole scan loop.
+                try {
+                    const location = item.location;
+                    if (location && location.points && location.points.length >= 4){
+                        overlayCtx.strokeStyle = '#00ff00';
+                        overlayCtx.lineWidth = 4;
+                        const points = location.points;
+                        overlayCtx.beginPath();
+                        overlayCtx.moveTo(points[0].x, points[0].y);
+                        for (let i=1;i<points.length;i++) overlayCtx.lineTo(points[i].x, points[i].y);
+                        overlayCtx.closePath();
+                        overlayCtx.stroke();
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+                try {
+                    processRead(item);
+                } catch(e) {
+                    console.error(e);
+                }
+                decoded.push(item.text);
+            }
+            // give the user immediate visual feedback: frame progress for animated
+            // transfers, or the decoded text when scanning a plain QR code.
+            var received = document.getElementById("received");
+            received.style.display = "block";
+            var receivedCount = getObjectLength(code_results);
+            if (total > 0){
+                received.textContent = "frame " + receivedCount + "/" + total;
+            }else{
+                received.textContent = decoded[0].substring(0, 160);
+            }
+        }
+        var endTime = performance.now();
+        updateStatistics(endTime-startTime);
+    }
+
+    function resetResults(){
+        code_results={};
+        total = 0;
+    }
+
+    function updateStatistics(timeElapsed){
+        var statisticsPre = document.getElementById("statisticsPre");
+        statistics = "elapsed time: " + (timeElapsed)/1000 +"s";
+        statistics = statistics +"\ntotal frame number: " + framesRead;
+        statistics = statistics +"\nsuccessful number: " + successNum;
+        statistics = statistics +"\nlast frame detected: " + lastDetected;
+        statistics = statistics +"\nsuccess fps: " + (successNum/(timeElapsed/1000)).toFixed(2);
+        statistics = statistics +"\nprogress: " + getObjectLength(code_results) + "/" + total;
+        statisticsPre.innerHTML=statistics;
+    }
+
+    function processRead(item){
+        var text = item.text;
+        try {
+            var meta = text.split("|")[0];
+            // Only animated QR frames carry the "index/total" metadata; plain QR
+            // codes are shown as text and must not pollute the transfer state.
+            if (!/^\d+\/\d+$/.test(meta)) {
+                return;
+            }
+            var totalOfThisOne = parseInt(meta.split("/")[1]);
+            if (total!=0){
+                if (total != totalOfThisOne){
+                    total = totalOfThisOne;
+                    code_results={};
+                    return;
+                }
+            }
+
+            total = totalOfThisOne;
+            var index = parseInt(meta.split("/")[0]);
+            code_results[index]=item;
+            if (getObjectLength(code_results)==total){
+                console.log("completed");
+                console.log(code_results);
+                onCompleted();
+            }
+
+        } catch(error) {
+            console.log(error);
+        }
+    }
+
+    function onCompleted(){
+        // Stop scanning and close the camera once the last frame has been received.
+        var endTime = performance.now();
+        timeElapsed = endTime - startTime;
+        stop();
+        var notice = document.getElementById("transferNotice");
+        notice.style.display = "block";
+        notice.textContent = "Transfer complete: " + getObjectLength(code_results) + " frames in " + (timeElapsed/1000).toFixed(2) + "s";
+        var decodedResultsContainer = document.getElementById("decodedResults");
+        decodedResultsContainer.style.display = "";
+        updateStatistics(timeElapsed);
+        showResult(timeElapsed);
+    }
+
+    function getObjectLength(obj){
+        return getObjectKeys(obj).length;
+    }
+
+    function getObjectKeys(obj){
+        return Object.keys(obj);
+    }
+
+    async function showResult(timeElapsed){
+        if (getObjectLength(code_results) < total){
+            alert("Incomplete transfer: received " + getObjectLength(code_results) + " of " + total + " frames. Please scan again.");
+            resetResults();
+            return;
+        }
+        var jointData = new Uint8Array(0);
+        for (var i=0;i<getObjectLength(code_results);i++){
+            var index = i+1;
+            var result = code_results[index];
+            console.log(result);
+            var bytes = result.bytes;
+            var text = result.text;
+            if (index == 1){
+                // The per-transfer flag char ('R'/'Z') sits right after "1/N|", so the
+                // decoded text is "1/N|Rfilename|mime|data...". Skip it when parsing the
+                // filename. Separator positions for slicing come from the bytes.
+                var parts = text.split("|");
+                var filename = decodeURIComponent(parts[1].substring(1));
+                var mimeType = parts[2];
+                var sep1 = bytes.indexOf(0x7C); // after "1/N"
+                var sep2 = bytes.indexOf(0x7C, sep1+1); // after filename
+                var sep3 = bytes.indexOf(0x7C, sep2+1); // after mime
+                var dataStart = sep3 + 1;
+                data = bytes.slice(dataStart,bytes.length);
+            }else{
+                var dataStart = bytes.indexOf(0x7C)+1;
+                data = bytes.slice(dataStart,bytes.length);
+            }
+            // Accumulate with a typed array; Array.concat would treat each Uint8Array
+            // chunk as a single element and corrupt the payload.
+            var combined = new Uint8Array(jointData.length + data.length);
+            combined.set(jointData, 0);
+            combined.set(data, jointData.length);
+            jointData = combined;
+        }
+        // The per-transfer flag ('R' raw / 'Z' gzip) sits right after "1/N|" in the
+        // first frame's decoded text; the joined payload below contains only the file
+        // bytes (raw or gzip), so decompress it when the flag says so.
+        var flag = code_results[1].text.charAt(code_results[1].text.indexOf("|")+1);
+        var rawBytes = new Uint8Array(jointData);
+        if (flag === 'Z') {
+            try {
+                const stream = new Blob([rawBytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+                rawBytes = new Uint8Array(await new Response(stream).arrayBuffer());
+            } catch (e) {
+                alert("Failed to decompress transfer: " + e.message);
+                resetResults();
+                return;
+            }
+        }
+        jointData = rawBytes;
+        var decodedList = document.getElementById("decodedList");
+        var item = document.createElement("li");
+        decodedList.appendChild(item);
+        var dataURL = await ArraybufferAsDataURL(jointData,mimeType);
+        appendDownloadLink(item, dataURL,filename);
+        var info = document.createElement("span");
+        info.innerText = " elapsed time: " + timeElapsed + "ms" +" speed: "+ (jointData.length/1024/(timeElapsed/1000)).toFixed(2) +"KB/s";
+        item.appendChild(info);
+        if (dataURL.indexOf("image")!=-1) {
+            var img = document.createElement("img");
+            img.src = dataURL;
+            img.style.display = "block";
+            img.style.maxHeight = "350px";
+            img.style.maxWidth = "100%";
+            item.appendChild(img);
+        }
+        resetResults();
+    }
+    //https://stackoverflow.com/questions/12710001/how-to-convert-uint8-array-to-base64-encoded-string
+    const ArraybufferAsDataURL = async (data,mimeType) => {
+        const dataUrl = await new Promise((r) => {
+            const reader = new FileReader()
+            reader.onload = () => r(reader.result)
+            var array = ConvertToUInt8Array(data);
+            var blob = new Blob([array],{type: mimeType});
+            reader.readAsDataURL(blob)
+        })
+        return dataUrl;
+    }
+
+    function ConvertToUInt8Array(data){
+        var array = new Uint8Array(data.length);
+        for (var i=0;i<data.length;i++){
+            array[i] = data[i];
+        }
+        return array;
+    }
+
+    function appendDownloadLink(item, dataURL,filename){
+        var link = document.createElement('a');
+        link.setAttribute('target', '_blank');
+        link.setAttribute('href', dataURL);
+        if (!filename){
+            filename = "file";
+        }
+        filename = decodeURIComponent(filename);
+        link.setAttribute('download', filename);
+        link.innerText=filename;
+        item.appendChild(link);
+    }
+
+    async function updateSettings(instance,isReader){
+        // Keep the default template; only restrict to QR codes.
+        let settings = await instance.getSimplifiedSettings('ReadBarcodes_Default');
+        settings.barcodeSettings.barcodeFormatIds = Dynamsoft.DBR.EnumBarcodeFormat.BF_QR_CODE;
+        if (document.getElementById("scanRegionChk").checked){
+            settings.roiMeasuredInPercentage = true;
+            const videoW = videoEl.videoWidth;
+            const videoH = videoEl.videoHeight;
+            if (videoH > videoW){
+                settings.roi = {points: [{x:0,y:25},{x:100,y:25},{x:100,y:75},{x:0,y:75}], id: 0};
+            }else{
+                settings.roi = {points: [{x:25,y:0},{x:75,y:0},{x:75,y:100},{x:25,y:100}], id: 0};
+            }
+        }
+        await instance.updateSettings('ReadBarcodes_Default', settings);
+    }
+
+    async function decodefile(){
+        let files = document.getElementById('file').files;
+        if (files.length == 0) {
+            return;
+        }
+        await updateSettings(cvr,true);
+        var file = files[0];
+        const dataUrl = await new Promise((r) => {
+            var reader = new FileReader();
+            reader.onload = () => r(reader.result);
+            reader.readAsDataURL(file);
+        });
+        var timeOfBegin = performance.now();
+        console.log("decoding");
+        let result = await cvr.capture(dataUrl, 'ReadBarcodes_Default');
+        var timeOfEnd = performance.now();
+        var items = (result.items || []).filter(it => it.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE);
+        if (items.length>0){
+            console.log(items);
+            alert("Detected. Elapsed time: "+(timeOfEnd-timeOfBegin));
+        }else{
+            alert("No barcodes detected.")
+        }
+    }
+
+  </script>
+</body>
+
+</html>
