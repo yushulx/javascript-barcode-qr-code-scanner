@@ -19,7 +19,7 @@ const DEFAULT_LICENSE =
 // Where the SDK loads its wasm/worker/model resources from. Pointing at the
 // jsDelivr CDN avoids bundling ~50 MB of binaries and keeps first load fast.
 // The SDK appends its own versioned package path (e.g.
-// dynamsoft-barcode-reader-bundle@11.6.3200/dist/) to this root directory.
+// dynamsoft-barcode-reader-bundle@11.6.5000/dist/) to this root directory.
 const SDK_RESOURCE_ROOT = "https://cdn.jsdelivr.net/npm/";
 
 export interface ScannerProps {
