@@ -12,7 +12,7 @@ https://github.com/tony-xlh/Vanilla-JS-Barcode-Reader-Demos/assets/5462205/aa178
 Both demos decode barcodes with the Dynamsoft Barcode Reader bundle:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.5000/dist/dbr.bundle.js"></script>
 ```
 
 Check out this repo to learn more about how to control camera zoom with JavaScript: https://github.com/tony-xlh/web-camera-zoom
