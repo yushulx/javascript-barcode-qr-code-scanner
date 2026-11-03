@@ -1,7 +1,7 @@
 /**
  * Barcode Scanner
  *
- * Built on Dynamsoft Barcode Reader (dynamsoft-barcode-reader-bundle 11.6.3200).
+ * Built on Dynamsoft Barcode Reader (dynamsoft-barcode-reader-bundle 11.6.5000).
  * Scans 1D/2D barcodes from image files, video files, and a live camera stream.
  */
 

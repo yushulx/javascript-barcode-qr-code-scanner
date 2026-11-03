@@ -1,9 +1,9 @@
 {
-  "measured_at": "2026-08-03T09:04:38.811Z",
+  "measured_at": "2026-11-03T05:32:42.697Z",
   "operating_system": "win32 10.0.26200",
   "processor": "13th Gen Intel(R) Core(TM) i5-13400F",
   "logical_processors": 16,
-  "node": "v24.13.0",
+  "node": "v22.22.2",
   "architecture": "x64",
   "configuration": "Browser WASM run driven by Node harness",
   "benchmark_processes": 1,
@@ -12,11 +12,11 @@
   "zxing_wasm_package": "zxing-wasm (jsdelivr CDN, pinned)",
   "dynamsoft_package": "dynamsoft-barcode-reader-bundle (jsdelivr CDN, pinned)",
   "browser": {
-    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36 Edg/156.0.0.0",
     "hardwareConcurrency": 16,
     "zxing_wasm": "3.1.2",
-    "dynamsoft_bundle": "11.4.3000",
-    "dbr_engine": "11.4.3000"
+    "dynamsoft_bundle": "11.6.5000",
+    "dbr_engine": "11.6.5000"
   },
-  "manifest_sha256": "75c976e0c1c8fda5607c7facb05685b4e9fd7c332dda61609f515aeac6fe9464"
+  "manifest_sha256": "6dc54bcbc41b10e335db93df921dcaa70068b6f2c62881f1fe91dd870d891ddc"
 }

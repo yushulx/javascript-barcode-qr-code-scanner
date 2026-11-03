@@ -4,7 +4,7 @@ An auditable, resumable benchmark that compares two browser barcode readers on t
 [BarBeR](https://ditto.ing.unimore.it/barber/) real-world dataset:
 
 - **zxing-wasm 3.1.2** (open-source ZXing-C++ compiled to WebAssembly)
-- **Dynamsoft Barcode Reader** via `dynamsoft-barcode-reader-bundle` 11.4.3000
+- **Dynamsoft Barcode Reader** via `dynamsoft-barcode-reader-bundle` 11.6.5000
 
 It reuses the exact audited manifest from the
 [C++](https://www.dynamsoft.com/codepool/benchmark-barcode-reading-cpp-zxing-dynamsoft-barcode-reader.html)
@@ -143,11 +143,11 @@ as correct predictions divided by evaluated predictions, where evaluated predict
 
 | Decoder | Correct | Recall | Precision | Image all-read rate | Mean decode time | Median decode time | P95 decode time |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Dynamsoft Barcode Reader JS 11.4.3000 | **7,637 / 8,411** | **90.80%** | **95.93%** | **90.77%** | 127.00 ms | 100.20 ms | 313.80 ms |
-| zxing-wasm 3.1.2 | 5,958 / 8,411 | 70.84% | 94.96% | 70.66% | 121.75 ms | 74.10 ms | 409.10 ms |
+| Dynamsoft Barcode Reader JS 11.6.5000 | **7,638 / 8,411** | **90.81%** | **95.97%** | **90.77%** | 121.05 ms | 95.50 ms | 298.40 ms |
+| zxing-wasm 3.1.2 | 5,958 / 8,411 | 70.84% | 94.96% | 70.66% | 116.22 ms | 70.20 ms | 389.70 ms |
 
-DBR read 1,679 more ground truth barcodes in this run and improved recall by 19.96 percentage
-points. DBR also had 0.97 percentage points higher precision. zxing-wasm had the lower mean decode
+DBR read 1,680 more ground truth barcodes in this run and improved recall by 19.97 percentage
+points. DBR also had 1.01 percentage points higher precision. zxing-wasm had the lower mean decode
 time in this browser run (121.75 ms versus 127.00 ms). Five images failed browser image decode for
 both readers and are recorded as `input_pipeline_error`, not as no-reads.
 

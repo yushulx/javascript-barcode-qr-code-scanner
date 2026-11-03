@@ -63,7 +63,7 @@ python -m http.server 4182
 Open **http://localhost:4182/** in a modern browser. Serve the whole folder so
 `pdf417-encoder.js` resolves.
 
-Barcode decoding uses **Dynamsoft Barcode Reader 11.6.3200**, loaded from a CDN
+Barcode decoding uses **Dynamsoft Barcode Reader 11.6.5000**, loaded from a CDN
 on the first decode. The online demo uses its hosted demo license; local
 previews use the SDK's public trial key. For your own application, obtain a
 [trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform)

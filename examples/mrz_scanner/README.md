@@ -3,7 +3,7 @@
 A plain JavaScript web app that extracts MRZ fields, document borders, and
 portrait photos from passports and ID cards. It uses
 [Dynamsoft Capture Vision](https://www.dynamsoft.com/capture-vision/overview/)
-(`dynamsoft-capture-vision-bundle@3.6.3200`) in the browser and supports image,
+(`dynamsoft-capture-vision-bundle@3.6.5000`) in the browser and supports image,
 PDF and TIFF upload, clipboard paste, drag-and-drop, and camera capture with a
 live document-outline preview.
 

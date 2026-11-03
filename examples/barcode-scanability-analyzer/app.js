@@ -16,7 +16,7 @@
     if(sdkPromise)return sdkPromise;
     const script=document.createElement('script');
     sdkPromise=new Promise((resolve,reject)=>{
-      script.async=true;script.src='https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js';
+      script.async=true;script.src='https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.5000/dist/dbr.bundle.js';
       script.onload=()=>window.Dynamsoft?resolve():reject(new Error('Barcode Reader did not initialize. Image-only analysis is available.'));
       script.onerror=()=>reject(new Error('Barcode Reader could not load. Check your network and retry Analyze image.'));
       document.head.append(script);

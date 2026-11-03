@@ -17,7 +17,7 @@ const DEFAULT_LICENSE =
 const ZXING_NAME = "zxing-wasm";
 const DBR_NAME = "dynamsoft-dbr-js";
 const ZXING_PINNED = "3.1.2";
-const DBR_PINNED = "11.4.3000";
+const DBR_PINNED = "11.6.5000";
 
 const el = {
   license: document.getElementById("license"),
