@@ -67,6 +67,9 @@
         analyzerPreview: $('analyzer-preview'), analyzerImg: $('analyzer-img'),
         analyzerOverlay: $('analyzer-overlay'), analyzerReport: $('analyzer-report'),
         analyzerLegendCount: $('analyzer-legend-count'),
+        analyzerRecover: $('analyzer-recover'), recoverCanvas: $('recover-canvas'),
+        recoverFacts: $('recover-facts'), recoverVerify: $('recover-verify'),
+        recoverPng: $('recover-png'), recoverSvg: $('recover-svg'),
         toast: $('toast')
     };
 
@@ -1183,6 +1186,9 @@
     var MAX_ANALYZE_EDGE = 1600;   /* px — big photos get downscaled first */
     var SAMPLE_PAYLOAD = 'https://www.dynamsoft.com/codepool/';
     var analyzing = false;
+    /* Guards the async re-read of a rebuilt symbol: a new image invalidates a
+       verification that was still in flight. */
+    var recoverToken = 0;
 
     function loadImage(src) {
         return new Promise(function (resolve, reject) {
@@ -1202,9 +1208,126 @@
         });
     }
 
+    /* ------------------------------------------------------------------ *
+     * Reading a damaged code
+     *
+     * The default template is the fast path and handles a clean capture. A
+     * damaged symbol — a torn finder pattern, a crease, faded print — needs
+     * the modes the SDK keeps for exactly that: BarcodeComplementModes
+     * completes missing positioning patterns and DeformationResistingModes
+     * straightens a distorted one. Without them the image simply comes back
+     * unread, even when a human can see the symbol perfectly well.
+     *
+     * Both passes run cheapest first: the second costs a few hundred
+     * milliseconds, so it only happens when the first found nothing.
+     * ------------------------------------------------------------------ */
+
+    /* Both templates are registered in one document. initSettings() replaces
+       the whole template set, so the SDK presets stop resolving the moment a
+       custom document lands — hence the default pass gets its own name here
+       instead of borrowing "ReadBarcodes_Default". The default template names
+       no modes at all, which is what "the default settings" means; the damaged
+       one adds the localization modes and the two stages built for physical
+       damage. */
+    var QR_DEFAULT_TEMPLATE = 'CodePoolQRDefault';
+    var QR_DAMAGED_TEMPLATE = 'CodePoolQRDamaged';
+    var qrTemplates = null;
+    var qrDefaultRunName = 'ReadBarcodes_Default';
+
+    function qrTemplateDocument() {
+        var localization = {
+            Stage: 'SST_LOCALIZE_CANDIDATE_BARCODES',
+            LocalizationModes: ['LM_CONNECTED_BLOCKS', 'LM_LINES', 'LM_STATISTICS', 'LM_SCAN_DIRECTLY', 'LM_NEURAL_NETWORK']
+                .map(function (mode) { return { Mode: mode }; })
+        };
+        function task(name, damaged) {
+            var sections = [
+                { Section: 'ST_REGION_PREDETECTION', ImageParameterName: 'IP_QR' },
+                { Section: 'ST_BARCODE_LOCALIZATION', ImageParameterName: 'IP_QR' }
+            ];
+            if (damaged) sections[1].StageArray = [localization];
+            var decoding = { Section: 'ST_BARCODE_DECODING', ImageParameterName: 'IP_QR' };
+            if (damaged) {
+                decoding.StageArray = [
+                    { Stage: 'SST_RESIST_DEFORMATION', DeformationResistingModes: [{ Mode: 'DRM_GENERAL' }] },
+                    { Stage: 'SST_COMPLEMENT_BARCODE', BarcodeComplementModes: [{ Mode: 'BCM_GENERAL' }] }
+                ];
+            }
+            sections.push(decoding);
+            return { Name: name + '-task', SectionArray: sections };
+        }
+        return {
+            CaptureVisionTemplates: [
+                { Name: QR_DEFAULT_TEMPLATE, ImageROIProcessingNameArray: [QR_DEFAULT_TEMPLATE + '-roi'] },
+                { Name: QR_DAMAGED_TEMPLATE, ImageROIProcessingNameArray: [QR_DAMAGED_TEMPLATE + '-roi'] }
+            ],
+            TargetROIDefOptions: [
+                { Name: QR_DEFAULT_TEMPLATE + '-roi', TaskSettingNameArray: [QR_DEFAULT_TEMPLATE + '-task'] },
+                { Name: QR_DAMAGED_TEMPLATE + '-roi', TaskSettingNameArray: [QR_DAMAGED_TEMPLATE + '-task'] }
+            ],
+            BarcodeReaderTaskSettingOptions: [
+                task(QR_DEFAULT_TEMPLATE, false),
+                task(QR_DAMAGED_TEMPLATE, true)
+            ],
+            ImageParameterOptions: [{ Name: 'IP_QR' }]
+        };
+    }
+
+    function registerQrTemplates(cvr) {
+        if (qrTemplates) return qrTemplates;
+        qrTemplates = cvr.initSettings(JSON.stringify(qrTemplateDocument())).then(function (info) {
+            if (info && info.errorCode) {
+                throw new Error('[' + info.errorCode + '] ' + (info.errorString || ''));
+            }
+            qrDefaultRunName = QR_DEFAULT_TEMPLATE;
+            return true;
+        }).catch(function (error) {
+            qrTemplates = null;
+            throw error;
+        });
+        return qrTemplates;
+    }
+
+    function pickQr(result) {
+        var items = (result && result.items) || [];
+        var micro = null;
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].type !== 2) continue;
+            var formatName = items[i].formatString || '';
+            if (!/QR/i.test(formatName)) continue;
+            if (/MICRO/i.test(formatName)) { micro = items[i]; continue; }
+            return { item: items[i], micro: micro };
+        }
+        return { item: null, micro: micro };
+    }
+
+    async function readQr(cvr, imageData, width, height) {
+        var frame = function () {
+            return {
+                bytes: new Uint8Array(imageData.data),
+                width: width, height: height, stride: width * 4, format: 10
+            };
+        };
+        /* A template failure is not a read failure: the SDK presets are still
+           there if registration never happened. */
+        var ready = await registerQrTemplates(cvr).then(function () { return true; }, function () { return false; });
+        var first = pickQr(await cvr.capture(frame(), qrDefaultRunName));
+        if (first.item || first.micro) return { item: first.item, micro: first.micro, pass: 'default' };
+        if (!ready) return { item: null, micro: first.micro, pass: 'default' };
+        try {
+            var second = pickQr(await cvr.capture(frame(), QR_DAMAGED_TEMPLATE));
+            return { item: second.item, micro: second.micro, pass: 'damaged' };
+        } catch (error) {
+            return { item: null, micro: first.micro, pass: 'default' };
+        }
+    }
+
     async function runAnalyzer(source) {
         if (analyzing) return;
         analyzing = true;
+        /* The previous image's rebuild is not this image's rebuild. */
+        recoverToken++;
+        els.analyzerRecover.hidden = true;
         try {
             var dataURL = typeof source === 'string' ? source : await readImageFile(source);
             var img = await loadImage(dataURL);
@@ -1236,32 +1359,22 @@
             var points = null;
             var text = null;
             var readerNote = '';
+            var readerPass = null;
             try {
                 var cvr = await engine();
-                var result = await cvr.capture({
-                    bytes: new Uint8Array(imageData.data),
-                    width: w, height: h, stride: w * 4, format: 10
-                }, 'ReadBarcodes_Default');
-                var items = (result.items || []).filter(function (i) { return i.type === 2; });
+                var read = await readQr(cvr, imageData, w, h);
                 /* Format strings are "QR_CODE" in current SDK bundles and
                    "QRCode" in older ones — match case-insensitively and keep
                    Micro QR out. */
-                var qr = null;
-                var micro = null;
-                for (var i = 0; i < items.length; i++) {
-                    var formatName = items[i].formatString || '';
-                    if (!/QR/i.test(formatName)) continue;
-                    if (/MICRO/i.test(formatName)) { micro = items[i]; continue; }
-                    qr = items[i];
-                    break;
-                }
+                var qr = read.item;
+                readerPass = read.pass;
                 if (qr) {
                     points = qr.location.points.map(function (p) { return [p.x, p.y]; });
                     text = qr.text;
                 } else {
-                    readerNote = micro
-                        ? 'The reader found a ' + micro.formatString + ' — this analysis covers standard QR codes only.'
-                        : 'The reader could not decode a QR code in this image.';
+                    readerNote = read.micro
+                        ? 'The reader found a ' + read.micro.formatString + ' — this analysis covers standard QR codes only.'
+                        : 'The reader could not decode a QR code in this image, with either the default settings or the damaged-code settings.';
                 }
             } catch (e) {
                 readerNote = 'The reader is unavailable (' + ((e && e.message) || e) + '). Locating the symbol by its finder patterns only.';
@@ -1281,8 +1394,36 @@
                 : null;
             var report = analyzer.analyze({ rgba: imageData.data, width: w, height: h, points: points }, window.BarcodeQR, reference);
 
+            /* Sampling fails when the damage sits on the data region: an
+               eroded module looks like any other, and this page has no second
+               opinion about what it used to be. The reader decoded the symbol,
+               so its corrected codewords are the authority — draw the symbol
+               from those instead of from the pixels. */
+            if (!report.repairedMatrix && qr && qr.details && qr.details.codewords
+                && typeof analyzer.rebuildFromCodewords === 'function') {
+                /* The reader's errorCorrectionLevel is its own enum, measured
+                   against known symbols: 0=H, 1=L, 2=M, 3=Q. It is not the
+                   format field's 2-bit value. */
+                var levels = ['H', 'L', 'M', 'Q'];
+                var level = levels[qr.details.errorCorrectionLevel];
+                var rebuilt = analyzer.rebuildFromCodewords(
+                    qr.details.codewords, qr.details.version, level,
+                    qr.details.dataMaskPattern, window.BarcodeQR);
+                if (rebuilt) {
+                    report.repairedMatrix = rebuilt;
+                    report.version = qr.details.version;
+                    report.size = rebuilt.length;
+                    report.ecLevel = level;
+                    report.mask = qr.details.dataMaskPattern;
+                    report.levelSource = 'reader';
+                    report.payload = qr.text;
+                    report.recoveredByReader = true;
+                }
+            }
+
             drawAnalyzerOverlay(report, w, h);
-            renderAnalyzerReport(report, { text: text, readerNote: readerNote, refPayload: reference ? reference.payload : null });
+            renderAnalyzerReport(report, { text: text, readerNote: readerNote, readerPass: readerPass, refPayload: reference ? reference.payload : null });
+            renderRecover(report);
         } catch (e) {
             els.analyzerReport.innerHTML = '<p class="analyzer-verdict bad">'
                 + escapeHtml((e && e.message) || String(e)) + '</p>';
@@ -1333,7 +1474,14 @@
         var meaning;
         var pct = r.totalBudget ? Math.round(r.totalCorrected / r.totalBudget * 100) : 0;
 
-        if (r.reason === 'no-grid') {
+        if (r.recoveredByReader) {
+            verdict = 'The reader read it, so it is rebuilt below';
+            tone = 'ok';
+            meaning = 'This page samples the pixels itself and could not verify a single block — the damage sits on '
+                + 'the data region, where an eroded module looks like any other. Dynamsoft Barcode Reader decoded '
+                + 'the symbol anyway, so the recovered symbol below is drawn from the codewords it recovered, not '
+                + 'from what the sampler could see.';
+        } else if (r.reason === 'no-grid') {
             verdict = 'No QR grid found';
             tone = 'note';
             if (r.version) {
@@ -1455,6 +1603,9 @@
                 ? 'by finder patterns — the reader could not decode the image'
                 : 'by the reader']);
         }
+        if (ctxInfo.readerPass === 'damaged') {
+            facts.push(['Reader settings', 'barcode complement + deformation resisting — the default settings found nothing']);
+        }
         if (r.finderScore !== undefined && r.finderScore !== null) {
             facts.push(['Grid match', 'finder ' + Math.round(r.finderScore * 100) + '% · timing '
                 + Math.round(r.timingScore * 100) + '%']);
@@ -1510,6 +1661,156 @@
         } else {
             els.analyzerLegendCount.textContent = '';
         }
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Recovery: the corrected codewords written back into a symbol
+     *
+     * The analyzer already knows the level, the mask and the corrected
+     * codeword stream, so the original symbol can be redrawn module by
+     * module. That is a repair of THIS symbol — not a re-encoding of the
+     * payload — which is why version, level and mask survive, and why the
+     * rebuilt image is a legitimate replacement for the damaged one.
+     *
+     * It is only legitimate if it scans. The reader is handed the same pixels
+     * the user would download, and the buttons stay disabled until the payload
+     * comes back identical.
+     * ------------------------------------------------------------------ */
+
+    function matrixCanvas(matrix, modulePx, quiet) {
+        var size = matrix.length;
+        var span = (size + quiet * 2) * modulePx;
+        var cv = document.createElement('canvas');
+        cv.width = span;
+        cv.height = span;
+        var ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, span, span);
+        ctx.fillStyle = '#000000';
+        for (var r = 0; r < size; r++) {
+            for (var c = 0; c < size; c++) {
+                if (matrix[r][c]) {
+                    ctx.fillRect((c + quiet) * modulePx, (r + quiet) * modulePx, modulePx, modulePx);
+                }
+            }
+        }
+        return cv;
+    }
+
+    function matrixSvg(matrix, modulePx, quiet) {
+        var size = matrix.length;
+        var span = (size + quiet * 2) * modulePx;
+        var d = '';
+        for (var r = 0; r < size; r++) {
+            for (var c = 0; c < size; c++) {
+                if (!matrix[r][c]) continue;
+                d += 'M' + (c + quiet) * modulePx + ' ' + (r + quiet) * modulePx
+                    + 'h' + modulePx + 'v' + modulePx + 'h-' + modulePx + 'z';
+            }
+        }
+        return '<?xml version="1.0" encoding="UTF-8"?>'
+            + '<svg xmlns="http://www.w3.org/2000/svg" width="' + span + '" height="' + span
+            + '" viewBox="0 0 ' + span + ' ' + span + '" shape-rendering="crispEdges">'
+            + '<rect width="' + span + '" height="' + span + '" fill="#ffffff"/>'
+            + '<path fill="#000000" d="' + d + '"/></svg>';
+    }
+
+    function renderRecover(r) {
+        var complete = !!(r && r.repairedMatrix && r.repairedMatrix.length);
+        els.analyzerRecover.hidden = !complete;
+        els.recoverPng.disabled = true;
+        els.recoverSvg.disabled = true;
+        els.recoverFacts.innerHTML = '';
+        els.recoverVerify.textContent = '';
+        els.recoverVerify.className = 'recover-verify';
+        state.recovered = complete ? r : null;
+        if (!complete) return;
+
+        var cv = matrixCanvas(r.repairedMatrix, 8, 4);
+        els.recoverCanvas.width = cv.width;
+        els.recoverCanvas.height = cv.height;
+        els.recoverCanvas.getContext('2d').drawImage(cv, 0, 0);
+
+        var facts = [
+            ['Symbol', 'version ' + r.version + ' — ' + r.size + '×' + r.size + ' modules'],
+            ['Level & mask', r.ecLevel + ' · mask ' + r.mask
+                + (r.levelSource === 'brute-force' ? ' (format field unreadable — found by brute force)'
+                    : r.levelSource === 'reader' ? ' (level and mask as the reader read them)' : '')]
+        ];
+        if (!r.recoveredByReader) {
+            facts.push(['Codewords repaired', r.totalCorrected + ' of ' + r.totalBudget + ' in the error budget']);
+        }
+        if (r.erasureCount) facts.push(['Erase decoding', r.erasureCount + ' known positions repaired at one parity symbol each']);
+        if (r.damageModules) facts.push(['Damaged modules restored', String(r.damageModules)]);
+        facts.push(['Rebuilt from', r.recoveredByReader
+            ? 'the codewords the reader recovered — this page could not verify a block itself'
+            : 'this page’s own Reed-Solomon repair of the sampled grid']);
+        els.recoverFacts.innerHTML = facts.map(function (fact) {
+            return '<dt>' + escapeHtml(fact[0]) + '</dt><dd>' + escapeHtml(String(fact[1])) + '</dd>';
+        }).join('');
+
+        els.recoverVerify.textContent = 'Re-reading the rebuilt symbol with Dynamsoft Barcode Reader…';
+        verifyRecover(r, ++recoverToken);
+    }
+
+    /* The rebuilt image is only useful if a reader accepts it, so the reader
+       gets the exact pixels the download would produce. Damaged finder or
+       timing patterns are NOT rebuilt — parity repairs codewords, not the
+       scaffolding — and this is the check that catches it. */
+    async function verifyRecover(r, token) {
+        var outcome;
+        try {
+            var cv = matrixCanvas(r.repairedMatrix, 8, 4);
+            var ctx = cv.getContext('2d', { willReadFrequently: true });
+            var image = ctx.getImageData(0, 0, cv.width, cv.height);
+            var cvr = await engine();
+            var result = await cvr.capture({
+                bytes: new Uint8Array(image.data.buffer, image.data.byteOffset, image.data.length),
+                width: cv.width, height: cv.height, stride: cv.width * 4, format: 10
+            }, qrDefaultRunName);
+            var items = (result.items || []).filter(function (item) { return item.type === 2; });
+            if (!items.length) {
+                outcome = { ok: false, message: 'The reader cannot decode the rebuilt symbol. If the finder or timing patterns were damaged, no amount of parity can rebuild them — nothing is offered for download.' };
+            } else if (r.payload && items[0].text !== r.payload) {
+                outcome = { ok: false, message: 'The reader decodes the rebuilt symbol but returns a different payload. Treat the image as unreliable — nothing is offered for download.' };
+            } else {
+                outcome = { ok: true, message: 'Re-read with Dynamsoft Barcode Reader: the same payload comes back.' };
+            }
+        } catch (e) {
+            outcome = { ok: null, message: 'The rebuilt symbol could not be re-read (' + ((e && e.message) || e) + '). Checks below are the calculator\'s own.' };
+        }
+        if (token !== recoverToken) return;
+        els.recoverVerify.textContent = outcome.message;
+        els.recoverVerify.className = 'recover-verify ' + (outcome.ok === true ? 'good' : outcome.ok === false ? 'bad' : 'warn');
+        /* A rebuild that no reader accepts stays undownloadable; an unavailable
+           reader is not a failed rebuild, so it is allowed through with the
+           warning the line above states. */
+        if (outcome.ok === false) return;
+        els.recoverPng.disabled = false;
+        els.recoverSvg.disabled = false;
+    }
+
+    function downloadRecover(kind) {
+        var r = state.recovered;
+        if (!r || !r.repairedMatrix) return;
+        if (kind === 'png') {
+            matrixCanvas(r.repairedMatrix, 10, 4).toBlob(function (blob) {
+                if (!blob) return;
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'recovered-qr.png';
+                a.click();
+                setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+            }, 'image/png');
+            return;
+        }
+        var url = URL.createObjectURL(new Blob([matrixSvg(r.repairedMatrix, 10, 4)], { type: 'image/svg+xml' }));
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'recovered-qr.svg';
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
     }
 
     /* Generated samples exercise the three verdicts: a clean render, one
@@ -1613,6 +1914,9 @@
                 runAnalyzer(buildSampleImage(this.getAttribute('data-sample')));
             });
         }
+
+        els.recoverPng.addEventListener('click', function () { downloadRecover('png'); });
+        els.recoverSvg.addEventListener('click', function () { downloadRecover('svg'); });
     }
 
     /* ------------------------------------------------------------------ *

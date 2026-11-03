@@ -1323,6 +1323,92 @@ code {
 }
 
 /* ---------------------------------------------------------------------------
+   Recovered symbol — the corrected codewords redrawn as a symbol.
+   Spans both columns of the analyzer body, so it reads as a result of the
+   analysis rather than a third column of it.
+   --------------------------------------------------------------------------- */
+
+.recover-block {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.5rem;
+    align-items: start;
+    margin-top: 0.35rem;
+    padding-top: 1.35rem;
+    border-top: 1px solid var(--dy-gray-100);
+}
+
+.recover-copy {
+    min-width: 0;
+}
+
+.recover-copy h3 {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-heading);
+    font-weight: 500;
+    font-size: 1.15rem;
+    color: var(--dy-gray-900);
+}
+
+.recover-copy p {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.65;
+    color: var(--dy-gray-700);
+}
+
+.recover-stage {
+    justify-self: end;
+}
+
+.recover-stage canvas {
+    display: block;
+    width: 200px;
+    height: auto;
+    image-rendering: pixelated;
+    background: #ffffff;
+    border: 1px solid var(--dy-gray-100);
+    border-radius: var(--radius-sm);
+}
+
+.recover-verify {
+    margin-top: 0.9rem;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    color: var(--dy-gray-600);
+}
+
+.recover-verify.good {
+    color: #1c6b3a;
+}
+
+.recover-verify.bad {
+    color: #a0301c;
+}
+
+.recover-verify.warn {
+    color: #8b4f05;
+}
+
+.recover-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+}
+
+@media (max-width: 720px) {
+    .recover-block {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .recover-stage {
+        justify-self: start;
+    }
+}
+
+/* ---------------------------------------------------------------------------
    Methodology + footer + toast
    --------------------------------------------------------------------------- */
 

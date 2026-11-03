@@ -46,6 +46,14 @@ meter tracks the Reed-Solomon repair budget.
   spends one parity symbol per erasure instead of two, so symbols past the
   ordinary ⌊EC/2⌋ error budget are repaired, up to the full parity count.
   Nothing is uploaded.
+- **Recover it.** When an uploaded code still decodes, the corrected codewords
+  are written back into a symbol — same version, level and mask, not a
+  re-encoding of its payload — and offered as PNG or SVG. Everything the
+  standard fixes by version (finders, timing, alignment, the dark module,
+  version information, both format copies) is redrawn rather than sampled,
+  because a blurry capture misreads the one-module timing patterns first.
+  Dynamsoft Barcode Reader re-reads the rendered image before the download
+  unlocks; a rebuild whose payload does not come back identical is not offered.
 
 The example is plain HTML, CSS and JavaScript with no build step.
 
@@ -127,3 +135,20 @@ erasure instead of two. A block of `e` parity codewords corrects `e`
 erasures rather than ⌊e/2⌋ errors, so symbols past the ordinary budget come
 back with their payload recovered. Without a reference that trick is
 impossible: nothing tells the decoder where the damage is.
+
+Reading a damaged code also needs the reader to try harder than its defaults.
+The page runs two passes: the stock settings first, then the modes built for
+physical damage — `BarcodeComplementModes` for missing positioning patterns,
+`DeformationResistingModes` for a distorted symbol. On a printed symbol with one
+corner torn through a finder pattern the defaults return nothing and the second
+pass returns the payload at 98% confidence.
+
+The recovery itself is a redraw, not a photograph lifted out of the SDK. When
+the page's own sampling verifies at least one block, the codewords are its own
+Reed-Solomon repair of the sampled grid. When the damage sits on the data
+region and no block verifies, they are the codewords the reader recovered —
+`details.codewords` is the full raw sequence including parity. Either way the
+symbol is drawn module by module from that matrix, with the scaffolding redrawn
+from the locked version, and the reader then has to read the result back before
+the download unlocks. Nothing in the recovered image comes from a reader
+callback.
