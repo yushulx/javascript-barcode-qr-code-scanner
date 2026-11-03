@@ -1,0 +1,177 @@
+{
+  "CaptureVisionTemplates": [
+    {
+      "Name": "Dotcode",
+      "ImageROIProcessingNameArray": [
+        "roi_read_dotcode"
+      ],
+      "Timeout": 700
+    }
+  ],
+  "TargetROIDefOptions": [
+    {
+      "Name": "roi_read_dotcode",
+      "TaskSettingNameArray": [
+        "task_read_dotcode"
+      ]
+    }
+  ],
+  "BarcodeFormatSpecificationOptions": [
+    {
+      "Name": "format_specification_read_dotcode",
+      "BarcodeFormatIds": [
+        "BF_DOTCODE"
+      ],
+      "MirrorMode": "MM_BOTH"
+    }
+  ],
+  "BarcodeReaderTaskSettingOptions": [
+    {
+      "Name": "task_read_dotcode",
+      "ExpectedBarcodesCount": 1,
+      "BarcodeFormatIds": [
+        "BF_DOTCODE"
+      ],
+      "BarcodeFormatSpecificationNameArray": [
+        "format_specification_read_dotcode"
+      ],
+      "SectionArray": [
+        {
+          "Section": "ST_REGION_PREDETECTION",
+          "ImageParameterName": "ip_read_dotcode",
+          "StageArray": [
+            {
+              "Stage": "SST_PREDETECT_REGIONS"
+            }
+          ]
+        },
+        {
+          "Section": "ST_BARCODE_LOCALIZATION",
+          "ImageParameterName": "ip_read_dotcode",
+          "StageArray": [
+            {
+              "LocalizationModes": [
+                {
+                  "Mode": "LM_STATISTICS_MARKS"
+                }
+              ],
+              "Stage": "SST_LOCALIZE_CANDIDATE_BARCODES"
+            },
+            {
+              "Stage": "SST_LOCALIZE_BARCODES"
+            }
+          ]
+        },
+        {
+          "Section": "ST_BARCODE_DECODING",
+          "ImageParameterName": "ip_read_dotcode",
+          "StageArray": [
+            {
+              "DeblurModes": [
+                {
+                  "Mode": "DM_BASED_ON_LOC_BIN"
+                },
+                {
+                  "Mode": "DM_THRESHOLD_BINARIZATION"
+                },
+                {
+                  "Mode": "DM_DEEP_ANALYSIS"
+                }
+              ],
+              "Stage": "SST_DECODE_BARCODES"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "ImageParameterOptions": [
+    {
+      "Name": "ip_read_dotcode",
+      "ApplicableStages": [
+        {
+          "Stage": "SST_INPUT_COLOR_IMAGE"
+        },
+        {
+          "Stage": "SST_SCALE_IMAGE"
+        },
+        {
+          "Stage": "SST_CONVERT_TO_GRAYSCALE"
+        },
+        {
+          "Stage": "SST_TRANSFORM_GRAYSCALE",
+          "GrayscaleTransformationModes": [
+            {
+              "Mode": "GTM_INVERTED"
+            },
+            {
+              "Mode": "GTM_ORIGINAL"
+            }
+          ]
+        },
+        {
+          "Stage": "SST_ENHANCE_GRAYSCALE",
+          "GrayscaleEnhancementModes": [
+            {
+              "Mode": "GEM_GENERAL"
+            }
+          ]
+        },
+        {
+          "Stage": "SST_BINARIZE_IMAGE",
+          "BinarizationModes": [
+            {
+              "Mode": "BM_LOCAL_BLOCK",
+              "BlockSizeX": 15,
+              "BlockSizeY": 15,
+              "EnableFillBinaryVacancy": 0,
+              "ThresholdCompensation": 10
+            },
+            {
+              "Mode": "BM_LOCAL_BLOCK",
+              "BlockSizeX": 21,
+              "BlockSizeY": 21,
+              "EnableFillBinaryVacancy": 0,
+              "ThresholdCompensation": 10,
+              "MorphOperation": "Erode",
+              "MorphOperationKernelSizeX": 3,
+              "MorphOperationKernelSizeY": 3,
+              "MorphShape": "Ellipse"
+            },
+            {
+              "Mode": "BM_LOCAL_BLOCK",
+              "BlockSizeX": 35,
+              "BlockSizeY": 35,
+              "EnableFillBinaryVacancy": 0,
+              "ThresholdCompensation": 10,
+              "MorphOperation": "Erode",
+              "MorphOperationKernelSizeX": 3,
+              "MorphOperationKernelSizeY": 3,
+              "MorphShape": "Ellipse"
+            },
+            {
+              "Mode": "BM_LOCAL_BLOCK",
+              "BlockSizeX": 45,
+              "BlockSizeY": 45,
+              "EnableFillBinaryVacancy": 0,
+              "ThresholdCompensation": 25,
+              "MorphOperation": "Erode",
+              "MorphOperationKernelSizeX": 3,
+              "MorphOperationKernelSizeY": 3,
+              "MorphShape": "Ellipse"
+            }
+          ]
+        },
+        {
+          "Stage": "SST_DETECT_TEXTURE"
+        },
+        {
+          "Stage": "SST_REMOVE_TEXTURE_FROM_GRAYSCALE"
+        },
+        {
+          "Stage": "SST_BINARIZE_TEXTURE_REMOVED_GRAYSCALE"
+        }
+      ]
+    }
+  ]
+}

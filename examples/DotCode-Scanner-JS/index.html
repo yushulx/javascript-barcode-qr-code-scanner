@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DotCode Scanner</title>
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.5000/dist/dbr.bundle.js"></script>
+  <style>
+  h2 {
+    text-align: center;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #cameraView {
+    width: 100%;
+    height: 60vh;
+  }
+  </style>
+</head>
+<html>
+<body>
+  <div id="app">
+    <h2>DotCode Scanner</h2>
+    <button id="startScanBtn">Start Scanning</button>
+    <button id="readFromImageBtn">Read from an Image</button>
+    <input id="fileInput" type="file" style="display:none;"/>
+    <div id="status">Loading...</div>
+    <div id="cameraView"></div>
+    <div id="result"></div>
+  </div>
+  <script>
+    let cvRouter;
+    let cameraEnhancer;
+    let initialized = false;
+    let templateName = "Dotcode";
+    document.getElementById("startScanBtn").addEventListener("click",function(){
+      if (initialized) {
+        toggleScanning();
+      }else{
+        alert("Please wait for the initialization.");
+      }
+    });
+    document.getElementById("readFromImageBtn").addEventListener("click",function(){
+      if (initialized) {
+        document.getElementById("fileInput").click();
+      }else{
+        alert("Please wait for the initialization.");
+      }
+    });
+    document.getElementById("fileInput").addEventListener("change",async function(){
+      let files = document.getElementById("fileInput").files;
+      if (files.length>0) {
+        let file  = files[0];
+        let result = await cvRouter.capture(file,templateName);
+        displayResults(result);
+      }
+    })
+    
+    window.onload = function(){
+      initBarcodeScanner();
+    }
+
+    async function initBarcodeScanner(){
+      Dynamsoft.License.LicenseManager.initLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9");
+      Dynamsoft.Core.CoreModule.loadWasm(["dbr"]);
+      cvRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+
+      let cameraView = await Dynamsoft.DCE.CameraView.createInstance();
+      cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
+      document.querySelector("#cameraView").append(cameraView.getUIElement());
+      cvRouter.setInput(cameraEnhancer);
+
+      const resultsContainer = document.querySelector("#results");
+      cvRouter.addResultReceiver({ onDecodedBarcodesReceived: (result) => {
+        console.log(result);
+        displayResults(result);
+      }});
+
+      let filter = new Dynamsoft.Utility.MultiFrameResultCrossFilter();
+      filter.enableResultCrossVerification("barcode", true);
+      filter.enableResultDeduplication("barcode", true);
+      await cvRouter.addResultFilter(filter);
+      await updateSettingsForDotCode();
+      document.getElementById("status").remove();
+      initialized = true;
+    }
+
+    function displayResults(result){
+      if (result.barcodeResultItems.length > 0) {
+        let container = document.getElementById("result");
+        let item = result.barcodeResultItems[0];
+        container.innerText = `${item.formatString}: ${item.text}`;
+      }
+    }
+
+    async function toggleScanning() {
+      let btn = document.getElementById("startScanBtn");
+      if (btn.innerText === "Start Scanning") {
+        await cameraEnhancer.open();
+        await cvRouter.startCapturing(templateName);
+        btn.innerText = "Stop Scanning";
+      }else{
+        await cvRouter.stopCapturing();
+        await cameraEnhancer.close();
+        btn.innerText = "Start Scanning";
+      }
+    }
+
+    async function updateSettingsForDotCode(){
+      await cvRouter.initSettings("./dotcode-template.json");
+      await cameraEnhancer.setScanRegion({
+        x: 1,
+        y: 40,
+        width: 98,
+        height: 20,
+        isMeasuredInPercentage: true,
+      });
+    }
+  </script>
+</body>
+</html>
