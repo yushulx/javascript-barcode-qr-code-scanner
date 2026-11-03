@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vCard Scanner</title>
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.5000/dist/dbr.bundle.js"></script>
+  <script type="text/javascript" src="vcf.js"></script>
+  <style>
+  h2 {
+    text-align: center;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #cameraView {
+    width: 100%;
+    height: 60vh;
+  }
+  </style>
+</head>
+<html>
+<body>
+  <div id="app">
+    <h2>vCard Scanner</h2>
+    <button id="startScanBtn">Start Scanning</button>
+    <button id="readFromImageBtn">Read from an Image</button>
+    <input id="fileInput" type="file" style="display:none;"/>
+    <div id="status">Loading...</div>
+    <div id="cameraView"></div>
+    <div id="result"></div>
+    <div class="buttons" hidden>
+      <button id="downloadBtn">Download</button>
+      <button id="shareBtn">Share</button>
+    </div>
+  </div>
+  <script>
+    let cvRouter;
+    let cameraEnhancer;
+    let initialized = false;
+    let templateName = "ReadSingleBarcode";
+    let vCardContent = "";
+    
+    document.getElementById("downloadBtn").addEventListener("click",function(){
+      downloadText();
+    });
+    document.getElementById("shareBtn").addEventListener("click",function(){
+      share();
+    });
+    document.getElementById("startScanBtn").addEventListener("click",function(){
+      if (initialized) {
+        toggleScanning();
+      }else{
+        alert("Please wait for the initialization.");
+      }
+    });
+    document.getElementById("readFromImageBtn").addEventListener("click",function(){
+      if (initialized) {
+        document.getElementById("fileInput").click();
+      }else{
+        alert("Please wait for the initialization.");
+      }
+    });
+    document.getElementById("fileInput").addEventListener("change",async function(){
+      let files = document.getElementById("fileInput").files;
+      if (files.length>0) {
+        let file  = files[0];
+        let result = await cvRouter.capture(file,templateName);
+        displayResults(result);
+      }
+    })
+    
+    window.onload = function(){
+      initBarcodeScanner();
+    }
+
+    function downloadText(){
+      let filename = 'scanned.vcf';
+      let link = document.createElement('a');
+      link.style.display = 'none';
+      link.setAttribute('target', '_blank');
+      link.setAttribute('href', 'data:text/vcard;charset=utf-8,' + encodeURIComponent(vCardContent));
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    async function initBarcodeScanner(){
+      Dynamsoft.License.LicenseManager.initLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9");
+      Dynamsoft.Core.CoreModule.loadWasm(["dbr"]);
+      cvRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+
+      let cameraView = await Dynamsoft.DCE.CameraView.createInstance();
+      cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
+      document.querySelector("#cameraView").append(cameraView.getUIElement());
+      cvRouter.setInput(cameraEnhancer);
+
+      const resultsContainer = document.querySelector("#results");
+      cvRouter.addResultReceiver({ onDecodedBarcodesReceived: (result) => {
+        console.log(result);
+        displayResults(result);
+      }});
+
+      let filter = new Dynamsoft.Utility.MultiFrameResultCrossFilter();
+      filter.enableResultCrossVerification("barcode", true);
+      filter.enableResultDeduplication("barcode", true);
+      await cvRouter.addResultFilter(filter);
+      document.getElementById("status").remove();
+      initialized = true;
+    }
+
+    function displayResults(result){
+      if (result.barcodeResultItems.length > 0) {
+        let container = document.getElementById("result");
+        let item = result.barcodeResultItems[0];
+        container.innerText = formatedContactInfo(item.text);
+      }
+    }
+
+    function formatedContactInfo(barcodeText) {
+      try {
+        let parsed = parse(barcodeText);
+        let presetKeys = {"fn":"Full name","org":"Orgnization","title":"Job Title","url":"URL","tel":"Tel","email":"Email"};
+        let str = "";
+        for (let index = 0; index < Object.keys(presetKeys).length; index++) {
+          const key = Object.keys(presetKeys)[index];
+          const value = presetKeys[key];
+          if (key in parsed) {
+            let appendedValue = "";
+            let valueArray = parsed[key];
+            valueArray.forEach(valueObject => {
+              appendedValue = appendedValue + valueObject.value + "\n";
+            });
+            str = str + value + ": " +appendedValue.trim() + "\n";
+          }
+        }
+        console.log(parsed);
+        vCardContent = barcodeText;
+        document.getElementsByClassName("buttons")[0].removeAttribute("hidden");
+        return str;
+      } catch (error) {
+        console.log(error);
+        return "Invalid vCard."
+      }
+    }
+
+    function share(){
+      var file = new File([vCardContent], "scanned.vcf", {type: 'text/vcard'});
+      var filesArray = [file];
+      var shareData = { files: filesArray };
+
+      if (navigator.canShare && navigator.canShare(shareData)) {
+        // Adding title afterwards as navigator.canShare just
+        // takes files as input
+        shareData.title = "vcard";
+
+        navigator.share(shareData)
+        .then(() => console.log('Share was successful.'))
+        .catch((error) => alert('Sharing failed: '+error));
+
+      } else {
+        console.log("Your system doesn't support sharing files.");
+      }
+    }
+
+    async function toggleScanning() {
+      let btn = document.getElementById("startScanBtn");
+      if (btn.innerText === "Start Scanning") {
+        await cameraEnhancer.open();
+        await cvRouter.startCapturing(templateName);
+        btn.innerText = "Stop Scanning";
+      }else{
+        await cvRouter.stopCapturing();
+        await cameraEnhancer.close();
+        btn.innerText = "Start Scanning";
+      }
+    }
+  </script>
+</body>
+</html>
