@@ -110,7 +110,6 @@ function generate(benchmarkData) {
           ? `<div class="metric-item"><div class="metric-label">Wrong Reads</div><div class="metric-value">${pct((s.success_count - s.exact_count) / s.total_images)}</div><div class="metric-sub">${s.success_count - s.exact_count}/${s.total_images}</div></div>
         <div class="metric-item"><div class="metric-label">No Read</div><div class="metric-value">${pct((s.total_images - s.success_count) / s.total_images)}</div><div class="metric-sub">${s.total_images - s.success_count}/${s.total_images}</div></div>`
           : `<div class="metric-item"><div class="metric-label">Success Rate</div><div class="metric-value">${pct(s.success_rate)}</div><div class="metric-sub">${s.success_count}/${s.total_images}</div></div>`}
-        ${hasGroundTruth ? `<div class="metric-item"><div class="metric-label">Avg Match Rate</div><div class="metric-value">${pct(s.average_match_rate)}</div></div>` : ''}
         <div class="metric-item"><div class="metric-label">Avg Time</div><div class="metric-value">${ms(s.avg_ms)}</div><div class="metric-sub">P50: ${ms(s.p50_ms)} | P95: ${ms(s.p95_ms)}</div></div>
         <div class="metric-item"><div class="metric-label">Min / Max</div><div class="metric-value">${ms(s.min_ms)}</div><div class="metric-sub">Max: ${ms(s.max_ms)}</div></div>
         <div class="metric-item"><div class="metric-label">Total Elapsed</div><div class="metric-value">${(s.total_wall_ms / 1000).toFixed(1)}s</div></div>
@@ -124,8 +123,8 @@ function generate(benchmarkData) {
     if (hasGroundTruth) {
       const accData = vendors.map(v => ({ name: v.name, value: v.summary.exact_accuracy, color: v.color }));
       comparisonHtml += comparisonBarSvg(accData, 'accuracy', 'Exact Accuracy Comparison', pct);
-      const matchData = vendors.map(v => ({ name: v.name, value: v.summary.average_match_rate, color: v.color }));
-      comparisonHtml += comparisonBarSvg(matchData, 'match', 'Average Match Rate Comparison', pct);
+      const wrongData = vendors.map(v => ({ name: v.name, value: (v.summary.success_count - v.summary.exact_count) / v.summary.total_images, color: v.color }));
+      comparisonHtml += comparisonBarSvg(wrongData, 'wrong', 'Wrong Reads Comparison (lower is better)', pct);
     }
     const speedData = vendors.map(v => ({ name: v.name, value: v.summary.avg_ms, color: v.color }));
     comparisonHtml += comparisonBarSvg(speedData, 'speed', 'Average Time Comparison (lower is better)', ms);
