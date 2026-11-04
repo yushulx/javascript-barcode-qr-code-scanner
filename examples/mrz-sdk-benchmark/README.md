@@ -17,12 +17,13 @@ Run on the curated 3,315-image [MIDV-500](https://github.com/fcakyon/midv500) MR
 | Metric | Dynamsoft Capture Vision 3.6.5000 | Scanbot Web SDK 9.0.0 |
 |---|---|---|
 | **Exact Accuracy** | **48.75% (1616/3315)** | 42.44% (1407/3315) |
-| Success Rate | 59.25% (1964/3315) | **63.92% (2119/3315)** |
+| **Wrong Reads** (text returned, not exact) | **10.50% (348/3315)** | 21.48% (712/3315) |
+| No Read (no MRZ text returned) | 40.75% (1351/3315) | **36.08% (1196/3315)** |
 | **Avg Scan Time** | **344.8 ms** | 616.8 ms |
 | **P50 Latency** | **297.9 ms** | 619.5 ms |
 | P95 Latency | 760.8 ms | **717.2 ms** |
 
-- **Dynamsoft produced 209 more fully correct reads** (+6.30 pp exact accuracy) — the metric that matters for identity verification, where one wrong character invalidates the result.
+- **Dynamsoft produced 209 more fully correct reads** (+6.30 pp exact accuracy) — the metric that matters for identity verification, where one wrong character invalidates the result. Scanbot returned text for 155 more images, but 712 of its reads were wrong against Dynamsoft's 348.
 - **Dynamsoft was ~44% faster on average** (344.8 ms vs 616.8 ms) and **~52% faster at the median** (297.9 ms vs 619.5 ms), finishing the full dataset in 1163 s versus Scanbot's 2057 s; P95 latency stays close, with Scanbot 5.7% ahead (760.8 ms vs 717.2 ms).
 - Scanbot returned raw MRZ text more often, but more of those strings contained at least one wrong character.
 
