@@ -11,7 +11,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "dynamsoft-barcode-reader-bundle": "^11.4.3000",
+    "dynamsoft-barcode-reader-bundle": "^11.6.5000",
     "sharp": "^0.35.3",
     "zxing-wasm": "^3.1.2"
   }

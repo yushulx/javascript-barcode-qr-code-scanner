@@ -254,6 +254,10 @@ export function generateSummary(records, { title } = {}) {
       supported_format_recall: supportedDenominator ? c.correct / supportedDenominator : 0,
       precision,
       f1: precision + recall ? (2 * precision * recall) / (precision + recall) : 0,
+      // Ground-truth failure split: wrong reads vs no read.
+      wrong_reads: (c.outcomes.wrong_text || 0) + (c.outcomes.wrong_format || 0),
+      no_read: (c.outcomes.not_found || 0) + (c.outcomes.unsupported_format || 0)
+        + (c.outcomes.decoder_error || 0),
       image_all_read_rate: c.records ? c.imageAllRead / c.records : 0,
       by_format: c.byFormat,
       by_source: c.bySource,

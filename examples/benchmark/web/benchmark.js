@@ -334,13 +334,18 @@ function renderSummary(summary) {
     .map(([name, d]) => {
       const recall = (d.coverage_adjusted_recall * 100).toFixed(2);
       const precision = (d.precision * 100).toFixed(2);
-      const allRead = (d.image_all_read_rate * 100).toFixed(2);
+      // Split failures by ground truth into wrong reads and no-reads.
+      const wrong = d.wrong_reads ?? ((d.outcomes?.wrong_text || 0) + (d.outcomes?.wrong_format || 0));
+      const noRead = d.no_read ?? ((d.outcomes?.not_found || 0)
+        + (d.outcomes?.unsupported_format || 0) + (d.outcomes?.decoder_error || 0));
+      const pct = (n) => (n / (d.eligible_instances || 1) * 100).toFixed(2);
       return `<tr>
         <td>${name} (${d.records} records)</td>
         <td>${d.correct} / ${d.eligible_instances}</td>
         <td><strong>${recall}%</strong></td>
         <td>${precision}%</td>
-        <td>${allRead}%</td>
+        <td>${wrong.toLocaleString()} (${pct(wrong)}%)</td>
+        <td>${noRead.toLocaleString()} (${pct(noRead)}%)</td>
         <td>${d.mean_decode_ms.toFixed(2)} ms</td>
         <td>${d.median_decode_ms.toFixed(2)} ms</td>
         <td>${d.p95_decode_ms.toFixed(2)} ms</td>
@@ -351,7 +356,7 @@ function renderSummary(summary) {
     <table>
       <thead><tr>
         <th>Decoder</th><th>Correct</th><th>Recall</th><th>Precision</th>
-        <th>Image all-read rate</th><th>Mean decode</th><th>Median decode</th><th>P95 decode</th>
+        <th>Wrong reads</th><th>No read</th><th>Mean decode</th><th>Median decode</th><th>P95 decode</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;

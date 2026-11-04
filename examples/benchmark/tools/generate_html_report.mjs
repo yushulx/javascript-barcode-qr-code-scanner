@@ -35,7 +35,9 @@ document.querySelectorAll('#q,#decoder,#outcome').forEach(e=>e.addEventListener(
 const cards = Object.entries(summary.decoders)
   .map(([name, value]) =>
     `<div class="card"><h3>${escape(name)}</h3><div class="metric">${(value.coverage_adjusted_recall * 100).toFixed(1)}%</div>` +
-    `<div class="muted">${value.correct}/${value.eligible_instances} exact, mean ${value.mean_decode_ms.toFixed(1)} ms</div></div>`
+    `<div class="muted">${value.correct.toLocaleString()}/${value.eligible_instances.toLocaleString()} exact` +
+    ` &middot; ${value.wrong_reads.toLocaleString()} wrong reads &middot; ${value.no_read.toLocaleString()} no read` +
+    ` &middot; mean ${value.mean_decode_ms.toFixed(1)} ms</div></div>`
   )
   .join("");
 
@@ -84,7 +86,8 @@ const document_ =
   decoderRecords.toLocaleString() +
   '</div>decoder records</div></div></section><section><h2>Method and disclosures</h2><p class="disclosure">' +
   escape(summary.disclosure) +
-  '</p><p>Both JavaScript decoders receive the same canvas painted from a single ImageBitmap; the fetch and bitmap decode stage is recorded separately as image_load_ns. Matching is a location-independent one-to-one multiset match of canonical format and exact normalized payload. UPC-A/EAN-13 leading zeros, CODE_39 start/stop asterisks, CODE_128 GS1 markers, HTML entity escaping, trailing newlines, and a leading \\000001 escape are normalized before scoring. Ground truth payload ^ is treated as an unreliable placeholder and excluded from scoring.</p><p><strong>Measured environment:</strong> ' +
+  '</p>' +
+  '<p>Both JavaScript decoders receive the same canvas painted from a single ImageBitmap; the fetch and bitmap decode stage is recorded separately as image_load_ns. Matching is a location-independent one-to-one multiset match of canonical format and exact normalized payload. UPC-A/EAN-13 leading zeros, CODE_39 start/stop asterisks, CODE_128 GS1 markers, HTML entity escaping, trailing newlines, and a leading \\000001 escape are normalized before scoring. Ground truth payload ^ is treated as an unreliable placeholder and excluded from scoring.</p><p><strong>Measured environment:</strong> ' +
   escape(environment.operating_system || "") +
   ', ' +
   escape(environment.processor || "") +
