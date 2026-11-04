@@ -1059,3 +1059,23 @@ a:hover {
         break-inside: avoid;
     }
 }
+
+/* ------------------------------------------------------------------
+   Explainer tables (shared/explainer.css)
+   The shared sheet gives every row header 34% of the table, which is
+   right for the two-column capability matrix and wrong for the layout
+   and field-position tables, where the first cell is "TD3" or "1-9".
+   ------------------------------------------------------------------ */
+.demo-explainer table.cols-layout tbody th {
+    width: 10%;
+}
+
+.demo-explainer table.cols-positions tbody th {
+    width: 12%;
+}
+
+.demo-explainer table.cols-layout th,
+.demo-explainer table.cols-layout td {
+    padding-left: 0.55em;
+    padding-right: 0.55em;
+}

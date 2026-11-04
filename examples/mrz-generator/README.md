@@ -18,7 +18,13 @@ https://www.dynamsoft.com/codepool/demos/mrz-generator/
 - Fills the form with random sample data for quick test documents.
 - Renders a mock document preview with the MRZ zone in the OCR-B font on an
   HTML5 canvas, at the character pitch ICAO 9303 specifies, so the output can be
-  fed to an MRZ recognition SDK.
+  fed to an MRZ recognition SDK. The data page carries a portrait, a holder
+  signature and a security rosette, all drawn on the canvas; the portrait is
+  composited from the record's own fields, so there is no photograph in the
+  repository and the same record always draws the same face.
+- Ships an explainer below the tool that walks the five ICAO 9303 layouts, the
+  position of every field on a TD3 lower line and the 7-3-1 check-digit
+  arithmetic, with the known limits written down rather than implied.
 
 ## Test Image Dataset
 
@@ -39,7 +45,7 @@ The second mode builds scanner-test images rather than a single document:
 The frame crop never cuts the MRZ: the trim stops before the edge would reach
 the band, and what the crop actually kept is recorded in the annotations.
 
-Score a dataset in the [MRZ scanner](https://www.dynamsoft.com/codepool/demos/mrz-scanner/) — its *Dataset benchmark*
+Score a dataset in the [MRZ scanner](../mrz-scanner/) — its *Dataset benchmark*
 mode reads the ZIP and reports per-field accuracy against this ground truth.
 
 ## Run Locally
@@ -55,4 +61,4 @@ mode reads the ZIP and reports per-field accuracy against this ground truth.
 
 ## Blog
 
-[How to Generate MRZ Code Programmatically with Python, Pyodide, and HTML5](https://www.dynamsoft.com/codepool/free-online-mrz-generator.html)
+[How to Generate MRZ Code Programmatically with JavaScript and HTML5 Canvas](https://www.dynamsoft.com/codepool/free-online-mrz-generator.html)
