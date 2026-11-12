@@ -1,5 +1,4 @@
 let cvr = null;
-let parser = null;
 let isMRZReady = false;
 let isFreeModelsReady = false;
 let isCameraRunning = false;
@@ -99,25 +98,18 @@ els.initBtn.addEventListener('click', async () => {
 
         // Load WASM modules
         els.status.textContent = "Loading WASM modules...";
-        await Dynamsoft.Core.CoreModule.loadWasm(["DLR"]);
-
-        // Create Code Parser for MRZ parsing
-        parser = await Dynamsoft.DCP.CodeParser.createInstance();
-
-        // Load MRZ specs
-        els.status.textContent = "Loading MRZ specs...";
-        await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD1_ID");
-        await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD2_FRENCH_ID");
-        await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD2_ID");
-        await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD2_VISA");
-        await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD3_PASSPORT");
-        await Dynamsoft.DCP.CodeParserModule.loadSpec("MRTD_TD3_VISA");
+        await Dynamsoft.Core.CoreModule.loadWasm();
 
         // Create Capture Vision Router
         cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
 
-        // Load MRZ template
-        await cvr.initSettings("./full.json");
+        // Load the MRZ template. Its CodeParserTaskSetting already declares the MRTD
+        // specs, so no CodeParser instance or loadSpec() call is needed here.
+        els.status.textContent = "Loading MRZ template...";
+        const info = await cvr.initSettings("./full.json");
+        if (info.errorCode !== 0) {
+            throw new Error(info.errorString);
+        }
 
         isMRZReady = true;
         els.status.textContent = "MRZ SDK Initialized. All features ready.";
@@ -329,15 +321,22 @@ function loadImage(base64Image) {
                     }
 
                     if (mrzTexts.length > 0) {
-                        // Display raw MRZ text with newlines for readability
-                        els.mrzRawText.textContent = mrzTexts.join('\\n');
+                        // The MRZ arrives as one string of 88 characters (two 44-char lines
+                        // concatenated). Split it so the panel shows the real line layout.
+                        const mrzText = mrzTexts.map(t => t.trim()).join('');
+                        els.mrzRawText.textContent = mrzText.match(/.{1,44}/g).join('\n');
 
-                        // Parse MRZ - join all lines into single string (no separators)
-                        // TD3 passport has 2 lines of 44 chars each = 88 chars total
-                        const mrzForParsing = mrzTexts.map(t => t.trim()).join('');
+                        // The template's CodeParserTaskSetting has already parsed this text:
+                        // capture() returns a ParsedResultItem alongside the text line.
+                        const parsedItem = result.parsedResult && result.parsedResult.parsedResultItems
+                            ? result.parsedResult.parsedResultItems[0]
+                            : null;
 
-                        const parseResults = await parser.parse(mrzForParsing);
-                        displayParsedMrz(parseResults);
+                        if (parsedItem) {
+                            displayParsedMrz(parsedItem);
+                        } else {
+                            els.mrzResults.textContent = "MRZ parsed result unavailable.";
+                        }
                     } else {
                         els.mrzRawText.textContent = "No MRZ detected.";
                         els.mrzResults.textContent = "No MRZ detected.";
@@ -520,7 +519,7 @@ function clearResults() {
 
 // Paste event handler
 document.addEventListener('paste', (event) => {
-    if (!isSDKReady) return;
+    if (!isFreeModelsReady) return;
     const items = (event.clipboardData || event.originalEvent.clipboardData).items;
 
     for (const item of items) {
