@@ -85,7 +85,7 @@ turns itself off. All decoded barcodes in that frame come back in `addedTrackedB
 benchmark/
 ├── src/
 │   ├── server.mjs            # collector + static/image server + scoring + finalize
-│   └── score.mjs             # canonical formats, matching, recall/precision/Wilson CI
+│   └── score.mjs             # canonical formats, matching, recall/Wilson CI
 ├── web/
 │   ├── index.html            # harness UI
 │   ├── benchmark.js          # manifest walk, timing, decode calls
@@ -93,16 +93,18 @@ benchmark/
 ├── tools/
 │   ├── run_headless.mjs      # headless Chrome driver + resumable run + finalize
 │   ├── validate_results.mjs  # JSONL structure / uniqueness / count checks
-│   ├── generate_html_report.mjs  # self-contained report + downloads
+│   ├── generate_html_report.mjs  # self-contained report
 │   ├── rematch_results.mjs   # re-score an existing JSONL after matching-rule changes
 │   └── generate_benchmark_media.py # cover/poster/slide video (Pillow + ffmpeg)
 ├── manifests/                # audited BarBeR manifest (shared with the series)
 ├── configs/                  # benchmark_environment.json (written on finalize)
-├── results/                  # results.jsonl / summary.json / results.json
-├── report/                   # index.html + downloads/ + media/
-├── node_modules/@scandit/    # pinned Scandit packages, served locally via import map
-└── .gitignore                # keeps node_modules out of version control
+├── results/full/             # published results.jsonl + summary.json
+├── report/                   # self-contained index.html with searchable per-image records
+├── node_modules/             # created by npm install (pinned Scandit packages served locally)
+└── .gitignore                # keeps node_modules and license files out of version control
 ```
+
+Trial keys live one level up in [`../licenses/`](../licenses/README.md); they are never committed.
 
 ## Prerequisites
 
@@ -110,14 +112,15 @@ benchmark/
   packages plus `puppeteer-core` for the headless runner)
 - The BarBeR dataset images and the audited manifest (this project expects the manifest already
   produced by the series audit under `manifests/`)
-- A Dynamsoft license key for the DBR side — get a
-  [30-day free trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform).
-  Without a key the harness falls back to a 24-hour public demo license.
-- A **Scandit web trial license key** for the Scandit side — get one from
-  [Scandit's trial page](https://www.scandit.com/trial/). There is no fallback key; the harness
-  refuses to initialize without one. It is supplied at runtime (input box, or the
-  `SCANDIT_LICENSE_KEY` environment variable for the headless runner) and is never written into
-  the repository.
+- **Your own Dynamsoft Barcode Reader license key** — apply for a
+  [free 30-day trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform).
+  No key is bundled; the harness refuses to initialize without one.
+- **Your own Scandit web trial license key** — apply at
+  [Scandit's trial page](https://www.scandit.com/trial/). No key is bundled either.
+- Both keys are supplied at runtime: paste them into the two license fields in the browser, or
+  set `DYNAMSOFT_LICENSE_KEY` / `SCANDIT_LICENSE_KEY` (or fill the untracked files in
+  `../licenses/`) for the headless runner. See [`../licenses/README.md`](../licenses/README.md).
+  They are never written into this repository.
 - A local Chrome/Edge installation for `tools/run_headless.mjs` (default: Chrome on Windows)
 - Python 3 + Pillow + ffmpeg (only for regenerating the report media)
 
@@ -129,7 +132,9 @@ images, resumes from any records already in `results.jsonl`, restarts the browse
 bound WASM memory, and calls `/finalize` automatically:
 
 ```bash
-SCANDIT_LICENSE_KEY='<your Scandit web trial key>' node tools/run_headless.mjs \
+DYNAMSOFT_LICENSE_KEY='<your Dynamsoft trial key>' \
+SCANDIT_LICENSE_KEY='<your Scandit web trial key>' \
+node tools/run_headless.mjs \
   --images "D:/images/BarBeR_Dataset/BarBeR - Dataset/dataset/images" \
   --manifest manifests/benchmark_manifest.jsonl \
   --output results/full \
@@ -151,8 +156,8 @@ node src/server.mjs \
   --port 8790
 ```
 
-Then open `http://localhost:8790/` in a browser, paste the Scandit trial key (required) and
-optionally a Dynamsoft license key, click **Initialize SDKs**, then **Run benchmark**. The page
+Then open `http://localhost:8790/` in a browser, paste **both** trial keys (both required), click
+**Initialize SDKs**, then **Run benchmark**. The page
 walks all 7,894 images; progress and a per-session mean decode time are shown live. Click
 **Finalize & summarize** to build `summary.json` / `results.json` /
 `configs/benchmark_environment.json`. The collector is resumable: an interrupted run can simply
@@ -170,12 +175,11 @@ node tools/validate_results.mjs \
 # Scoring excludes 204 "^" placeholders, so recall uses 8411.
 # Three decoders x 7894 images x 1 repetition = 23,682 records.
 
-# self-contained HTML report + downloads
+# self-contained HTML report
 node tools/generate_html_report.mjs \
   --inventory manifests/barber_source_files.json \
   --environment configs/benchmark_environment.json \
   --results results/full/results.jsonl \
-  --results-json results/full/results.json \
   --summary results/full/summary.json \
   --output report/index.html
 
@@ -202,7 +206,7 @@ to 8,411 for all three decoders.
 
 | Decoder | Correct | Recall | Wrong reads | No read | Mean decode | Median decode | P95 decode |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Dynamsoft Barcode Reader JS 11.6.5000 | **7,642 / 8,411** | **90.86%** | 86 (1.02%) | 683 (8.12%) | 157.88 ms | 125.75 ms | 380.20 ms |
+| Dynamsoft Barcode Reader JS 11.6.5000 | **7,814 / 8,411** | **92.90%** | 89 (1.06%) | 508 (6.04%) | 192.59 ms | 113.60 ms | 413.50 ms |
 | Scandit Data Capture SDK 8.7.1 | 7,593 / 8,411 | 90.27% | **81 (0.96%)** | 737 (8.76%) | **92.42 ms** | **76.80 ms** | **202.60 ms** |
 | zxing-wasm 3.1.2 | 6,023 / 8,411 | 71.61% | 90 (1.07%) | 2,298 (27.32%) | 144.54 ms | 88.20 ms | 476.00 ms |
 
@@ -214,20 +218,25 @@ Failures are split into **wrong reads** (`wrong_text + wrong_format`) and **no r
 > photograph, or a symbology the dataset does not cover, is charged as a false positive. It measures
 > annotation coverage as much as decoder error, so it is not reported.
 
-DBR read 49 more ground truth barcodes than Scandit, a lead of 0.59 percentage points in recall.
+DBR read 221 more ground truth barcodes than Scandit, a lead of 2.63 percentage points in recall.
 Scandit read 1,570 more than zxing-wasm, a lead of 18.66 points in recall, and produced the fewest
-wrong reads (81 against DBR's 86 and zxing-wasm's 90). Scandit was the fastest decoder on every
-timing measure: 92.42 ms mean (versus 157.88 ms DBR and 144.54 ms zxing-wasm), 76.80 ms median and
+wrong reads (81 against DBR's 89 and zxing-wasm's 90). Scandit was the fastest decoder on every
+timing measure: 92.42 ms mean (versus 192.59 ms DBR and 144.54 ms zxing-wasm), 76.80 ms median and
 202.60 ms P95, both the lowest of the three. DBR's lead over Scandit comes from the no-read column —
-683 against 737 — and Scandit's 23 unsupported annotations are the only ones either decoder cannot
+508 against 737 — and Scandit's 23 unsupported annotations are the only ones either decoder cannot
 attempt. Five images could not be decoded by the browser at all and are counted as no-reads
 (`decoder_error` in `outcomes`) for all three decoders; `validate_results.mjs` reports these 15
 records as errors by design.
 
-Against the original two-decoder run, DBR gains 4 correct readings under protocol v2 (7,638 →
-7,642, from the GS1 format family) and zxing-wasm gains 65 (5,958 → 6,023: 61 from the GS1
-parenthesis rule and 4 from the same family rule). Only the decode times differ from the earlier run,
-because this one used headless Chrome on different hardware.
+Against the original two-decoder run, DBR gains 176 correct readings (7,638 → 7,814): 172 from
+decoding Royal Mail once `BF_ALL` is enabled and 4 from the GS1 format family. zxing-wasm gains 65
+(5,958 → 6,023: 61 from the GS1 parenthesis rule and 4 from the same family rule).
+
+DBR's records were re-measured in a separate headless session after `BF_ALL` was enabled, so its
+decode times are not from the same session as Scandit's and zxing-wasm's; the other two decoders'
+records are unchanged from the original run. Enabling `BF_ALL` has a cost: DBR's mean decode time
+rises from 157.88 to 192.59 ms, mostly because every image is now also searched for the postal and
+Pharmacode symbologies, not only the 192 Royal Mail ones (non-Royal-Mail images: 155.9 → 188.7 ms).
 
 ### Post-run correction (auditable)
 

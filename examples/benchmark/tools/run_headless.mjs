@@ -34,6 +34,7 @@ function parseArgs(argv) {
     repetitions: 1,
     "restart-every": 3000,
     "stall-seconds": 300,
+    decoders: "zxing-wasm,dynamsoft-dbr-js,scandit-web-datacapture",
     chrome: "C:/Program Files/Google/Chrome/Application/chrome.exe",
   };
   for (let i = 2; i < argv.length; i++) {
@@ -60,9 +61,17 @@ function loadKey(envName, file) {
   return "";
 }
 
-const DYNAMSOFT_KEY = loadKey("DYNAMSOFT_LICENSE_KEY", path.join(LICENSE_DIR, "dynamsoft-dbr.txt"));
-const SCANDIT_KEY = loadKey("SCANDIT_LICENSE_KEY", path.join(LICENSE_DIR, "scandit-web.txt"));
-if (!DYNAMSOFT_KEY || !SCANDIT_KEY) {
+const ACTIVE_DECODERS = args.decoders.split(",").map((s) => s.trim()).filter(Boolean);
+const NEEDS_DBR = ACTIVE_DECODERS.includes("dynamsoft-dbr-js");
+const NEEDS_SCANDIT = ACTIVE_DECODERS.includes("scandit-web-datacapture");
+
+const DYNAMSOFT_KEY = NEEDS_DBR
+  ? loadKey("DYNAMSOFT_LICENSE_KEY", path.join(LICENSE_DIR, "dynamsoft-dbr.txt"))
+  : "";
+const SCANDIT_KEY = NEEDS_SCANDIT
+  ? loadKey("SCANDIT_LICENSE_KEY", path.join(LICENSE_DIR, "scandit-web.txt"))
+  : "";
+if ((NEEDS_DBR && !DYNAMSOFT_KEY) || (NEEDS_SCANDIT && !SCANDIT_KEY)) {
   console.error(
     "Both license keys are required. Apply for your own trials, then set\n" +
     "  DYNAMSOFT_LICENSE_KEY and SCANDIT_LICENSE_KEY, or copy the .example files\n" +
@@ -82,6 +91,7 @@ const server = spawn(
     "--output", args.output,
     "--port", String(args.port),
     "--repetitions", String(args.repetitions),
+    "--decoders", ACTIVE_DECODERS.join(","),
   ],
   { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] }
 );
@@ -117,10 +127,11 @@ async function openSession() {
     ],
   });
   const page = await browser.newPage();
-  await page.evaluateOnNewDocument((keys) => {
-    window.__SCANDIT_LICENSE_KEY__ = keys.scandit;
-    window.__DYNAMSOFT_LICENSE_KEY__ = keys.dynamsoft;
-  }, { scandit: SCANDIT_KEY, dynamsoft: DYNAMSOFT_KEY });
+  await page.evaluateOnNewDocument((config) => {
+    window.__SCANDIT_LICENSE_KEY__ = config.scandit;
+    window.__DYNAMSOFT_LICENSE_KEY__ = config.dynamsoft;
+    window.__BENCH_DECODERS__ = config.decoders;
+  }, { scandit: SCANDIT_KEY, dynamsoft: DYNAMSOFT_KEY, decoders: ACTIVE_DECODERS });
   page.on("pageerror", (err) => console.log("[pageerror]", err.message));
   page.on("console", (msg) => {
     const text = msg.text();

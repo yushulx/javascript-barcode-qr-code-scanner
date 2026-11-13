@@ -26,8 +26,8 @@ import {
   Symbology, SymbologyDescription,
 } from "@scandit/web-datacapture-barcode";
 
-const DEFAULT_LICENSE =
-  "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+// Both commercial license keys are supplied by the user at runtime. Nothing is
+// bundled in this repository; see ../../licenses/README.md for how to apply.
 const ZXING_NAME = "zxing-wasm";
 const DBR_NAME = "dynamsoft-dbr-js";
 const SCANDIT_NAME = "scandit-web-datacapture";
@@ -74,6 +74,10 @@ let completedKeys = new Set();
 let repetitions = 1;
 let cvRouter = null;
 let dbrTemplate = "ReadBarcodes_Default";
+let dbrFormats = "";
+// Which decoders this run covers. The headless runner sets it before the page
+// loads so a single decoder can be re-measured without touching the others.
+const ACTIVE_DECODERS = window.__BENCH_DECODERS__ || [ZXING_NAME, DBR_NAME, SCANDIT_NAME];
 let zxingVersion = ZXING_PINNED;
 let dbrVersion = DBR_PINNED;
 let scanditVersion = SCANDIT_PINNED;
@@ -119,7 +123,7 @@ function mulberry32(seed) {
 async function shuffledDecoders(sampleId, repetition) {
   const hex = await sha256Hex(`${sampleId}:${repetition}`);
   const rng = mulberry32(parseInt(hex.slice(0, 12), 16));
-  const order = [ZXING_NAME, DBR_NAME, SCANDIT_NAME];
+  const order = ACTIVE_DECODERS.slice();
   for (let i = order.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [order[i], order[j]] = [order[j], order[i]];
@@ -130,32 +134,54 @@ async function shuffledDecoders(sampleId, repetition) {
 // --- SDK initialization ----------------------------------------------------
 
 async function initSdk() {
-  setStatus("Initializing zxing-wasm…");
-  if (typeof ZXingWASM === "undefined") throw new Error("ZXingWASM global missing — CDN script not loaded?");
-  zxingVersion = ZXingWASM.version || ZXING_PINNED;
+  const runs = (decoder) => ACTIVE_DECODERS.includes(decoder);
 
-  setStatus("Initializing Dynamsoft Barcode Reader…");
-  const key = el.license.value.trim() || DEFAULT_LICENSE;
-  await Dynamsoft.License.LicenseManager.initLicense(key, true);
-  await Dynamsoft.Core.CoreModule.loadWasm(["DBR"]);
-  cvRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
-  dbrTemplate = Dynamsoft.CVR.EnumPresetTemplate.PT_READ_BARCODES;
-  dbrVersion =
-    (Dynamsoft.Core.CoreModule && Dynamsoft.Core.CoreModule.version) ||
-    (window.Dynamsoft && Dynamsoft.DBR && Dynamsoft.DBR.BarcodeReader && Dynamsoft.DBR.BarcodeReader.version) ||
-    DBR_PINNED;
+  if (runs(ZXING_NAME)) {
+    setStatus("Initializing zxing-wasm…");
+    if (typeof ZXingWASM === "undefined") throw new Error("ZXingWASM global missing — CDN script not loaded?");
+    zxingVersion = ZXingWASM.version || ZXING_PINNED;
+  }
 
-  setStatus("Initializing Scandit Data Capture SDK…");
-  const scanditKey = (window.__SCANDIT_LICENSE_KEY__ || el.scanditLicense.value).trim();
-  if (!scanditKey) throw new Error("Scandit license key is required — paste it in the Scandit license field");
-  scanditContext = await DataCaptureContext.forLicenseKey(scanditKey, {
-    libraryLocation: "/scandit/barcode/sdc-lib/",
-    moduleLoaders: [barcodeCaptureLoader()],
-  });
-  const settings = new BarcodeBatchSettings();
-  settings.enableSymbologies(SCANDIT_SYMBOLOGIES);
-  scanditBatch = await BarcodeBatch.forContext(scanditContext, settings);
-  await scanditBatch.setEnabled(false);
+  let scanditEnvironment = null;
+  if (runs(DBR_NAME)) {
+    setStatus("Initializing Dynamsoft Barcode Reader…");
+    const key = (window.__DYNAMSOFT_LICENSE_KEY__ || el.license.value || "").trim();
+    if (!key) {
+      throw new Error(
+        "Dynamsoft Barcode Reader license key is required — apply for a free 30-day trial " +
+        "and paste it in the Dynamsoft license field (or set DYNAMSOFT_LICENSE_KEY)"
+      );
+    }
+    await Dynamsoft.License.LicenseManager.initLicense(key, true);
+    await Dynamsoft.Core.CoreModule.loadWasm(["DBR"]);
+    cvRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+    dbrTemplate = Dynamsoft.CVR.EnumPresetTemplate.PT_READ_BARCODES;
+    await enableAllBarcodeFormats();
+    dbrVersion =
+      (Dynamsoft.Core.CoreModule && Dynamsoft.Core.CoreModule.version) ||
+      (window.Dynamsoft && Dynamsoft.DBR && Dynamsoft.DBR.BarcodeReader && Dynamsoft.DBR.BarcodeReader.version) ||
+      DBR_PINNED;
+  }
+
+  if (runs(SCANDIT_NAME)) {
+    setStatus("Initializing Scandit Data Capture SDK…");
+    const scanditKey = (window.__SCANDIT_LICENSE_KEY__ || el.scanditLicense.value).trim();
+    if (!scanditKey) throw new Error("Scandit license key is required — paste it in the Scandit license field");
+    scanditContext = await DataCaptureContext.forLicenseKey(scanditKey, {
+      libraryLocation: "/scandit/barcode/sdc-lib/",
+      moduleLoaders: [barcodeCaptureLoader()],
+    });
+    const settings = new BarcodeBatchSettings();
+    settings.enableSymbologies(SCANDIT_SYMBOLOGIES);
+    scanditBatch = await BarcodeBatch.forContext(scanditContext, settings);
+    await scanditBatch.setEnabled(false);
+    scanditEnvironment = {
+      scandit_core: SCANDIT_PINNED,
+      scandit_barcode: SCANDIT_PINNED,
+      scandit_symbologies: settings.enabledSymbologies,
+      scandit_mode: "BarcodeBatch / MatrixScan, one ImageFrameSource.fromImageData frame per image",
+    };
+  }
 
   await fetch("/environment", {
     method: "POST",
@@ -163,20 +189,16 @@ async function initSdk() {
     body: JSON.stringify({
       userAgent: navigator.userAgent,
       hardwareConcurrency: navigator.hardwareConcurrency,
-      zxing_wasm: zxingVersion,
+      decoders: ACTIVE_DECODERS,
+      zxing_wasm: runs(ZXING_NAME) ? zxingVersion : "not run",
       dynamsoft_bundle: DBR_PINNED,
-      dbr_engine: dbrVersion,
-      scandit_core: SCANDIT_PINNED,
-      scandit_barcode: SCANDIT_PINNED,
-      scandit_symbologies: settings.enabledSymbologies,
-      scandit_mode: "BarcodeBatch / MatrixScan, one ImageFrameSource.fromImageData frame per image",
+      dbr_engine: runs(DBR_NAME) ? dbrVersion : "not run",
+      dbr_formats: runs(DBR_NAME) ? dbrFormats : "not run",
+      ...(scanditEnvironment || {}),
     }),
   });
 
-  setStatus(
-    `zxing-wasm ${zxingVersion} · dynamsoft-barcode-reader-bundle ${DBR_PINNED} · ` +
-    `scandit-web-datacapture ${SCANDIT_PINNED} ready`
-  );
+  setStatus(`${ACTIVE_DECODERS.join(" · ")} ready`);
   el.run.disabled = false;
   el.finalize.disabled = false;
   window.__bench.phase = "initialized";
@@ -219,6 +241,24 @@ async function decodeWithZxing(canvas) {
     };
   } catch (err) {
     return { predictions: [], decodeNs: Math.round((performance.now() - begin) * 1e6), error: `decoder_error: ${err.message || err}` };
+  }
+}
+
+// The preset template ships BF_DEFAULT, which omits the postal symbologies
+// (RM4SCC, POSTNET, ...). The C++ harness runs DBR with BF_ALL, so the same
+// setting is applied here to keep the two runtimes comparable. No barcode-count
+// hint is set: the decoder is left to decide how many codes to look for.
+async function enableAllBarcodeFormats() {
+  try {
+    const settings = await cvRouter.getSimplifiedSettings(dbrTemplate);
+    const all = Dynamsoft.DBR && Dynamsoft.DBR.EnumBarcodeFormat && Dynamsoft.DBR.EnumBarcodeFormat.BF_ALL;
+    settings.barcodeSettings.barcodeFormatIds = all || BigInt("0xFFFFFFFEFFFFFFFF");
+    await cvRouter.updateSettings(dbrTemplate, settings);
+    dbrFormats = String(settings.barcodeSettings.barcodeFormatIds);
+    setStatus(`Dynamsoft Barcode Reader ready (formats ${dbrFormats})`);
+  } catch (error) {
+    dbrFormats = "BF_DEFAULT (BF_ALL unavailable: " + (error && error.message ? error.message : error) + ")";
+    console.warn("Could not enable all barcode formats", error);
   }
 }
 

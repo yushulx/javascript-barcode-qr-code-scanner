@@ -26,7 +26,7 @@ const ROOT = path.resolve(__dirname, "..");
 function parseArgs(argv) {
   const args = {
     port: 8790, images: "", manifest: "manifests/benchmark_manifest.jsonl",
-    output: "results/full", repetitions: 1, dbrTemplate: "ReadBarcodes_Default",
+    output: "results/full", repetitions: 1, dbrTemplate: "ReadBarcodes_Default", decoders: "",
   };
   for (let i = 2; i < argv.length; i++) {
     const key = argv[i].replace(/^--/, "");
@@ -38,6 +38,11 @@ function parseArgs(argv) {
 }
 
 const args = parseArgs(process.argv);
+// A run may cover a subset of the decoders; the completed-record checks and the
+// /state payload must agree with what the page actually runs.
+const ACTIVE_DECODERS = args.decoders
+  ? args.decoders.split(",").map((s) => s.trim()).filter(Boolean)
+  : DECODERS;
 const manifestPath = path.resolve(ROOT, args.manifest);
 const outputDir = path.resolve(ROOT, args.output);
 const imageRoot = path.resolve(args.images);
@@ -145,7 +150,7 @@ function writeEnvironment() {
     scandit_core_package: `@scandit/web-datacapture-core ${SCANDIT_VERSION} (local npm, pinned)`,
     scandit_barcode_package: `@scandit/web-datacapture-barcode ${SCANDIT_VERSION} (local npm, pinned)`,
     scandit_mode: "BarcodeBatch / MatrixScan, single ImageFrameSource.fromImageData frame per image",
-    decoders: DECODERS,
+    decoders: ACTIVE_DECODERS,
     browser: browserEnvironment,
     manifest_sha256: manifestSha256,
   };
@@ -191,8 +196,8 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, {
         total_images: manifestRecords.length,
         repetitions: args.repetitions,
-        decoders: DECODERS,
-        expected_records: manifestRecords.length * DECODERS.length * args.repetitions,
+        decoders: ACTIVE_DECODERS,
+        expected_records: manifestRecords.length * ACTIVE_DECODERS.length * args.repetitions,
         completed_records: completed.size,
         completed: [...completed],
         manifest_sha256: manifestSha256,
@@ -205,7 +210,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && url.pathname === "/progress") {
       return json(res, 200, {
         completed_records: completed.size,
-        expected_records: manifestRecords.length * DECODERS.length * args.repetitions,
+        expected_records: manifestRecords.length * ACTIVE_DECODERS.length * args.repetitions,
       });
     }
 

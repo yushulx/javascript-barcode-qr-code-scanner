@@ -71,6 +71,9 @@ const FORMAT_MAPPING = {
   // every decoder under protocol v1. Map the stripped spelling back to the
   // underscored canonical name (issue 1 of the v2 matching fix).
   ROYALMAIL: "ROYAL_MAIL",
+  // The browser bundle spells the same symbology RM4SCC (the Linux build says
+  // ROYAL_MAIL); both are BF_RM4SCC.
+  RM4SCC: "ROYAL_MAIL",
   IATA2OF5: "IATA_2_OF_5",
   USPSINTELLIGENTMAIL: "USPS_INTELLIGENT_MAIL",
   UPCA: "UPC_A", UPC_S: "UPC_A", UPC: "UPC_A",

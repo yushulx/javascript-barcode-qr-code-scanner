@@ -8,7 +8,7 @@
   "configuration": "Browser WASM run driven by Node harness",
   "benchmark_processes": 1,
   "repetitions": 1,
-  "dbr_template": "ReadBarcodes_Default",
+  "dbr_template": "ReadBarcodes_Default with BF_ALL and no barcode-count hint",
   "zxing_wasm_package": "zxing-wasm (jsdelivr CDN, pinned)",
   "dynamsoft_package": "dynamsoft-barcode-reader-bundle (jsdelivr CDN, pinned)",
   "scandit_core_package": "@scandit/web-datacapture-core 8.7.1 (local npm, pinned)",
@@ -45,7 +45,9 @@
       "royal-mail-4state",
       "uspsIntelligentMail"
     ],
-    "scandit_mode": "BarcodeBatch / MatrixScan, one ImageFrameSource.fromImageData frame per image"
+    "scandit_mode": "BarcodeBatch / MatrixScan, one ImageFrameSource.fromImageData frame per image",
+    "dbr_formats": "BF_ALL (0xFFFFFFFEFFFFFFFF)"
   },
-  "manifest_sha256": "6dc54bcbc41b10e335db93df921dcaa70068b6f2c62881f1fe91dd870d891ddc"
+  "manifest_sha256": "6dc54bcbc41b10e335db93df921dcaa70068b6f2c62881f1fe91dd870d891ddc",
+  "notes": "DBR, Scandit and zxing-wasm all ran in headless Chrome against the same manifest. DBR's records were re-measured in a second session after BF_ALL was enabled (the preset ships BF_DEFAULT, which omits Royal Mail / POSTNET), so its decode times are not from the same session as the other two; their records are unchanged from the first run."
 }
