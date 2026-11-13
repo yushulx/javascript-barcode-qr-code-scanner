@@ -1,5 +1,5 @@
 {
-  "measured_at": "2026-11-03T05:32:42.697Z",
+  "measured_at": "2026-11-13T04:29:58.275Z",
   "operating_system": "win32 10.0.26200",
   "processor": "13th Gen Intel(R) Core(TM) i5-13400F",
   "logical_processors": 16,
@@ -11,12 +11,41 @@
   "dbr_template": "ReadBarcodes_Default",
   "zxing_wasm_package": "zxing-wasm (jsdelivr CDN, pinned)",
   "dynamsoft_package": "dynamsoft-barcode-reader-bundle (jsdelivr CDN, pinned)",
+  "scandit_core_package": "@scandit/web-datacapture-core 8.7.1 (local npm, pinned)",
+  "scandit_barcode_package": "@scandit/web-datacapture-barcode 8.7.1 (local npm, pinned)",
+  "scandit_mode": "BarcodeBatch / MatrixScan, single ImageFrameSource.fromImageData frame per image",
+  "decoders": [
+    "zxing-wasm",
+    "dynamsoft-dbr-js",
+    "scandit-web-datacapture"
+  ],
   "browser": {
-    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36 Edg/156.0.0.0",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
     "hardwareConcurrency": 16,
     "zxing_wasm": "3.1.2",
     "dynamsoft_bundle": "11.6.5000",
-    "dbr_engine": "11.6.5000"
+    "dbr_engine": "11.6.5000",
+    "scandit_core": "8.7.1",
+    "scandit_barcode": "8.7.1",
+    "scandit_symbologies": [
+      "ean13Upca",
+      "upce",
+      "ean8",
+      "code39",
+      "code93",
+      "code128",
+      "codabar",
+      "interleavedTwoOfFive",
+      "iata2of5",
+      "qr",
+      "dataMatrix",
+      "aztec",
+      "pdf417",
+      "kix",
+      "royal-mail-4state",
+      "uspsIntelligentMail"
+    ],
+    "scandit_mode": "BarcodeBatch / MatrixScan, one ImageFrameSource.fromImageData frame per image"
   },
   "manifest_sha256": "6dc54bcbc41b10e335db93df921dcaa70068b6f2c62881f1fe91dd870d891ddc"
 }

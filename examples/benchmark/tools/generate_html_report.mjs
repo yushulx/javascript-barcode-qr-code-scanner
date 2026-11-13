@@ -28,13 +28,13 @@ const STYLE = `
 const SCRIPT = `
 const rows=REPORT_ROWS,body=document.querySelector('#raw tbody');
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function render(){const q=document.querySelector('#q').value.toLowerCase(),d=document.querySelector('#decoder').value,o=document.querySelector('#outcome').value;body.innerHTML='';const matched=rows.filter(r=>(!d||r.decoder===d)&&(!o||r.matches.some(m=>m.outcome===o))&&JSON.stringify(r).toLowerCase().includes(q));document.querySelector('#shown').textContent=\`Showing \${Math.min(500,matched.length).toLocaleString()} of \${matched.length.toLocaleString()} matching records\`;matched.slice(0,500).forEach(r=>{const tr=document.createElement('tr'),out=r.matches.map(m=>m.outcome);tr.innerHTML=\`<td>\${esc(r.decoder)}</td><td>\${esc(r.relative_path)}</td><td>\${esc(r.annotation_file)}</td><td>\${r.ground_truth.filter(x=>x.decode_eligible).map(x=>esc(x.format)+': '+esc(x.text)).join('<br>')}</td><td>\${r.predictions.map(x=>esc(x.format)+': '+esc(x.text)).join('<br>')}</td><td class="\${out[0]||''}">\${out.map(esc).join(', ')}</td><td>\${(r.decode_ns/1e6).toFixed(2)}</td>\`;body.appendChild(tr)})}
+function render(){const q=document.querySelector('#q').value.toLowerCase(),d=document.querySelector('#decoder').value,o=document.querySelector('#outcome').value;body.innerHTML='';const matched=rows.filter(r=>(!d||r.decoder===d)&&(!o||r.matches.some(m=>m.outcome===o))&&JSON.stringify(r).toLowerCase().includes(q));document.querySelector('#shown').textContent=\`Showing \${Math.min(500,matched.length).toLocaleString()} of \${matched.length.toLocaleString()} matching records\`;matched.slice(0,500).forEach(r=>{const tr=document.createElement('tr'),out=r.matches.filter(m=>m.outcome!=='extra_result').map(m=>m.outcome);tr.innerHTML=\`<td>\${esc(r.decoder)}</td><td>\${esc(r.relative_path)}</td><td>\${esc(r.annotation_file)}</td><td>\${r.ground_truth.filter(x=>x.decode_eligible).map(x=>esc(x.format)+': '+esc(x.text)).join('<br>')}</td><td>\${r.predictions.map(x=>esc(x.format)+': '+esc(x.text)).join('<br>')}</td><td class="\${out[0]||''}">\${out.map(esc).join(', ')}</td><td>\${(r.decode_ns/1e6).toFixed(2)}</td>\`;body.appendChild(tr)})}
 document.querySelectorAll('#q,#decoder,#outcome').forEach(e=>e.addEventListener('input',render));render();
 `;
 
 const cards = Object.entries(summary.decoders)
   .map(([name, value]) =>
-    `<div class="card"><h3>${escape(name)}</h3><div class="metric">${(value.coverage_adjusted_recall * 100).toFixed(1)}%</div>` +
+    `<div class="card"><h3>${escape(name)}</h3><div class="metric">${(value.coverage_adjusted_recall * 100).toFixed(2)}%</div>` +
     `<div class="muted">${value.correct.toLocaleString()}/${value.eligible_instances.toLocaleString()} exact` +
     ` &middot; ${value.wrong_reads.toLocaleString()} wrong reads &middot; ${value.no_read.toLocaleString()} no read` +
     ` &middot; mean ${value.mean_decode_ms.toFixed(1)} ms</div></div>`
@@ -42,7 +42,9 @@ const cards = Object.entries(summary.decoders)
   .join("");
 
 const decoderOptions = [...new Set(rows.map((r) => r.decoder))].sort().map((x) => `<option>${escape(x)}</option>`).join("");
-const outcomes = [...new Set(rows.flatMap((r) => r.matches.map((m) => m.outcome)))].sort();
+const outcomes = [...new Set(rows.flatMap((r) => r.matches.map((m) => m.outcome)))]
+  .filter((x) => x !== "extra_result")
+  .sort();
 const outcomeOptions = outcomes.map((x) => `<option>${escape(x)}</option>`).join("");
 // Inject the rows as a JSON literal. Escape the two sequences that can break a
 // <script> block or a JS string: "</" (would close the script tag) and the raw
@@ -57,6 +59,7 @@ const rowsJson = JSON.stringify(rows)
 // special replacement patterns by String.replace().
 const script = SCRIPT.replace("REPORT_ROWS", () => rowsJson);
 const decoderRecords = Object.values(summary.decoders).reduce((sum, value) => sum + value.records, 0);
+const reportTitle = Object.keys(summary.decoders).map(escape).join(" vs. ");
 
 const browserLine = environment.browser
   ? `${escape(environment.browser.userAgent || "")}, ${environment.browser.hardwareConcurrency || ""} logical processors reported by the browser`
@@ -68,7 +71,9 @@ const browserLine = environment.browser
 const document_ =
   '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="icon" href="data:,"><title>JavaScript BarBeR Barcode Benchmark</title><style>' +
   STYLE +
-  '</style><header><h1>zxing-wasm vs. Dynamsoft Barcode Reader JavaScript</h1><p>BarBeR public dataset decoding benchmark. Exact payload and canonical format are scored. Localization geometry is not scored.</p></header><main class="wrap"><section><h2>Full benchmark results</h2><div class="cards">' +
+  '</style><header><h1>' +
+  reportTitle +
+  '</h1><p>BarBeR public dataset decoding benchmark. Exact payload and canonical format are scored. Localization geometry is not scored.</p></header><main class="wrap"><section><h2>Full benchmark results</h2><div class="cards">' +
   cards +
   '</div></section><section><h2>Dataset audit</h2><div class="cards"><div class="card"><div class="metric">' +
   stats.source_images.toLocaleString() +
@@ -87,7 +92,7 @@ const document_ =
   '</div>decoder records</div></div></section><section><h2>Method and disclosures</h2><p class="disclosure">' +
   escape(summary.disclosure) +
   '</p>' +
-  '<p>Both JavaScript decoders receive the same canvas painted from a single ImageBitmap; the fetch and bitmap decode stage is recorded separately as image_load_ns. Matching is a location-independent one-to-one multiset match of canonical format and exact normalized payload. UPC-A/EAN-13 leading zeros, CODE_39 start/stop asterisks, CODE_128 GS1 markers, HTML entity escaping, trailing newlines, and a leading \\000001 escape are normalized before scoring. Ground truth payload ^ is treated as an unreliable placeholder and excluded from scoring.</p><p><strong>Measured environment:</strong> ' +
+  '<p>All three decoders read the same pixels from one canvas painted from a single ImageBitmap; the fetch and bitmap decode stage is recorded separately as image_load_ns. zxing-wasm reads ImageData, Dynamsoft reads the canvas, and Scandit reads one ImageFrameSource frame built from the same canvas ImageData (BarcodeBatch / MatrixScan mode). Only the decoder call is timed, and decoder order is shuffled per image with a seeded PRNG. Matching is a location-independent one-to-one multiset match of canonical format and exact normalized payload. UPC-A/EAN-13 leading zeros, CODE_39 start/stop asterisks, CODE_128 GS1 markers, HTML entity escaping, trailing newlines, and a leading \\000001 escape are normalized before scoring. Ground truth payload ^ is treated as an unreliable placeholder and excluded from scoring.</p><p><strong>Measured environment:</strong> ' +
   escape(environment.operating_system || "") +
   ', ' +
   escape(environment.processor || "") +
@@ -99,7 +104,15 @@ const document_ =
   (environment.repetitions || 1) +
   ' measured run. ' +
   browserLine +
-  '</p></section><section><h2>Per-image results</h2><p class="muted">The interactive table displays up to 500 matching rows. The complete JSONL stream and a complete JSON package are included in the report downloads.</p><div class="controls"><input id="q" placeholder="Search image, format, payload"><select id="decoder"><option value="">All decoders</option>' +
+  '</p>' +
+  (environment.scandit_barcode_package
+    ? '<p><strong>Pinned SDKs:</strong> ' +
+      escape(environment.zxing_wasm_package || "") + '; ' +
+      escape(environment.dynamsoft_package || "") + '; ' +
+      escape(environment.scandit_barcode_package || "") +
+      '. Scandit ran in ' + escape(environment.scandit_mode || "single-image mode") + '.</p>'
+    : '') +
+  '</section><section><h2>Per-image results</h2><p class="muted">The interactive table displays up to 500 matching rows. The Predictions column lists every barcode the reader returned for the image, including any that no annotation claims; the Outcomes column covers only the annotations. The complete JSONL stream, the summary, the source inventory and the environment snapshot are shipped under <code>results/full/</code>, <code>manifests/</code> and <code>configs/</code>.</p><div class="controls"><input id="q" placeholder="Search image, format, payload"><select id="decoder"><option value="">All decoders</option>' +
   decoderOptions +
   '</select><select id="outcome"><option value="">All outcomes</option>' +
   outcomeOptions +

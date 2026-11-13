@@ -7,7 +7,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { readJsonl, matchResults, generateSummary } from "../src/score.mjs";
+import { readJsonl, matchResults, generateSummary, PROTOCOL } from "../src/score.mjs";
 
 function parseArgs(argv) {
   const args = { results: "", output: "" };
@@ -28,6 +28,9 @@ const records = readJsonl(args.results);
 for (const record of records) {
   if (record.error) continue;
   record.matches = matchResults(record.ground_truth || [], record.predictions || [], record.decoder);
+  // The matches in this file were produced by the current rules, so the record
+  // must say so even though the decode itself predates them.
+  record.protocol = PROTOCOL;
 }
 
 fs.mkdirSync(args.output, { recursive: true });

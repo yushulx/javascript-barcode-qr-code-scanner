@@ -1,26 +1,55 @@
 /**
- * Browser harness for the zxing-wasm vs. Dynamsoft Barcode Reader benchmark.
+ * Browser harness for the zxing-wasm vs. Dynamsoft Barcode Reader vs. Scandit benchmark.
  *
  * Protocol (kept identical in spirit to the C++/Python series articles):
  * - The server supplies the audited BarBeR manifest and dataset images.
  * - Each image is fetched once and decoded into an ImageBitmap, then painted
  *   onto a shared canvas. That stage is recorded as image_load_ns and never
  *   enters the decode clock.
- * - Both decoders receive the same canvas; only the decoder call is timed.
+ * - All three decoders receive the same canvas/raw pixels; only the decoder
+ *   call is timed.
  * - Decoder order is shuffled per (sample, repetition) with a seeded PRNG.
  * - Each record is POSTed to the collector server, which scores it with the
  *   shared matching rules and appends it to results.jsonl (resumable).
+ *
+ * Scandit runs in BarcodeBatch (MatrixScan) mode. One ImageFrameSource is built
+ * per image from the shared canvas' ImageData; it emits exactly one frame and
+ * turns itself off. didUpdateSession fires for every processed frame (with or
+ * without barcodes), so it is used as the "frame processed" signal.
  */
+
+import {
+  DataCaptureContext, ImageFrameSource, FrameSourceState,
+} from "@scandit/web-datacapture-core";
+import {
+  barcodeCaptureLoader, BarcodeBatch, BarcodeBatchSettings,
+  Symbology, SymbologyDescription,
+} from "@scandit/web-datacapture-barcode";
 
 const DEFAULT_LICENSE =
   "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
 const ZXING_NAME = "zxing-wasm";
 const DBR_NAME = "dynamsoft-dbr-js";
+const SCANDIT_NAME = "scandit-web-datacapture";
 const ZXING_PINNED = "3.1.2";
 const DBR_PINNED = "11.6.5000";
+const SCANDIT_PINNED = "8.7.1";
+
+// Every BarBeR-relevant symbology that Scandit 8.7.1 exposes. Scandit has no
+// JAPAN_POST or POSTNET symbology; those annotations are scored as
+// unsupported_format by src/score.mjs, exactly as for zxing-wasm.
+const SCANDIT_SYMBOLOGIES = [
+  Symbology.EAN13UPCA, Symbology.UPCE, Symbology.EAN8,
+  Symbology.Code39, Symbology.Code93, Symbology.Code128,
+  Symbology.Codabar, Symbology.InterleavedTwoOfFive, Symbology.IATATwoOfFive,
+  Symbology.QR, Symbology.DataMatrix, Symbology.Aztec,
+  Symbology.PDF417, Symbology.KIX, Symbology.RoyalMail4state,
+  Symbology.USPSIntelligentMail,
+];
 
 const el = {
   license: document.getElementById("license"),
+  scanditLicense: document.getElementById("scandit-license"),
   init: document.getElementById("init-btn"),
   run: document.getElementById("run-btn"),
   stop: document.getElementById("stop-btn"),
@@ -47,6 +76,9 @@ let cvRouter = null;
 let dbrTemplate = "ReadBarcodes_Default";
 let zxingVersion = ZXING_PINNED;
 let dbrVersion = DBR_PINNED;
+let scanditVersion = SCANDIT_PINNED;
+let scanditContext = null;
+let scanditBatch = null;
 let stopRequested = false;
 let sharedCanvas = document.createElement("canvas");
 let sharedCtx = sharedCanvas.getContext("2d", { willReadFrequently: true });
@@ -54,6 +86,7 @@ let sharedCtx = sharedCanvas.getContext("2d", { willReadFrequently: true });
 const stats = {
   [ZXING_NAME]: { images: 0, barcodes: 0, totalDecodeMs: 0 },
   [DBR_NAME]: { images: 0, barcodes: 0, totalDecodeMs: 0 },
+  [SCANDIT_NAME]: { images: 0, barcodes: 0, totalDecodeMs: 0 },
 };
 
 function setStatus(text) {
@@ -86,7 +119,7 @@ function mulberry32(seed) {
 async function shuffledDecoders(sampleId, repetition) {
   const hex = await sha256Hex(`${sampleId}:${repetition}`);
   const rng = mulberry32(parseInt(hex.slice(0, 12), 16));
-  const order = [ZXING_NAME, DBR_NAME];
+  const order = [ZXING_NAME, DBR_NAME, SCANDIT_NAME];
   for (let i = order.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [order[i], order[j]] = [order[j], order[i]];
@@ -112,6 +145,18 @@ async function initSdk() {
     (window.Dynamsoft && Dynamsoft.DBR && Dynamsoft.DBR.BarcodeReader && Dynamsoft.DBR.BarcodeReader.version) ||
     DBR_PINNED;
 
+  setStatus("Initializing Scandit Data Capture SDK…");
+  const scanditKey = (window.__SCANDIT_LICENSE_KEY__ || el.scanditLicense.value).trim();
+  if (!scanditKey) throw new Error("Scandit license key is required — paste it in the Scandit license field");
+  scanditContext = await DataCaptureContext.forLicenseKey(scanditKey, {
+    libraryLocation: "/scandit/barcode/sdc-lib/",
+    moduleLoaders: [barcodeCaptureLoader()],
+  });
+  const settings = new BarcodeBatchSettings();
+  settings.enableSymbologies(SCANDIT_SYMBOLOGIES);
+  scanditBatch = await BarcodeBatch.forContext(scanditContext, settings);
+  await scanditBatch.setEnabled(false);
+
   await fetch("/environment", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -121,12 +166,20 @@ async function initSdk() {
       zxing_wasm: zxingVersion,
       dynamsoft_bundle: DBR_PINNED,
       dbr_engine: dbrVersion,
+      scandit_core: SCANDIT_PINNED,
+      scandit_barcode: SCANDIT_PINNED,
+      scandit_symbologies: settings.enabledSymbologies,
+      scandit_mode: "BarcodeBatch / MatrixScan, one ImageFrameSource.fromImageData frame per image",
     }),
   });
 
-  setStatus(`zxing-wasm ${zxingVersion} ready · dynamsoft-barcode-reader-bundle ${DBR_PINNED} ready`);
+  setStatus(
+    `zxing-wasm ${zxingVersion} · dynamsoft-barcode-reader-bundle ${DBR_PINNED} · ` +
+    `scandit-web-datacapture ${SCANDIT_PINNED} ready`
+  );
   el.run.disabled = false;
   el.finalize.disabled = false;
+  window.__bench.phase = "initialized";
 }
 
 // --- manifest + state ------------------------------------------------------
@@ -189,6 +242,90 @@ async function decodeWithDbr(canvas) {
     return { predictions, decodeNs, error: null };
   } catch (err) {
     return { predictions: [], decodeNs: Math.round((performance.now() - begin) * 1e6), error: `decoder_error: ${err.message || err}` };
+  }
+}
+
+/**
+ * Map a Scandit barcode to the canonical format names used by src/score.mjs.
+ * EAN13UPCA is one Scandit symbology covering both EAN-13 and UPC-A; Scandit
+ * returns UPC-A payloads as 13 digits with a leading zero, so it is split by
+ * payload length. The UPC-A/EAN-13 bridge in the scorer handles the remaining
+ * leading-zero cases.
+ */
+function scanditFormat(barcode) {
+  const data = String(barcode.data || "");
+  switch (barcode.symbology) {
+    case Symbology.EAN13UPCA:
+      if (/^\d{12}$/.test(data)) return "UPC_A";
+      if (/^\d{8}$/.test(data)) return "EAN_8";
+      return "EAN_13";
+    case Symbology.UPCE: return "UPC_E";
+    case Symbology.EAN8: return "EAN_8";
+    case Symbology.Code39: return "CODE_39";
+    case Symbology.Code93: return "CODE_93";
+    // Scandit sets isGS1DataCarrier on many ordinary Code 128 payloads, but BarBeR
+    // labels 1,120 of them CODE_128 and only 4 GS1_128. Splitting on that flag
+    // produced 171 spurious wrong_format outcomes in the first full run. Label
+    // every Code 128 result CODE_128, the same convention the zxing-wasm and DBR
+    // harnesses use, and let the scorer's GS1 marker normalization handle payloads.
+    case Symbology.Code128: return "CODE_128";
+    case Symbology.Codabar: return "CODABAR";
+    case Symbology.InterleavedTwoOfFive: return "ITF";
+    case Symbology.IATATwoOfFive: return "IATA_2_OF_5";
+    case Symbology.QR: return "QR_CODE";
+    case Symbology.DataMatrix: return "DATA_MATRIX";
+    case Symbology.Aztec: return "AZTEC";
+    case Symbology.PDF417: return "PDF_417";
+    case Symbology.KIX: return "KIX";
+    case Symbology.RoyalMail4state: return "ROYAL_MAIL";
+    case Symbology.USPSIntelligentMail: return "USPS_INTELLIGENT_MAIL";
+    default: return new SymbologyDescription(barcode.symbology).readableName;
+  }
+}
+
+async function decodeWithScandit(canvas) {
+  const begin = performance.now();
+  let listener = null;
+  try {
+    const imageData = sharedCtx.getImageData(0, 0, canvas.width, canvas.height);
+    const found = [];
+    let resolveDone;
+    let settled = false;
+    const done = new Promise((resolve) => {
+      resolveDone = () => { if (!settled) { settled = true; resolve(); } };
+    });
+    listener = {
+      didUpdateSession: (_batch, session) => {
+        for (const tracked of session.addedTrackedBarcodes || []) found.push(tracked.barcode);
+        resolveDone();
+      },
+    };
+    scanditBatch.addListener(listener);
+    const frameSource = await ImageFrameSource.fromImageData(imageData);
+    await scanditContext.setFrameSource(frameSource);
+    await scanditBatch.setEnabled(true);
+    await frameSource.switchToDesiredState(FrameSourceState.On);
+    // didUpdateSession fires for every processed frame, even when nothing is
+    // found. A short safety timeout keeps one dropped frame from stalling the run.
+    let timer;
+    const timeout = new Promise((resolve) => { timer = setTimeout(resolve, 1200); });
+    await Promise.race([done, timeout]);
+    clearTimeout(timer);
+    const decodeNs = Math.round((performance.now() - begin) * 1e6);
+    const predictions = found.map((barcode) => ({
+      format: scanditFormat(barcode),
+      text: String(barcode.data || ""),
+      raw_bytes_hex: "",
+      confidence: null,
+    }));
+    return { predictions, decodeNs, error: null };
+  } catch (err) {
+    return { predictions: [], decodeNs: Math.round((performance.now() - begin) * 1e6), error: `decoder_error: ${err.message || err}` };
+  } finally {
+    try {
+      if (listener) scanditBatch.removeListener(listener);
+      if (scanditBatch) await scanditBatch.setEnabled(false);
+    } catch (_) { /* keep the decode result even if cleanup fails */ }
   }
 }
 
@@ -268,12 +405,16 @@ async function runBenchmark() {
         let result;
         if (loadError) {
           result = { predictions: [], decodeNs: 0, error: loadError };
+        } else if (decoder === ZXING_NAME) {
+          result = await decodeWithZxing(sharedCanvas);
+        } else if (decoder === DBR_NAME) {
+          result = await decodeWithDbr(sharedCanvas);
         } else {
-          result = decoder === ZXING_NAME ? await decodeWithZxing(sharedCanvas) : await decodeWithDbr(sharedCanvas);
+          result = await decodeWithScandit(sharedCanvas);
         }
         await postRecord(
           sample, decoder,
-          decoder === ZXING_NAME ? zxingVersion : dbrVersion,
+          decoder === ZXING_NAME ? zxingVersion : decoder === DBR_NAME ? dbrVersion : scanditVersion,
           repetition, loadError ? 0 : imageLoadNs, result
         );
         completedKeys.add(key);
@@ -313,7 +454,7 @@ async function runBenchmark() {
 }
 
 function renderLiveStats() {
-  const rows = [ZXING_NAME, DBR_NAME].map((name) => {
+  const rows = [ZXING_NAME, DBR_NAME, SCANDIT_NAME].map((name) => {
     const s = stats[name];
     const mean = s.images ? (s.totalDecodeMs / s.images).toFixed(2) : "—";
     return `<div class="stat-card"><strong>${name}</strong><span>${s.images} images · ${s.barcodes} barcodes · mean ${mean} ms (session)</span></div>`;
@@ -363,10 +504,16 @@ function renderSummary(summary) {
 }
 
 el.init.addEventListener("click", () =>
-  initSdk().catch((err) => setStatus(`Init failed: ${err.message || err}`))
+  initSdk().catch((err) => {
+    window.__bench.errors.push(String(err.message || err));
+    setStatus(`Init failed: ${err.message || err}`);
+  })
 );
 el.run.addEventListener("click", () =>
-  runBenchmark().catch((err) => progress(`Run failed: ${err.message || err}`, 0))
+  runBenchmark().catch((err) => {
+    window.__bench.errors.push(String(err.message || err));
+    progress(`Run failed: ${err.message || err}`, 0);
+  })
 );
 el.stop.addEventListener("click", () => {
   stopRequested = true;

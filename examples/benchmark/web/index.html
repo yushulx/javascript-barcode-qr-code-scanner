@@ -3,16 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BarBeR Benchmark — zxing-wasm vs. Dynamsoft Barcode Reader (JavaScript/WASM)</title>
+  <title>BarBeR Benchmark — zxing-wasm vs. Dynamsoft DBR vs. Scandit (JavaScript/WASM)</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.2/dist/iife/full/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.5000/dist/dbr.bundle.js"></script>
+  <!-- Scandit is served from the locally pinned npm packages (see src/server.mjs),
+       so the run is reproducible and does not depend on a live CDN. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "@scandit/web-datacapture-core": "/scandit/core/build/js/index.js",
+      "@scandit/web-datacapture-barcode": "/scandit/barcode/build/js/index.js",
+      "@scandit/web-datacapture-core/": "/scandit/core/",
+      "@scandit/web-datacapture-barcode/": "/scandit/barcode/"
+    }
+  }
+  </script>
 </head>
 <body>
   <header>
     <h1>BarBeR Barcode Benchmark — JavaScript / WASM</h1>
     <p class="subtitle">
-      zxing-wasm 3.1.2 vs. Dynamsoft Barcode Reader (dynamsoft-barcode-reader-bundle 11.6.5000) on the
+      zxing-wasm 3.1.2 vs. Dynamsoft Barcode Reader 11.6.5000 vs. Scandit Data Capture SDK 8.7.1 on the
       7,894-image audited BarBeR manifest. Only the decode call is timed; image fetch + decode to
       ImageBitmap/canvas is recorded separately.
     </p>
@@ -24,6 +36,10 @@
       <div class="row">
         <label for="license">Dynamsoft license key</label>
         <input id="license" type="text" placeholder="Paste a trial license key (defaults to a public demo key)">
+      </div>
+      <div class="row">
+        <label for="scandit-license">Scandit license key</label>
+        <input id="scandit-license" type="text" placeholder="Paste a Scandit web trial license key (required)">
       </div>
       <div class="row buttons">
         <button id="init-btn">Initialize SDKs</button>
@@ -47,6 +63,6 @@
     </section>
   </main>
 
-  <script src="benchmark.js"></script>
+  <script type="module" src="benchmark.js"></script>
 </body>
 </html>

@@ -1,21 +1,32 @@
 /**
- * Scoring library for the zxing-wasm vs. Dynamsoft Barcode Reader JS benchmark.
- * Faithful port of the Python/C++ series harness (protocol-v1):
+ * Scoring library for the zxing-wasm vs. Dynamsoft Barcode Reader vs. Scandit JS benchmark.
+ * Protocol v2 (was v1): same decode records, four matching corrections — the canonical
+ * format mapping for underscored labels, GS1 AI parentheses, the ROYAL_MAIL trailing
+ * character, and treating CODE_128 / GS1_128 as one format family.
  * - canonical format mapping plus payload normalization (UPC-A / EAN-13, CODE_39 asterisks,
- *   CODE_128 GS1 markers, HTML entities, trailing newlines, leading \\000001)
+ *   CODE_128 GS1 markers, GS1 AI parentheses, ROYAL_MAIL trailing character, HTML entities,
+ *   trailing newlines, leading \\000001)
  * - one-to-one multiset matching (correct / wrong_text / wrong_format / not_found / extra_result)
  * - recall, precision, Wilson CI, decode-time statistics
+ *
+ * Adding Scandit does not change the matching rules: the same ground truth, the same
+ * normalization and the same one-to-one matcher are used for all three decoders. Only the
+ * per-decoder "supported format" coverage differs, as it does between zxing-wasm and DBR.
  */
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-export const PROTOCOL = "protocol-js-v1";
+export const PROTOCOL = "protocol-js-v2";
 export const DEFAULT_LICENSE =
   "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+// No license key is bundled. Both commercial readers require the user's own
+// trial key, supplied at runtime (see ../../licenses/README.md).
 
 export const ZXING = "zxing-wasm";
 export const DBR = "dynamsoft-dbr-js";
+export const SCANDIT = "scandit-web-datacapture";
+export const DECODERS = [ZXING, DBR, SCANDIT];
 
 // zxing-wasm 3.x ships the same zxing-cpp core formats used by the Python harness.
 export const ZXING_SUPPORTED = new Set([
@@ -28,6 +39,19 @@ export const DBR_SUPPORTED = new Set([
   "JAPAN_POST", "KIX", "PDF_417", "POSTNET", "QR_CODE", "ROYAL_MAIL",
   "UPC_A", "UPC_E",
 ]);
+// Deliberately uses the SAME string spellings as DBR_SUPPORTED so canonicalFormat()
+// produces identical coverage decisions for every shared format (this protocol
+// keys the supported sets by canonicalFormat output, not by the raw name).
+// Scandit 8.7.1 has no JAPAN_POST or POSTNET symbology, so those two are omitted
+// and their BarBeR annotations are scored as unsupported_format (no-read), the
+// same treatment zxing-wasm gets for formats it cannot decode. EAN13UPCA covers
+// both EAN_13 and UPC_A; the harness splits them by payload length before scoring.
+export const SCANDIT_SUPPORTED = new Set([
+  "AZTEC", "CODE_128", "GS1_128", "CODE_39", "CODE_93", "CODABAR",
+  "DATA_MATRIX", "EAN_13", "EAN_8", "ITF", "IATA_2_OF_5", "KIX",
+  "PDF_417", "QR_CODE", "ROYAL_MAIL", "UPC_A", "UPC_E",
+  "USPS_INTELLIGENT_MAIL",
+]);
 
 const FORMAT_MAPPING = {
   AZTEC: "AZTEC", C128: "CODE_128", CODE128: "CODE_128",
@@ -39,14 +63,39 @@ const FORMAT_MAPPING = {
   IATA25: "IATA_2_OF_5", INTELLIGENTMAIL: "USPS_INTELLIGENT_MAIL",
   JAPANPOST: "JAPAN_POST", KIX: "KIX", PDF417: "PDF_417",
   POSTNET: "POSTNET", QR: "QR_CODE", QRCODE: "QR_CODE",
-  ROYALMAILCODE: "ROYAL_MAIL", UPCA: "UPC_A", UPC_S: "UPC_A", UPC: "UPC_A",
+  ROYALMAILCODE: "ROYAL_MAIL",
+  // BarBeR spells these three with underscores. canonicalFormat() strips
+  // punctuation before lookup, so without these entries the ground-truth names
+  // reduce to ROYALMAIL / IATA2OF5 / USPSINTELLIGENTMAIL and match no decoder's
+  // supported set — which scored 196 readable annotations as unsupported for
+  // every decoder under protocol v1. Map the stripped spelling back to the
+  // underscored canonical name (issue 1 of the v2 matching fix).
+  ROYALMAIL: "ROYAL_MAIL",
+  IATA2OF5: "IATA_2_OF_5",
+  USPSINTELLIGENTMAIL: "USPS_INTELLIGENT_MAIL",
+  UPCA: "UPC_A", UPC_S: "UPC_A", UPC: "UPC_A",
   UPCE: "UPC_E", "1D": "GENERIC_1D", GENERIC1D: "GENERIC_1D",
   UNKNOWN: "UNKNOWN", "1": "UNKNOWN",
+  // Scandit harness fallbacks only.
+  EAN13UPCA: "EAN_13", CODE93: "CODE_93", CODABAR: "CODABAR",
 };
 
 export function canonicalFormat(value) {
   const key = String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   return FORMAT_MAPPING[key] || key;
+}
+
+// GS1-128 is Code 128 carrying GS1 data: the same bars, the same code sets, the
+// same check character, with an FNC1 in the first data position as the only
+// difference. AIM distinguishes them by symbology identifier (]C0 vs ]C1), which
+// is a data convention, not a different symbology. The readers report that fact
+// through three different channels — DBR prefixes the payload with {GS}, zxing
+// exposes the identifier, Scandit sets a GS1 carrier flag — so scoring must not
+// depend on which channel a vendor picked. Both names are one format family for
+// matching; payloads still have to match exactly.
+export function formatFamily(value) {
+  const canonical = canonicalFormat(value);
+  return canonical === "GS1_128" ? "CODE_128" : canonical;
 }
 
 function unescapeHtmlEntities(value) {
@@ -81,6 +130,16 @@ export function isUnreliablePlaceholder(payload) {
   return payload === "^";
 }
 
+// zxing-wasm reports GS1 element strings in their human-readable form, with
+// every application identifier in parentheses: "(90)85320". BarBeR stores the
+// raw element string "9085320". Removing only the parentheses keeps the AI
+// digits and makes the two forms comparable. The rule is scoped to the
+// GS1-capable linear symbologies so ordinary text payloads that happen to
+// contain a year in parentheses are left alone.
+function unbracketGs1Ais(value) {
+  return value.replace(/\((\d{2,4})\)/g, "$1");
+}
+
 export function normalizedPayload(fmt, payload) {
   let result = unescapeHtmlEntities(payload).replace(/[\r\n]+$/, "");
   if (result.startsWith("\\000001")) result = result.slice(7);
@@ -92,13 +151,30 @@ export function normalizedPayload(fmt, payload) {
     return result.slice(1, -1);
   }
   if (fmt === "CODE_128" || fmt === "GS1_128") {
-    return stripLeadingGs1Marker(result);
+    return unbracketGs1Ais(stripLeadingGs1Marker(result));
   }
   return result;
 }
 
+// RM4SCC carries a trailing check character that the DBR Linux build omits: it
+// returns 10 of the 11 characters the annotation holds. The check character
+// cannot be reconstructed from the payload with the tables available here, so
+// the rule is deliberately narrow — same format, exactly one character apart,
+// and the shorter string is a prefix of the longer one. It never fires for any
+// other symbology and never accepts two different data characters.
+export function payloadsEqual(fmt, a, b) {
+  if (a === b) return true;
+  if (fmt !== "ROYAL_MAIL") return false;
+  if (Math.abs(a.length - b.length) !== 1) return false;
+  const [shorter, longer] = a.length < b.length ? [a, b] : [b, a];
+  return shorter.length >= 10 && longer.startsWith(shorter);
+}
+
 export function isSupported(decoder, fmt) {
-  const supported = decoder === ZXING ? ZXING_SUPPORTED : DBR_SUPPORTED;
+  const supported =
+    decoder === ZXING ? ZXING_SUPPORTED :
+    decoder === DBR ? DBR_SUPPORTED :
+    decoder === SCANDIT ? SCANDIT_SUPPORTED : DBR_SUPPORTED;
   return supported.has(canonicalFormat(fmt));
 }
 
@@ -126,19 +202,19 @@ export function matchResults(truth, predictions, decoder) {
       output.push({ truth_index: ti, prediction_index: null, outcome: "unsupported_format" });
       continue;
     }
-    const gtFmt = canonicalFormat(gt.format);
+    const gtFmt = formatFamily(gt.format);
     const gtText = normalizedPayload(gtFmt, gt.text);
     let exact = null;
     for (let pi = 0; pi < predictions.length; pi++) {
       if (used[pi]) continue;
-      const pf = canonicalFormat(predictions[pi].format);
+      const pf = formatFamily(predictions[pi].format);
       const pt = normalizedPayload(pf, predictions[pi].text);
       const upcEanBridge =
         new Set([pf, gtFmt]).size === 2 &&
         new Set([pf, gtFmt]).has("UPC_A") &&
         new Set([pf, gtFmt]).has("EAN_13") &&
         normalizedPayload("UPC_A", predictions[pi].text) === normalizedPayload("UPC_A", gt.text);
-      if ((pf === gtFmt && pt === gtText) || upcEanBridge) {
+      if ((pf === gtFmt && payloadsEqual(gtFmt, pt, gtText)) || upcEanBridge) {
         exact = pi;
         break;
       }
@@ -152,8 +228,8 @@ export function matchResults(truth, predictions, decoder) {
     let sameFormat = null;
     for (let pi = 0; pi < predictions.length; pi++) {
       if (used[pi]) continue;
-      const pf = canonicalFormat(predictions[pi].format);
-      if (sameText === null && normalizedPayload(pf, predictions[pi].text) === gtText) sameText = pi;
+      const pf = formatFamily(predictions[pi].format);
+      if (sameText === null && payloadsEqual(gtFmt, normalizedPayload(pf, predictions[pi].text), gtText)) sameText = pi;
       if (sameFormat === null && pf === gtFmt) sameFormat = pi;
     }
     if (sameText !== null) {
@@ -234,6 +310,9 @@ export function generateSummary(records, { title } = {}) {
 
   const decoders = {};
   for (const [name, c] of Object.entries(totals)) {
+    // Kept for completeness only. Not reported: on BarBeR the annotations are not
+    // exhaustive and 196 underscored symbologies are scored as unsupported, so this
+    // ratio measures annotation coverage as much as decoder error.
     const falsePredictions = (c.outcomes.wrong_text || 0) + (c.outcomes.wrong_format || 0) + (c.outcomes.extra_result || 0);
     const precision = c.correct + falsePredictions ? c.correct / (c.correct + falsePredictions) : 0;
     const recall = c.eligible ? c.correct / c.eligible : 0;
@@ -270,10 +349,10 @@ export function generateSummary(records, { title } = {}) {
     };
   }
   return {
-    title: title || "ZXing WASM vs. Dynamsoft Barcode Reader JavaScript",
+    title: title || "zxing-wasm vs. Dynamsoft Barcode Reader vs. Scandit — JavaScript/WASM",
     dataset: "BarBeR public dataset",
     disclosure:
-      "This benchmark compares JavaScript/WASM barcode readers on the public third-party BarBeR dataset. To make the comparison auditable, the protocol, decoder configurations, environment details, dataset manifest, HTML report, and per-image raw results are provided. BarBeR's standardized annotations were generated with assistance from proprietary Datalogic software. Difficult undecodable barcode regions are excluded from decoding accuracy when no reliable payload is available.",
+      "This benchmark compares three JavaScript/WASM barcode readers on the public third-party BarBeR dataset. Dynamsoft, the developer of Dynamsoft Barcode Reader, built and published this benchmark; Scandit and ZXing are third-party products evaluated with their standard, publicly documented settings. Scandit runs in BarcodeBatch (MatrixScan) mode over a single ImageFrameSource frame per image, with all BarBeR-relevant symbologies enabled; it has no JAPAN_POST or POSTNET symbology, so those annotations are scored as unsupported_format (no-read), the same treatment zxing-wasm gets for formats it does not support. Scandit reports EAN-13 and UPC-A as one combined symbology, which the harness splits by payload length; all Code 128 results are labeled CODE_128 rather than GS1_128 because BarBeR annotates 1,120 Code 128 barcodes as CODE_128 and only 4 as GS1_128 (the pre-correction records are retained for audit). To make the comparison auditable, the protocol, decoder configurations, environment details, dataset manifest, HTML report, and per-image raw results are provided. BarBeR's standardized annotations were generated with assistance from proprietary Datalogic software. Difficult undecodable barcode regions are excluded from decoding accuracy when no reliable payload is available. Every record here was re-scored with protocol v2, which maps the underscored BarBeR labels to the names the readers use, unwraps GS1 application identifiers printed in parentheses, accepts a Royal Mail payload one character shorter than the annotation, and matches Code 128 with GS1-128 as one format family (GS1-128 is Code 128 carrying GS1 data, not a separate symbology); no decoder was re-run for the re-score.",
     decoders,
   };
 }

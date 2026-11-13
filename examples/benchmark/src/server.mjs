@@ -16,7 +16,8 @@ import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import {
-  PROTOCOL, ZXING, DBR, sha256File, readJsonl, matchResults, generateSummary,
+  PROTOCOL, ZXING, DBR, SCANDIT, DECODERS,
+  sha256File, readJsonl, matchResults, generateSummary,
 } from "./score.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -63,6 +64,8 @@ for (const row of readJsonl(jsonlPath)) {
 
 const zxingConfigHash = "zxing-wasm:all-supported";
 const dbrConfigHash = `dbr-template:${args.dbrTemplate}`;
+const scanditConfigHash = "scandit:barcode-batch:single-image:16-symbologies";
+const SCANDIT_VERSION = "8.7.1";
 let browserEnvironment = null;
 
 function json(res, code, value) {
@@ -99,7 +102,10 @@ function recordFromPost(body) {
     ground_truth: sample.ground_truth,
     decoder: body.decoder,
     decoder_version: body.decoder_version,
-    config_sha256: body.decoder === ZXING ? zxingConfigHash : dbrConfigHash,
+    config_sha256:
+      body.decoder === ZXING ? zxingConfigHash :
+      body.decoder === DBR ? dbrConfigHash :
+      body.decoder === SCANDIT ? scanditConfigHash : "unknown-decoder",
     repetition: body.repetition,
     image_load_ns: body.image_load_ns,
     decode_ns: body.decode_ns,
@@ -136,6 +142,10 @@ function writeEnvironment() {
     dbr_template: args.dbrTemplate,
     zxing_wasm_package: "zxing-wasm (jsdelivr CDN, pinned)",
     dynamsoft_package: "dynamsoft-barcode-reader-bundle (jsdelivr CDN, pinned)",
+    scandit_core_package: `@scandit/web-datacapture-core ${SCANDIT_VERSION} (local npm, pinned)`,
+    scandit_barcode_package: `@scandit/web-datacapture-barcode ${SCANDIT_VERSION} (local npm, pinned)`,
+    scandit_mode: "BarcodeBatch / MatrixScan, single ImageFrameSource.fromImageData frame per image",
+    decoders: DECODERS,
     browser: browserEnvironment,
     manifest_sha256: manifestSha256,
   };
@@ -147,9 +157,23 @@ function writeEnvironment() {
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json",
   ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".wasm": "application/wasm",
+  ".data": "application/octet-stream",
+  ".txt": "text/plain; charset=utf-8",
+  ".map": "application/json",
+};
+
+// Scandit is served from the locally pinned npm packages so the run is fully
+// reproducible and does not depend on a live CDN. The import map in the harness
+// maps the bare specifiers to /scandit/core and /scandit/barcode.
+const SCANDIT_PACKAGES = {
+  core: path.resolve(ROOT, "node_modules", "@scandit", "web-datacapture-core"),
+  barcode: path.resolve(ROOT, "node_modules", "@scandit", "web-datacapture-barcode"),
 };
 
 const server = http.createServer(async (req, res) => {
@@ -167,11 +191,21 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, {
         total_images: manifestRecords.length,
         repetitions: args.repetitions,
-        expected_records: manifestRecords.length * 2 * args.repetitions,
+        decoders: DECODERS,
+        expected_records: manifestRecords.length * DECODERS.length * args.repetitions,
         completed_records: completed.size,
         completed: [...completed],
         manifest_sha256: manifestSha256,
         dbr_template: args.dbrTemplate,
+      });
+    }
+
+    // Lightweight poll endpoint for the headless runner (avoids shipping the
+    // whole completed[] array on every progress check).
+    if (req.method === "GET" && url.pathname === "/progress") {
+      return json(res, 200, {
+        completed_records: completed.size,
+        expected_records: manifestRecords.length * DECODERS.length * args.repetitions,
       });
     }
 
@@ -188,6 +222,25 @@ const server = http.createServer(async (req, res) => {
         return res.end("not found");
       }
       res.writeHead(200, { "content-type": "application/octet-stream", "cache-control": "no-store" });
+      return fs.createReadStream(file).pipe(res);
+    }
+
+    if (req.method === "GET" && url.pathname.startsWith("/scandit/")) {
+      const parts = decodeURIComponent(url.pathname.slice("/scandit/".length)).split("/");
+      const pkg = SCANDIT_PACKAGES[parts.shift()];
+      if (!pkg) {
+        res.writeHead(404);
+        return res.end("not found");
+      }
+      const file = path.resolve(pkg, parts.join("/"));
+      if (!file.startsWith(pkg) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+        res.writeHead(404);
+        return res.end("not found");
+      }
+      res.writeHead(200, {
+        "content-type": MIME[path.extname(file)] || "application/octet-stream",
+        "cache-control": "no-store",
+      });
       return fs.createReadStream(file).pipe(res);
     }
 
