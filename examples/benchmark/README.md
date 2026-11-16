@@ -104,7 +104,8 @@ benchmark/
 └── .gitignore                # keeps node_modules and license files out of version control
 ```
 
-Trial keys live one level up in [`../licenses/`](../licenses/README.md); they are never committed.
+No license key is stored in this repository. The harness takes them at runtime — see
+[Setting the license keys](#setting-the-license-keys).
 
 ## Prerequisites
 
@@ -118,11 +119,30 @@ Trial keys live one level up in [`../licenses/`](../licenses/README.md); they ar
 - **Your own Scandit web trial license key** — apply at
   [Scandit's trial page](https://www.scandit.com/trial/). No key is bundled either.
 - Both keys are supplied at runtime: paste them into the two license fields in the browser, or
-  set `DYNAMSOFT_LICENSE_KEY` / `SCANDIT_LICENSE_KEY` (or fill the untracked files in
-  `../licenses/`) for the headless runner. See [`../licenses/README.md`](../licenses/README.md).
-  They are never written into this repository.
+  set the environment variables listed below for the headless runner. They are never written into
+  this repository.
 - A local Chrome/Edge installation for `tools/run_headless.mjs` (default: Chrome on Windows)
 - Python 3 + Pillow + ffmpeg (only for regenerating the report media)
+
+### Setting the license keys
+
+Nothing is read from a file inside this repository, and nothing is committed:
+
+| Decoder | Headless runner | Browser UI |
+|:--------|:----------------|:-----------|
+| Dynamsoft Barcode Reader | `DYNAMSOFT_LICENSE_KEY` | *Dynamsoft license key* field |
+| Scandit Data Capture (Web) | `SCANDIT_LICENSE_KEY` | *Scandit license key* field |
+
+```bash
+# Git Bash / Linux / macOS
+export DYNAMSOFT_LICENSE_KEY='DLS2...'
+export SCANDIT_LICENSE_KEY='...'
+node tools/run_headless.mjs --manifest manifests/benchmark_manifest.jsonl --output results/full
+```
+
+On Windows set them with **System Properties → Environment Variables**, or per session in `cmd`
+(`set SCANDIT_LICENSE_KEY=...`) before running the same command. The runner only requires the keys
+of the decoders you ask for: `--decoders dynamsoft-dbr-js` needs the Dynamsoft key alone.
 
 ## Run the benchmark
 
@@ -164,6 +184,11 @@ walks all 7,894 images; progress and a per-session mean decode time are shown li
 be restarted and it will skip records already present in `results.jsonl`.
 
 ## Validate and build the report
+
+The generated page ends with a **Failures to follow up** table: one row per annotation that was
+not read correctly, with the image, the expected symbology and payload, what that reader returned
+for it, the outcome and the decode time. Filter by reader, outcome or format, and export exactly
+the filtered rows as CSV for triage.
 
 ```bash
 # structural + count validation
