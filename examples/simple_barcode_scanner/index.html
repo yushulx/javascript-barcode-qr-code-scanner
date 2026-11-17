@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.5000/dist/dbr.bundle.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3.0.2/dist/iife/full/index.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@pixelverse/strichjs-sdk@latest/dist/strich-noesm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/scanbot-web-sdk@8/bundle/ScanbotSDK.min.js"></script>
     <script type="importmap">
     {
@@ -78,22 +77,6 @@
                     </div>
                 </div>
 
-                <!-- Strich.io License -->
-                <div class="settings-sdk-section">
-                    <div class="settings-sdk-header">
-                        <strong>Strich.io</strong>
-                        <span id="strich_status" class="sdk-badge badge-inactive">Not Activated</span>
-                    </div>
-                    <span class="hint">Get your license from <a
-                            href="https://portal.strich.io"
-                            target="_blank" class="link">Strich Portal</a></span>
-                    <div class="input-group">
-                        <input type="text" id="strich_license_key" class="form-input"
-                            placeholder="Enter your Strich.io license key">
-                        <button onclick="activateStrich()" class="btn btn-primary" id="strich_activate_btn">Activate</button>
-                    </div>
-                </div>
-
                 <!-- Scanbot License -->
                 <div class="settings-sdk-section">
                     <div class="settings-sdk-header">
@@ -137,7 +120,6 @@
                 <select onchange="sdkChanged()" id="sdk_selector" class="form-select">
                     <option value="zxing">ZXing (Free)</option>
                     <option value="dynamsoft">Dynamsoft</option>
-                    <option value="strich">Strich.io</option>
                     <option value="scanbot">Scanbot</option>
                     <option value="scandit">Scandit</option>
                 </select>
@@ -233,7 +215,6 @@
                     <div id="benchmark_sdk_checkboxes" class="benchmark-checkboxes">
                         <label class="checkbox-label"><input type="checkbox" value="zxing" checked> ZXing</label>
                         <label class="checkbox-label"><input type="checkbox" value="dynamsoft"> Dynamsoft</label>
-                        <label class="checkbox-label"><input type="checkbox" value="strich"> Strich.io</label>
                         <label class="checkbox-label"><input type="checkbox" value="scanbot"> Scanbot</label>
                         <label class="checkbox-label"><input type="checkbox" value="scandit"> Scandit</label>
                     </div>

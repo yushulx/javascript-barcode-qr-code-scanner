@@ -21,13 +21,9 @@ let stream;
 let sdkActivated = {
     zxing: false,
     dynamsoft: false,
-    strich: false,
     scanbot: false,
     scandit: false
 };
-
-// Strich.io state
-let strichInitialized = false;
 
 // Scanbot state
 let scanbotSDK = null;
@@ -233,8 +229,6 @@ function loadImage2Canvas(base64Image) {
                 await resetOrReapplyDynamsoftSettings();
                 let result = await cvr.capture(img.src, dynamsoftTemplate);
                 showFileResult(context, result);
-            } else if (currentSDK === 'strich') {
-                await scanImageWithStrich(img, context);
             } else if (currentSDK === 'scanbot') {
                 await scanImageWithScanbot(img, context);
             } else if (currentSDK === 'scandit') {
@@ -303,8 +297,6 @@ function startFileScanning() {
 
                 if (currentSDK === 'dynamsoft') {
                     await scanVideoFrameDynamsoft(tempCanvas, ctx);
-                } else if (currentSDK === 'strich') {
-                    await scanVideoFrameStrich(tempCanvas, ctx);
                 } else if (currentSDK === 'scanbot') {
                     await scanVideoFrameScanbot(tempCanvas, ctx);
                 } else if (currentSDK === 'scandit') {
@@ -490,72 +482,6 @@ async function activateDynamsoft() {
         alert('Failed to activate Dynamsoft SDK.');
         btn.disabled = false;
         btn.textContent = 'Activate';
-    }
-}
-
-async function activateStrich() {
-    if (sdkActivated.strich) return;
-    let licenseKey = document.getElementById('strich_license_key').value.trim();
-    if (!licenseKey) {
-        alert('Please enter a Strich.io license key.');
-        return;
-    }
-
-    let btn = document.getElementById('strich_activate_btn');
-    btn.disabled = true;
-    btn.textContent = 'Activating...';
-
-    try {
-        await strich.StrichSDK.initialize(licenseKey);
-        strichInitialized = true;
-        sdkActivated.strich = true;
-        saveLicenseKey('strich', licenseKey);
-        updateSDKBadge('strich');
-        if (currentSDK === 'strich') {
-            isSDKReady = true;
-        }
-        console.log('Strich.io SDK initialized');
-        btn.textContent = 'Activated';
-    } catch (ex) {
-        console.error(ex);
-        alert('Failed to initialize Strich.io SDK: ' + (ex.message || ex));
-        btn.disabled = false;
-        btn.textContent = 'Activate';
-    }
-}
-
-const STRICH_SYMBOLOGIES = ['ean13', 'ean8', 'code128', 'code39', 'qr', 'upca', 'upce', 'itf', 'codabar', 'datamatrix', 'pdf417', 'aztec'];
-
-async function scanImageWithStrich(imageElement, context) {
-    if (!strichInitialized) {
-        throw new Error('Strich SDK not initialized');
-    }
-
-    const detections = await strich.ImageScanner.scan(imageElement, {
-        engine: { symbologies: STRICH_SYMBOLOGIES }
-    });
-
-    if (detections && detections.length > 0) {
-        let txts = [];
-        for (const detection of detections) {
-            txts.push(detection.data);
-
-            if (detection.quadrilateral && detection.quadrilateral.points) {
-                const pts = detection.quadrilateral.points;
-                context.strokeStyle = '#ff0000';
-                context.lineWidth = 2;
-                context.beginPath();
-                context.moveTo(pts[0].x, pts[0].y);
-                context.lineTo(pts[1].x, pts[1].y);
-                context.lineTo(pts[2].x, pts[2].y);
-                context.lineTo(pts[3].x, pts[3].y);
-                context.closePath();
-                context.stroke();
-            }
-        }
-        detectionResult.value = `Total: ${txts.length} barcode(s)\n` + txts.join('\n') + '\n\n';
-    } else {
-        detectionResult.value = 'Nothing found\n';
     }
 }
 
@@ -747,7 +673,7 @@ function loadLicenseKey(sdk) {
 }
 
 function restoreLicenseKeys() {
-    ['dynamsoft', 'strich', 'scanbot', 'scandit'].forEach(sdk => {
+    ['dynamsoft', 'scanbot', 'scandit'].forEach(sdk => {
         let saved = loadLicenseKey(sdk);
         if (saved) {
             let input = document.getElementById(sdk + '_license_key');
@@ -817,39 +743,6 @@ async function scanVideoFrameDynamsoft(canvas, ctx) {
                     ctx.lineTo(points[1].x, points[1].y);
                     ctx.lineTo(points[2].x, points[2].y);
                     ctx.lineTo(points[3].x, points[3].y);
-                    ctx.closePath();
-                    ctx.stroke();
-                }
-            }
-        }
-        detectionResult.value = fileScanResults.join('\n') + '\n\n';
-    }
-}
-
-async function scanVideoFrameStrich(canvas, ctx) {
-    if (!strichInitialized) return;
-
-    const dataUrl = canvas.toDataURL('image/png');
-    const detections = await strich.ImageScanner.scan(dataUrl, {
-        engine: { symbologies: STRICH_SYMBOLOGIES }
-    });
-
-    if (detections && detections.length > 0) {
-        for (const detection of detections) {
-            let type = detection.typeName || 'Unknown';
-            let key = `[${type}] ${detection.data}`;
-            if (!fileScanResults.includes(key)) {
-                fileScanResults.push(key);
-
-                if (detection.quadrilateral && detection.quadrilateral.points) {
-                    const pts = detection.quadrilateral.points;
-                    ctx.strokeStyle = '#00ff00';
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    ctx.moveTo(pts[0].x, pts[0].y);
-                    ctx.lineTo(pts[1].x, pts[1].y);
-                    ctx.lineTo(pts[2].x, pts[2].y);
-                    ctx.lineTo(pts[3].x, pts[3].y);
                     ctx.closePath();
                     ctx.stroke();
                 }
@@ -1019,8 +912,6 @@ function startCameraScanning() {
                     if (cameraScanning) {
                         showCameraResult(result);
                     }
-                } else if (currentSDK === 'strich') {
-                    await scanCameraFrameStrich(canvas, frameCtx);
                 } else if (currentSDK === 'scanbot') {
                     await scanCameraFrameScanbot(canvas, frameCtx);
                 } else if (currentSDK === 'scandit') {
@@ -1065,50 +956,6 @@ function stopCamera() {
     if (cameraOverlay) {
         let ctx = cameraOverlay.getContext('2d');
         ctx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
-    }
-}
-
-async function scanCameraFrameStrich(canvas, canvasCtx) {
-    if (!strichInitialized) return;
-
-    const dataUrl = canvas.toDataURL('image/png');
-    const detections = await strich.ImageScanner.scan(dataUrl, {
-        engine: { symbologies: STRICH_SYMBOLOGIES }
-    });
-
-    if (detections && detections.length > 0 && cameraScanning) {
-        showCameraResultStrich(detections);
-    }
-}
-
-function showCameraResultStrich(detections) {
-    let txts = [];
-    let ctx = cameraOverlay.getContext('2d');
-
-    for (const detection of detections) {
-        let type = detection.typeName || 'Unknown';
-        let key = `[${type}] ${detection.data}`;
-        if (!cameraScanResults.includes(key)) {
-            cameraScanResults.push(key);
-        }
-        txts.push(detection.data);
-
-        if (detection.quadrilateral && detection.quadrilateral.points) {
-            const pts = detection.quadrilateral.points;
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(pts[0].x, pts[0].y);
-            ctx.lineTo(pts[1].x, pts[1].y);
-            ctx.lineTo(pts[2].x, pts[2].y);
-            ctx.lineTo(pts[3].x, pts[3].y);
-            ctx.closePath();
-            ctx.stroke();
-        }
-    }
-
-    if (txts.length > 0) {
-        scanResult.value = cameraScanResults.join('\n') + '\n\n';
     }
 }
 
@@ -1313,7 +1160,7 @@ function updateSDKBadge(sdkName) {
 }
 
 function updateAllBadges() {
-    ['dynamsoft', 'strich', 'scanbot', 'scandit'].forEach(updateSDKBadge);
+    ['dynamsoft', 'scanbot', 'scandit'].forEach(updateSDKBadge);
 }
 
 function updateBenchmarkCheckboxes() {
@@ -1405,7 +1252,7 @@ async function runBenchmark() {
     progressBar.style.width = '0%';
     resultsContainer.innerHTML = '';
 
-    const sdkLabels = {zxing:'ZXing', dynamsoft:'Dynamsoft', strich:'Strich.io', scanbot:'Scanbot', scandit:'Scandit'};
+    const sdkLabels = {zxing:'ZXing', dynamsoft:'Dynamsoft', scanbot:'Scanbot', scandit:'Scandit'};
 
     // Build list of images to benchmark
     let imagesToBenchmark = [];
@@ -1503,15 +1350,6 @@ async function benchmarkSingleSDK(sdk, testImg, groundTruth = null) {
                     if (item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE) {
                         barcodes.push({ type: item.formatString || 'Unknown', text: item.text });
                     }
-                }
-            }
-        } else if (sdk === 'strich') {
-            const detections = await strich.ImageScanner.scan(testImg, {
-                engine: { symbologies: STRICH_SYMBOLOGIES }
-            });
-            if (detections && detections.length > 0) {
-                for (const d of detections) {
-                    barcodes.push({ type: d.typeName || 'Unknown', text: d.data });
                 }
             }
         } else if (sdk === 'scanbot') {
