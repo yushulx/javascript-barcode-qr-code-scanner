@@ -3,10 +3,10 @@ const MODEL_ASSETS = [
     './assets/ch_PP-OCRv4_det.onnx',
     './assets/ch_PP-OCRv4_rec.onnx',
     './assets/ppocr_keys_v1.txt',
-    './assets/version-RFB-320.onnx',
     './assets/face-api-models/ssd_mobilenetv1_model-shard1',
     './assets/face-api-models/ssd_mobilenetv1_model-shard2',
-    './assets/face-api-models/ssd_mobilenetv1_model-weights_manifest.json'
+    './assets/face-api-models/ssd_mobilenetv1_model-weights_manifest.json',
+    './full.json'
 ];
 
 // Install event - only cache the heavy model files
