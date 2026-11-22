@@ -106,7 +106,10 @@ function generate(benchmarkData) {
       <div class="vendor-card-title" style="color:${vendor.color}">${escHtml(vendor.name)}${vendor.version ? ' <span style="font-size:11px;color:#9ca3af">(' + escHtml(vendor.version) + ')</span>' : ''}</div>
       <div class="metric-grid">
         ${hasGroundTruth ? `<div class="metric-item"><div class="metric-label">Exact Accuracy</div><div class="metric-value">${pct(s.exact_accuracy)}</div><div class="metric-sub">${s.exact_count}/${s.total_images}</div></div>` : ''}
-        <div class="metric-item"><div class="metric-label">Success Rate</div><div class="metric-value">${pct(s.success_rate)}</div><div class="metric-sub">${s.success_count}/${s.total_images}</div></div>
+        ${hasGroundTruth
+          ? `<div class="metric-item"><div class="metric-label">Wrong Reads</div><div class="metric-value">${pct((s.success_count - s.exact_count) / s.total_images)}</div><div class="metric-sub">${s.success_count - s.exact_count}/${s.total_images}</div></div>
+        <div class="metric-item"><div class="metric-label">No Read</div><div class="metric-value">${pct((s.total_images - s.success_count) / s.total_images)}</div><div class="metric-sub">${s.total_images - s.success_count}/${s.total_images}</div></div>`
+          : `<div class="metric-item"><div class="metric-label">Success Rate</div><div class="metric-value">${pct(s.success_rate)}</div><div class="metric-sub">${s.success_count}/${s.total_images}</div></div>`}
         ${hasGroundTruth ? `<div class="metric-item"><div class="metric-label">Avg Match Rate</div><div class="metric-value">${pct(s.average_match_rate)}</div></div>` : ''}
         <div class="metric-item"><div class="metric-label">Avg Time</div><div class="metric-value">${ms(s.avg_ms)}</div><div class="metric-sub">P50: ${ms(s.p50_ms)} | P95: ${ms(s.p95_ms)}</div></div>
         <div class="metric-item"><div class="metric-label">Min / Max</div><div class="metric-value">${ms(s.min_ms)}</div><div class="metric-sub">Max: ${ms(s.max_ms)}</div></div>
