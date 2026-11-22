@@ -519,8 +519,11 @@ code,
        page indicator are useless if they scroll away from the page they describe. */
     position: sticky;
     top: 84px;
-    height: calc(100vh - 104px);
-    min-height: 520px;
+    /* Height follows the page instead of the viewport, so a wide screenshot
+       does not leave half a screen of empty stage beneath it. Tall pages are
+       still clamped and scroll inside. */
+    height: auto;
+    max-height: calc(100vh - 104px);
 }
 
 .pane-head {
@@ -747,8 +750,8 @@ code,
 
 .preview-stage {
     position: relative;
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 0 1 auto;
+    min-height: 160px;
     overflow: auto;
     padding: 18px;
     background: #f1f1ef;
@@ -831,6 +834,23 @@ code,
 .stage-rotor > * {
     flex: 0 0 auto;
     transform-origin: center center;
+}
+
+/* An <img> is draggable by default; in a viewer that means pressing and moving
+   starts a native drag instead of panning the zoomed picture. */
+.stage-rotor img {
+    -webkit-user-drag: none;
+    user-select: none;
+}
+
+/* Grab cursor only when there is somewhere to pan to. */
+.preview-stage.is-pannable {
+    cursor: grab;
+}
+
+.preview-stage.is-panning,
+.preview-stage.is-panning * {
+    cursor: grabbing;
 }
 
 .stage-media.is-rotated {
