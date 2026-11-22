@@ -5,7 +5,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Dynamsoft JavaScript Barcode Reader</title>
-    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.42/dist/dbr.js"></script>
+    <!-- Dynamsoft Barcode Reader Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
     <script src="overlay.js"></script>
     <style>
         #imageview {
@@ -74,9 +75,6 @@
         <button onclick="reset()">Reset</button>
         <button onclick="saveChanges()">Commit changes</button>
         <div id="editable" contenteditable="true">
-            <!-- parameter JSON object -->
-            <!-- <pre id="json-data">
-            </pre> -->
             <textarea id="json-data"></textarea>
         </div>
     </div>
@@ -101,20 +99,34 @@
 
 
     <script>
-        var reader = null;
+        var cvr = null;
         let defaultSettings = null;
         let currentFile = null;
-        // Make sure to set the key before you call any other APIs under Dynamsoft.DBR
+        // Make sure to set the key before you call any other APIs under Dynamsoft
         // You can register for a free 30-day trial here: https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform
-        Dynamsoft.DBR.BarcodeReader.license = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+        const LICENSE_KEY = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
         initOverlay(document.getElementById('overlay'));
 
+        // The SDK uses BigInt for barcode format bitmasks, which JSON.stringify
+        // cannot serialize. Convert BigInt values to strings when displaying.
+        function settingsToJSON(settings) {
+            return JSON.stringify(settings, (key, value) =>
+                typeof value === 'bigint' ? value.toString() : value, 2);
+        }
+
         (async () => {
-            reader = await Dynamsoft.DBR.BarcodeReader.createInstance();
-            document.getElementById('loading-status').hidden = true;
-            let runtimeSettings = await reader.getRuntimeSettings();
-            defaultSettings = await reader.outputRuntimeSettingsToString();
-            document.getElementById("json-data").value = defaultSettings; //JSON.stringify(runtimeSettings, null, 2);
+            try {
+                await Dynamsoft.License.LicenseManager.initLicense(LICENSE_KEY, true);
+                await Dynamsoft.Core.CoreModule.loadWasm(["DBR"]);
+                cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+                document.getElementById('loading-status').hidden = true;
+                defaultSettings = await cvr.getSimplifiedSettings("ReadBarcodes_Default");
+                document.getElementById("json-data").value = settingsToJSON(defaultSettings);
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loading-status').innerHTML = 'Failed to initialize: ' + e.message;
+                document.getElementById("json-data").value = e.message;
+            }
         })();
 
         document.getElementById("file").addEventListener("change", function () {
@@ -138,36 +150,35 @@
             fr.readAsDataURL(currentFile);
         });
 
-        function decode(file) {
-            if (reader) {
-                reader.decode(file).then(function (results) {
+        async function decode(file) {
+            if (cvr) {
+                try {
+                    let result = await cvr.capture(file, "ReadBarcodes_Default");
                     let txts = [];
-                    try {
-                        let localization;
-                        if (results.length > 0) {
-                            for (var i = 0; i < results.length; ++i) {
-                                txts.push(results[i].barcodeText);
-                                localization = results[i].localizationResult;
-                                drawOverlay(localization, results[i].barcodeText);
+                    for (const item of result.items) {
+                        if (item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE) {
+                            txts.push(item.text);
+                            if (item.location) {
+                                drawOverlay(item.location.points, item.text);
                             }
-                            document.getElementById('result').innerHTML = txts.join(', ');
                         }
-                        else {
-                            document.getElementById('result').innerHTML = "No barcode found";
-                        }
-
-                    } catch (e) {
-                        alert(e);
                     }
-                });
-
+                    document.getElementById('result').innerHTML = txts.length > 0 ? txts.join(', ') : "No barcode found";
+                } catch (e) {
+                    alert(e);
+                }
             }
         }
 
         async function saveChanges() {
-            let editedHTML = document.getElementById("json-data").value;
+            let editedJSON = document.getElementById("json-data").value;
             try {
-                await reader.initRuntimeSettingsWithString(editedHTML);
+                let settings = JSON.parse(editedJSON);
+                // barcodeFormatIds is serialized as a string; convert it back to BigInt
+                if (settings.barcodeSettings && typeof settings.barcodeSettings.barcodeFormatIds === 'string') {
+                    settings.barcodeSettings.barcodeFormatIds = BigInt(settings.barcodeSettings.barcodeFormatIds);
+                }
+                await cvr.updateSettings("ReadBarcodes_Default", settings);
                 console.log("Settings updated successfully");
 
                 if (currentFile != null) {
@@ -177,11 +188,10 @@
             } catch (error) {
                 console.log(error);
             }
-
         }
 
         function reset() {
-            document.getElementById("json-data").value = defaultSettings;
+            document.getElementById("json-data").value = settingsToJSON(defaultSettings);
         }
     </script>
 </body>

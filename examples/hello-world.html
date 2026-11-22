@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Dynamsoft JavaScript Barcode Scanner</title>
+    <!-- Dynamsoft Barcode Reader Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+</head>
+
+<body>
+    <div id="barcodeScanner" style="height: 100vh;"></div>
+    <script>
+        // Make sure to set the key before you call any other APIs under Dynamsoft
+        // You can register for a free 30-day trial here: https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform
+        const LICENSE_KEY = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+        (async () => {
+            await Dynamsoft.License.LicenseManager.initLicense(LICENSE_KEY, true);
+            // Load the DBR engine
+            await Dynamsoft.Core.CoreModule.loadWasm(["DBR"]);
+            // Create a camera view and a camera enhancer to capture video
+            let cameraView = await Dynamsoft.DCE.CameraView.createInstance();
+            let enhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
+            document.getElementById("barcodeScanner").appendChild(cameraView.getUIElement());
+            // Create a CaptureVisionRouter and feed it the camera
+            let cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+            cvr.setInput(enhancer);
+            cvr.addResultReceiver({
+                onDecodedBarcodesReceived: (result) => {
+                    console.log(result.barcodeResultItems);
+                }
+            });
+            await enhancer.open();
+            await cvr.startCapturing("ReadBarcodes_Default");
+        })();
+    </script>
+</body>
+
+</html>

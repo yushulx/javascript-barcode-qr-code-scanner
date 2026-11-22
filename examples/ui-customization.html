@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Dynamsoft JavaScript Barcode Scanner</title>
+    <!-- Dynamsoft Barcode Reader Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
+    <style>
+        #videoview {
+            position: relative;
+            display: none
+        }
+
+        #barcodeScanner {
+            position: relative;
+            height: 40vh;
+            width: 40vw;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        Barcode Result: <a id='result'>N/A</a>
+    </div>
+    <div id="barcodeScanner">
+        <span id='loading-status' style='font-size:x-large'>Loading Library...</span>
+    </div>
+    <script>
+        // Make sure to set the key before you call any other APIs under Dynamsoft
+        // You can register for a free 30-day trial here: https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform
+        const LICENSE_KEY = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+
+        window.onload = async function () {
+            try {
+                await Dynamsoft.License.LicenseManager.initLicense(LICENSE_KEY, true);
+                await Dynamsoft.Core.CoreModule.loadWasm(["DBR"]);
+                await initBarcodeScanner();
+            } catch (ex) {
+                alert(ex.message);
+                throw ex;
+            }
+        };
+
+        // Hide the built-in camera/resolution selects once DCE adds them to the UI
+        async function hideBuiltInSelects() {
+            let names = ['dce-sel-camera', 'dce-sel-resolution'];
+            for (let attempt = 0; attempt < 20; ++attempt) {
+                let found = true;
+                for (const name of names) {
+                    let el = document.getElementsByClassName(name)[0];
+                    if (el) {
+                        el.hidden = true;
+                    } else {
+                        found = false;
+                    }
+                }
+                if (found) return;
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        async function initBarcodeScanner() {
+            let cameraView = await Dynamsoft.DCE.CameraView.createInstance();
+            let enhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
+            document.getElementById('barcodeScanner').appendChild(cameraView.getUIElement());
+
+            let cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+            cvr.setInput(enhancer);
+            cvr.addResultReceiver({
+                onDecodedBarcodesReceived: (result) => {
+                    let items = result.barcodeResultItems;
+                    for (const item of items) {
+                        document.getElementById('result').innerHTML = item.formatString + ", " + item.text;
+                    }
+                }
+            });
+            document.getElementById('loading-status').hidden = true;
+            await hideBuiltInSelects();
+            await enhancer.open();
+            await cvr.startCapturing("ReadBarcodes_Default");
+        }
+    </script>
+</body>
+
+</html>
