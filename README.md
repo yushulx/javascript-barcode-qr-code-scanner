@@ -20,6 +20,8 @@ This repository contains **JavaScript** examples demonstrating how to use [Dynam
 - [Driver License Generator](https://www.dynamsoft.com/codepool/demos/driver-license-generator/)
 - [GS1 Barcode Scanner](https://www.dynamsoft.com/codepool/demos/gs1-barcode-scanner/)
 - [GS1 Barcode Generator](https://www.dynamsoft.com/codepool/demos/gs1-barcode-generator/) — a standalone, tested example: [examples/gs1-generator](examples/gs1-generator)
+- [Boarding Pass Scanner (IATA BCBP)](https://www.dynamsoft.com/codepool/demos/boarding-pass-scanner/) — a standalone, tested example: [examples/boarding-pass-scanner](examples/boarding-pass-scanner)
+- [Boarding Pass Generator (IATA BCBP)](https://www.dynamsoft.com/codepool/demos/boarding-pass-generator/) — a standalone, tested example: [examples/boarding-pass-generator](examples/boarding-pass-generator)
 - [Scan 1D Barcode and OCR Text](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_ocr_text)
 - [Detect Barcode, MRZ and Document](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_mrz_document/)
 - [Aadhaar Card](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/aadhaar_card/)
