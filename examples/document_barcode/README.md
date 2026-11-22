@@ -37,7 +37,7 @@ https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_barcode/
 
 ## Technology
 
-Built with **Dynamsoft Capture Vision Bundle v3.2.5000**:
+Built with **Dynamsoft Capture Vision Bundle v3.6.3200**:
 - **Document Normalizer (DDN)**: Document boundary detection and perspective correction
 - **Barcode Reader (DBR)**: 1D/2D barcode recognition
 
