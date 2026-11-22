@@ -1069,6 +1069,26 @@ code {
     white-space: normal;
 }
 
+/* Image column: the download link for the exact render a row decoded. */
+.log-table td.image {
+    padding-left: 0.2rem;
+    padding-right: 0.15rem;
+}
+
+.row-download {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--dy-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    white-space: nowrap;
+}
+
+.row-download:hover {
+    color: var(--dy-link-hover);
+}
+
 /* ---------------------------------------------------------------------------
    QR anatomy card: per-region colored map + hover glossary
    --------------------------------------------------------------------------- */
