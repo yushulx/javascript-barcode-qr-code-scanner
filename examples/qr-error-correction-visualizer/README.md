@@ -33,8 +33,24 @@ meter tracks the Reed-Solomon repair budget.
   scan log keeps one PNG per row — the exact render that was decoded — so after
   a sweep the last step that still decoded can be downloaded and compared with
   the first one that did not.
+- **Analyze an image you did not generate.** Drop, paste or pick any QR picture
+  and the page locates the symbol — the reader's own corner points when it
+  decodes, otherwise its finder-pattern locator — reads the format information,
+  and runs Reed-Solomon decoding to report how many codewords it had to repair,
+  whether the repair budget is exhausted, or that the grid could not be locked
+  at all. Nothing is uploaded.
 
 The example is plain HTML, CSS and JavaScript with no build step.
+
+## Files
+
+| File | Description |
+|------|-------------|
+| `index.html` | App markup — symbol stage, damage tools, decode panel, log, image analyzer |
+| `styles.css` | Light-themed responsive CSS |
+| `qr-encoder.js` | Dependency-free QR Code (ISO/IEC 18004) encoder with the codeword and block structure exposed |
+| `qr-analyzer.js` | Grid locator, format reader and Reed-Solomon decoder for measuring damage in a received image |
+| `app.js` | All application logic — encoding, damage model, budget meter, decoding, sweep, image analyzer |
 
 ## Run locally
 
@@ -78,3 +94,17 @@ damaged render; another reader, another resolution or a print-and-scan round
 trip can shift the boundary. This example contains no analytics or tracking
 scripts. The SDK still downloads its engine and contacts Dynamsoft for license
 activation.
+
+## Reading an image you did not generate
+
+The forward half of the page knows the payload, so it can count damage exactly.
+The analyzer does not — it gets a stranger's image. So it locates the grid from
+the finder patterns (1:1:3:1:1 runs, confirmed vertically, three corners
+forming an isoceles right triangle), fits a homography to the symbol, reads the
+format information for the level and mask, samples every module through that
+grid, and hands the codeword stream to a Reed-Solomon decoder.
+
+That last step is what makes the answer exact instead of estimated: the decoder
+knows which codewords it had to repair and where they were. If it cannot finish,
+the page reports that the budget is spent; if it cannot lock the grid at all, it
+says so rather than inventing a percentage.

@@ -1162,6 +1162,167 @@ code {
 }
 
 /* ---------------------------------------------------------------------------
+   Analyze card: drop zone, preview with overlay, report panel
+   --------------------------------------------------------------------------- */
+
+.analyzer-body {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.analyzer-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-width: 0;
+}
+
+.drop-zone {
+    border: 2px dashed var(--dy-gray-300);
+    border-radius: var(--radius);
+    background: var(--dy-gray-50);
+    padding: 1.7rem 1.2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.over {
+    border-color: var(--dy-orange);
+    background: var(--dy-orange-tint);
+    outline: none;
+}
+
+.drop-zone-lead {
+    font-weight: 600;
+    color: var(--dy-gray-900);
+}
+
+.drop-zone-sub {
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--dy-gray-500);
+}
+
+.analyzer-samples .label-text {
+    margin-bottom: 0.45rem;
+}
+
+.analyzer-shot {
+    position: relative;
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--dy-gray-50);
+    line-height: 0;
+}
+
+.analyzer-shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.analyzer-shot canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.analyzer-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.55rem;
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+}
+
+.analyzer-report {
+    min-width: 0;
+}
+
+.analyzer-placeholder {
+    font-size: 0.88rem;
+    color: var(--dy-gray-700);
+    line-height: 1.6;
+}
+
+.analyzer-verdict {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    color: var(--dy-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.analyzer-verdict.ok {
+    color: var(--ok);
+}
+
+.analyzer-verdict.warn {
+    color: #8b4f05;
+}
+
+.analyzer-verdict.bad {
+    color: var(--bad);
+}
+
+.analyzer-meaning {
+    margin-top: 0.45rem;
+    font-size: 0.88rem;
+    color: var(--dy-gray-700);
+    line-height: 1.6;
+}
+
+.analyzer-facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.35rem 1rem;
+    margin: 0.95rem 0 0;
+    padding: 0.8rem 0.95rem;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-100);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+}
+
+.analyzer-facts dt {
+    margin: 0;
+    font-weight: 700;
+    color: var(--dy-gray-700);
+    white-space: nowrap;
+}
+
+.analyzer-facts dd {
+    margin: 0;
+    color: var(--dy-gray-900);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
+}
+
+.analyzer-note {
+    margin-top: 0.85rem;
+    font-size: 0.8rem;
+    color: #8b4f05;
+}
+
+.analyzer-fineprint {
+    margin-top: 0.95rem;
+    font-size: 0.74rem;
+    color: var(--dy-gray-500);
+    line-height: 1.55;
+}
+
+/* ---------------------------------------------------------------------------
    Methodology + footer + toast
    --------------------------------------------------------------------------- */
 
@@ -1238,6 +1399,10 @@ footer {
     }
 
     .anatomy-body {
+        grid-template-columns: 1fr;
+    }
+
+    .analyzer-body {
         grid-template-columns: 1fr;
     }
 

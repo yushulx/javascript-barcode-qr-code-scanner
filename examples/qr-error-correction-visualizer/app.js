@@ -63,6 +63,10 @@
         btnDecode: $('btn-decode'), btnSweep: $('btn-sweep'),
         logTbody: $('log-tbody'), logEmpty: $('log-empty'),
         anatomyCanvas: $('anatomy-canvas'), anatomyLegend: $('anatomy-legend'),
+        analyzerDrop: $('analyzer-drop'), analyzerFile: $('analyzer-file'),
+        analyzerPreview: $('analyzer-preview'), analyzerImg: $('analyzer-img'),
+        analyzerOverlay: $('analyzer-overlay'), analyzerReport: $('analyzer-report'),
+        analyzerLegendCount: $('analyzer-legend-count'),
         toast: $('toast')
     };
 
@@ -1163,6 +1167,374 @@
     }
 
     /* ------------------------------------------------------------------ *
+     * Analyze a received image — the inverse direction.
+     *
+     * The forward half of this page knows the payload, so it can count
+     * damage exactly. Here the input is a stranger's image: the reader
+     * locates the symbol (or the finder-pattern locator does, when the
+     * reader cannot decode it at all), qr-analyzer.js rebuilds the codeword
+     * stream and Reed-Solomon reports how many repairs it needed — or that
+     * the budget is spent.
+     * ------------------------------------------------------------------ */
+    var MAX_ANALYZE_EDGE = 1600;   /* px — big photos get downscaled first */
+    var SAMPLE_PAYLOAD = 'https://www.dynamsoft.com/codepool/';
+    var analyzing = false;
+
+    function loadImage(src) {
+        return new Promise(function (resolve, reject) {
+            var img = new Image();
+            img.onload = function () { resolve(img); };
+            img.onerror = function () { reject(new Error('The file could not be read as an image.')); };
+            img.src = src;
+        });
+    }
+
+    function readImageFile(file) {
+        return new Promise(function (resolve, reject) {
+            var reader = new FileReader();
+            reader.onload = function () { resolve(reader.result); };
+            reader.onerror = function () { reject(new Error('The file could not be read.')); };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function runAnalyzer(source) {
+        if (analyzing) return;
+        analyzing = true;
+        try {
+            var dataURL = typeof source === 'string' ? source : await readImageFile(source);
+            var img = await loadImage(dataURL);
+
+            /* Downscale first: everything downstream is nicer with bounded
+               pixels, and a QR symbol that survives at 1600 px was not
+               readable at 4000 px for any scanner either. */
+            var scale = Math.min(1, MAX_ANALYZE_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+            var w = Math.max(1, Math.round(img.naturalWidth * scale));
+            var h = Math.max(1, Math.round(img.naturalHeight * scale));
+            var cv = document.createElement('canvas');
+            cv.width = w;
+            cv.height = h;
+            var cx = cv.getContext('2d');
+            cx.drawImage(img, 0, 0, w, h);
+            var imageData = cx.getImageData(0, 0, w, h);
+
+            els.analyzerPreview.hidden = false;
+            els.analyzerImg.src = dataURL;
+            els.analyzerOverlay.width = w;
+            els.analyzerOverlay.height = h;
+            els.analyzerOverlay.getContext('2d').clearRect(0, 0, w, h);
+            els.analyzerLegendCount.textContent = '';
+            els.analyzerReport.innerHTML = '<p class="analyzer-placeholder">Analysing…</p>';
+
+            /* The reader gives the exact corner points and, when it can, the
+               payload. A reader error or a failed decode is not fatal — the
+               finder locator inside the analyzer takes over. */
+            var points = null;
+            var text = null;
+            var readerNote = '';
+            try {
+                var cvr = await engine();
+                var result = await cvr.capture({
+                    bytes: new Uint8Array(imageData.data),
+                    width: w, height: h, stride: w * 4, format: 10
+                }, 'ReadBarcodes_Default');
+                var items = (result.items || []).filter(function (i) { return i.type === 2; });
+                /* Format strings are "QR_CODE" in current SDK bundles and
+                   "QRCode" in older ones — match case-insensitively and keep
+                   Micro QR out. */
+                var qr = null;
+                var micro = null;
+                for (var i = 0; i < items.length; i++) {
+                    var formatName = items[i].formatString || '';
+                    if (!/QR/i.test(formatName)) continue;
+                    if (/MICRO/i.test(formatName)) { micro = items[i]; continue; }
+                    qr = items[i];
+                    break;
+                }
+                if (qr) {
+                    points = qr.location.points.map(function (p) { return [p.x, p.y]; });
+                    text = qr.text;
+                } else {
+                    readerNote = micro
+                        ? 'The reader found a ' + micro.formatString + ' — this analysis covers standard QR codes only.'
+                        : 'The reader could not decode a QR code in this image.';
+                }
+            } catch (e) {
+                readerNote = 'The reader is unavailable (' + ((e && e.message) || e) + '). Locating the symbol by its finder patterns only.';
+            }
+
+            var analyzer = window.QRAnalyzer;
+            if (!analyzer || !analyzer.analyze) {
+                els.analyzerReport.innerHTML = '<p class="analyzer-verdict bad">The analyzer script failed to load. Reload the page and try again.</p>';
+                return;
+            }
+            var report = analyzer.analyze({ rgba: imageData.data, width: w, height: h, points: points });
+
+            drawAnalyzerOverlay(report, w, h);
+            renderAnalyzerReport(report, { text: text, readerNote: readerNote });
+        } catch (e) {
+            els.analyzerReport.innerHTML = '<p class="analyzer-verdict bad">'
+                + escapeHtml((e && e.message) || String(e)) + '</p>';
+        } finally {
+            analyzing = false;
+        }
+    }
+
+    function drawAnalyzerOverlay(report, w, h) {
+        var ctx = els.analyzerOverlay.getContext('2d');
+        ctx.clearRect(0, 0, w, h);
+        if (!report || !report.quad) return;
+        var lineWidth = Math.max(2, Math.round(w / 300));
+        /* The symbol outline — where the grid locked. */
+        ctx.strokeStyle = 'rgba(48, 104, 119, 0.75)';
+        ctx.lineWidth = lineWidth;
+        ctx.setLineDash([lineWidth * 3, lineWidth * 2]);
+        ctx.beginPath();
+        ctx.moveTo(report.quad[0][0], report.quad[0][1]);
+        ctx.lineTo(report.quad[1][0], report.quad[1][1]);
+        ctx.lineTo(report.quad[2][0], report.quad[2][1]);
+        ctx.lineTo(report.quad[3][0], report.quad[3][1]);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.setLineDash([]);
+        /* Modules whose codewords needed repair. */
+        var quads = report.cellQuads || [];
+        if (!quads.length) return;
+        ctx.fillStyle = 'rgba(180, 35, 24, 0.4)';
+        for (var i = 0; i < quads.length; i++) {
+            var q = quads[i];
+            ctx.beginPath();
+            ctx.moveTo(q[0][0], q[0][1]);
+            ctx.lineTo(q[1][0], q[1][1]);
+            ctx.lineTo(q[2][0], q[2][1]);
+            ctx.lineTo(q[3][0], q[3][1]);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    function renderAnalyzerReport(report, ctxInfo) {
+        var r = report || { reason: 'no-grid' };
+        var verdict;
+        var tone;
+        var meaning;
+        var pct = r.totalBudget ? Math.round(r.totalCorrected / r.totalBudget * 100) : 0;
+
+        if (r.reason === 'no-grid') {
+            verdict = 'No QR grid found';
+            tone = 'note';
+            if (r.version) {
+                meaning = 'A grid locked at version ' + r.version + ', but neither the format field nor any block '
+                    + 'could be verified — nothing here proves a readable QR symbol.';
+            } else if (r.locatedBy === 'finder') {
+                meaning = 'Finder patterns were spotted, but no version locked onto them — the symbol is too '
+                    + 'damaged, too small or too warped for this analysis.';
+            } else {
+                meaning = 'Nothing in this image looks like a QR symbol: no finder patterns were found at all.';
+            }
+        } else if (r.reason === 'low-contrast') {
+            verdict = 'Black and white will not separate';
+            tone = 'note';
+            meaning = 'The symbol area has almost no contrast (measured ' + r.contrast + '). Binarizing the modules would be guessing, so no numbers.';
+        } else if (r.reason === 'no-encoder') {
+            verdict = 'Analyzer unavailable';
+            tone = 'bad';
+            meaning = 'The encoder tables this analysis is built on did not load. Reload the page.';
+        } else if (r.reason === 'decoded') {
+            if (r.totalCorrected === 0) {
+                verdict = 'Decoded — no repairs needed';
+                tone = 'ok';
+                meaning = 'Every block verified without a single corrected codeword. On a screenshot that is as clean as it gets; on a photo, light sampling noise can still hide here.';
+            } else {
+                verdict = 'Decoded — ' + r.totalCorrected + ' of ' + r.totalBudget + ' repairs used';
+                tone = pct >= 80 ? 'warn' : 'ok';
+                meaning = 'Reed-Solomon rebuilt ' + r.totalCorrected + ' corrupted codeword'
+                    + (r.totalCorrected === 1 ? '' : 's') + ' — ' + pct + '% of the repair budget. '
+                    + (pct >= 80
+                        ? 'This code is living on its last repairs: another scratch will do it.'
+                        : 'The symbol still has real headroom left.');
+            }
+        } else {
+            /* beyond-repair */
+            verdict = 'Beyond repair';
+            tone = 'bad';
+            var budgetText = r.blocks && r.blocks.length ? ' (budget ' + r.blocks[0].budget + ' repairs per block)' : '';
+            meaning = 'At least one block reports more corrupted codewords than its repairs can fix' + budgetText
+                + '. '
+                + (ctxInfo.text
+                    ? 'The reader did still return a payload — luck, not headroom.'
+                    : 'A reader could not decode it either.');
+        }
+
+        var html = '<p class="analyzer-verdict ' + tone + '">' + escapeHtml(verdict) + '</p>';
+        html += '<p class="analyzer-meaning">' + escapeHtml(meaning) + '</p>';
+
+        var facts = [];
+        if (ctxInfo.text) facts.push(['Decoded payload', ctxInfo.text]);
+        else if (r.reason === 'decoded') facts.push(['Decoded payload', 'the reader returned no text']);
+        if (r.version) facts.push(['Symbol', 'version ' + r.version + ' — ' + r.size + '×' + r.size + ' modules']);
+        if (r.ecLevel) {
+            facts.push(['Level & mask', r.ecLevel + ' · mask ' + r.mask
+                + (r.levelSource === 'brute-force' ? ' (format field unreadable — recovered by brute-force decoding)' : '')]);
+        }
+        if (r.modulePx) facts.push(['Module size', (Math.round(r.modulePx * 10) / 10) + ' px in this image']);
+        if (r.contrast !== undefined) facts.push(['Contrast', String(r.contrast) + ' (0–255)']);
+        if (r.locatedBy) {
+            facts.push(['Located', r.locatedBy === 'finder'
+                ? 'by finder patterns — the reader could not decode the image'
+                : 'by the reader']);
+        }
+        if (r.finderScore !== undefined && r.finderScore !== null) {
+            facts.push(['Grid match', 'finder ' + Math.round(r.finderScore * 100) + '% · timing '
+                + Math.round(r.timingScore * 100) + '%']);
+        }
+        if (facts.length) {
+            html += '<dl class="analyzer-facts">';
+            for (var i = 0; i < facts.length; i++) {
+                html += '<dt>' + escapeHtml(facts[i][0]) + '</dt><dd>' + escapeHtml(String(facts[i][1])) + '</dd>';
+            }
+            html += '</dl>';
+        }
+
+        if (r.blocks && r.blocks.length) {
+            html += '<div class="budget-bars">';
+            for (var b = 0; b < r.blocks.length; b++) {
+                var block = r.blocks[b];
+                var fillPct = block.ok
+                    ? Math.min(100, block.corrected / Math.max(1, block.ecCount) * 100)
+                    : 100;
+                html += '<div class="budget-row' + (block.ok ? '' : ' over') + '">'
+                    + '<span class="budget-label">Block ' + (b + 1) + '</span>'
+                    + '<span class="budget-track"><span class="budget-fill" style="width:' + fillPct.toFixed(1) + '%"></span>'
+                    + '<span class="budget-cap" style="left:' + (block.budget / Math.max(1, block.ecCount) * 100).toFixed(1) + '%"></span></span>'
+                    + '<span class="budget-note">' + (block.ok
+                        ? block.corrected + ' / ' + block.budget + ' repairs used'
+                        : 'more than ' + block.budget + ' — beyond budget')
+                    + '</span></div>';
+            }
+            html += '</div>';
+        }
+
+        if (ctxInfo.readerNote && r.reason !== 'no-grid') {
+            html += '<p class="analyzer-note">' + escapeHtml(ctxInfo.readerNote) + '</p>';
+        }
+        html += '<p class="analyzer-fineprint">Grid sampling can misread a blurry module and count a phantom repair; '
+            + 'a clean render gives exact numbers, a photographed code gives the decoder\'s best reading.</p>';
+
+        els.analyzerReport.innerHTML = html;
+
+        if (r.correctedCells && r.correctedCells.length) {
+            els.analyzerLegendCount.textContent = ' — ' + r.correctedCells.length + ' module'
+                + (r.correctedCells.length === 1 ? '' : 's');
+        } else {
+            els.analyzerLegendCount.textContent = '';
+        }
+    }
+
+    /* Generated samples exercise the three verdicts: a clean render, one
+       with 8 corrupted codewords (inside the 13-repair budget), and one
+       with 16 (past it). All deterministic — the flips never move. */
+    function buildSampleImage(kind) {
+        var enc = window.BarcodeQR.encode(SAMPLE_PAYLOAD, { ecLevel: 'M', version: 3 });
+        var matrix = enc.matrix.map(function (row) { return row.slice(); });
+        var count = kind === 'scars' ? 8 : kind === 'dead' ? 16 : 0;
+        var corrupted = {};
+        for (var i = 0; i < count; i++) {
+            corrupted[kind === 'scars' ? 3 + i * 8 : 2 + i * 4] = true;
+        }
+        if (count) {
+            for (var rr = 0; rr < enc.size; rr++) {
+                for (var cc = 0; cc < enc.size; cc++) {
+                    var p = enc.placement[rr][cc];
+                    if (p !== null && corrupted[p]) matrix[rr][cc] ^= 1;
+                }
+            }
+        }
+        var QUIET_LOCAL = 4;
+        var MODULE_PX_LOCAL = 10;
+        var span = (enc.size + QUIET_LOCAL * 2) * MODULE_PX_LOCAL;
+        var cv = document.createElement('canvas');
+        cv.width = span;
+        cv.height = span;
+        var cx = cv.getContext('2d');
+        cx.fillStyle = '#ffffff';
+        cx.fillRect(0, 0, span, span);
+        cx.fillStyle = '#000000';
+        for (rr = 0; rr < enc.size; rr++) {
+            for (cc = 0; cc < enc.size; cc++) {
+                if (matrix[rr][cc]) {
+                    cx.fillRect((cc + QUIET_LOCAL) * MODULE_PX_LOCAL, (rr + QUIET_LOCAL) * MODULE_PX_LOCAL,
+                        MODULE_PX_LOCAL, MODULE_PX_LOCAL);
+                }
+            }
+        }
+        return cv.toDataURL('image/png');
+    }
+
+    function wireAnalyzer() {
+        if (!els.analyzerDrop) return;
+
+        els.analyzerDrop.addEventListener('click', function () { els.analyzerFile.click(); });
+        els.analyzerDrop.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                els.analyzerFile.click();
+            }
+        });
+        els.analyzerFile.addEventListener('change', function () {
+            if (els.analyzerFile.files && els.analyzerFile.files[0]) {
+                runAnalyzer(els.analyzerFile.files[0]);
+                els.analyzerFile.value = '';
+            }
+        });
+
+        ['dragover', 'dragenter'].forEach(function (ev) {
+            els.analyzerDrop.addEventListener(ev, function (e) {
+                e.preventDefault();
+                els.analyzerDrop.classList.add('over');
+            });
+        });
+        ['dragleave', 'dragend'].forEach(function (ev) {
+            els.analyzerDrop.addEventListener(ev, function () {
+                els.analyzerDrop.classList.remove('over');
+            });
+        });
+        els.analyzerDrop.addEventListener('drop', function (e) {
+            e.preventDefault();
+            els.analyzerDrop.classList.remove('over');
+            var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+            if (file) runAnalyzer(file);
+        });
+
+        /* Pasting a screenshot is the fastest path from a chat window: accept
+           it anywhere on the page except while typing into a field. */
+        document.addEventListener('paste', function (e) {
+            var target = e.target;
+            if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')) return;
+            if (!e.clipboardData) return;
+            var items = e.clipboardData.items || [];
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].type && items[i].type.indexOf('image/') === 0) {
+                    var file = items[i].getAsFile();
+                    if (file) {
+                        e.preventDefault();
+                        els.analyzerDrop.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        runAnalyzer(file);
+                    }
+                    return;
+                }
+            }
+        });
+
+        var sampleButtons = document.querySelectorAll('[data-sample]');
+        for (var i = 0; i < sampleButtons.length; i++) {
+            sampleButtons[i].addEventListener('click', function () {
+                runAnalyzer(buildSampleImage(this.getAttribute('data-sample')));
+            });
+        }
+    }
+
+    /* ------------------------------------------------------------------ *
      * Controls
      * ------------------------------------------------------------------ */
     function renderAfterEncode() {
@@ -1347,6 +1719,7 @@
         applyFormat('none');
         wirePainting();
         wireEvents();
+        wireAnalyzer();
 
         if (encodeCurrent()) {
             renderAfterEncode();
