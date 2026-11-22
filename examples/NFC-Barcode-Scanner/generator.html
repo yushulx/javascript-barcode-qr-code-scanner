@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<script type="text/javascript" src="qrcode.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0" />
+</head>
+<body>
+  <div>Message:</div>
+  <textarea id="message">https://www.dynamsoft.com</textarea>
+  <div>Key:</div>
+  <input type="text" id="key" value="dynamsoft"></input>
+  <div id="placeHolder"></div>
+  <button onclick="createQRCode();">Create Encrypted QR Code</button>
+  <button id="NFC-btn" onclick="writeNFCTag();">Write Key to NFC Tag</button>
+<script>
+  checkIFNFCSupported();
+  function checkIFNFCSupported(){
+    if (!("NDEFReader" in window)) {
+      alert("NFC is not supported.");
+      document.getElementById("NFC-btn").disabled = true;
+    }
+  }
+  function createQRCode(){
+    let typeNumber = 0;
+    let errorCorrectionLevel = 'L';
+    let qr = qrcode(typeNumber, errorCorrectionLevel);
+    let message = document.getElementById("message").textContent;
+    let key = document.getElementById("key").value;
+    qr.addData(CryptoJS.AES.encrypt(message,key).toString());
+    qr.make();
+    let placeHolder = document.getElementById('placeHolder');
+    placeHolder.innerHTML = qr.createImgTag(); // or createImgTag
+    let img = placeHolder.children[0];
+    let width = img.getAttribute("width").replace("px","");
+    let height = img.getAttribute("height").replace("px","");
+    img.setAttribute("width",width);
+    img.setAttribute("height",height); 
+  }
+
+  function writeNFCTag(){
+    alert("Put the device close to the tag to write");
+    let key = document.getElementById("key").value;
+    const ndef = new NDEFReader();
+    ndef.write(
+      key
+    ).then(() => {
+      alert("Message written.");
+    }).catch(error => {
+      alert(`Write failed :-( try again: ${error}.`);
+    });
+  }
+</script>
+</body>
+</html>
