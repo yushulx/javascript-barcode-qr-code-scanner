@@ -5,6 +5,30 @@
  * Scans 1D/2D barcodes from image files, video files, and a live camera stream.
  */
 
+/* Analytics shim: keeps the demo running even if the shared tracker fails
+   to load (blocked by an ad blocker, offline, etc.). */
+/* Shared capture-progress feedback (demos/shared/scanner-feedback.js). Same
+   degrade-gracefully pattern as analytics above: if the shared file did not
+   load, capture still works, it just shows no animation. */
+var feedback = window.ScannerFeedback || {
+    begin: function () { },
+    end: function () { },
+    isBusy: function () { return false; },
+    run: function (label, factory) {
+        return Promise.resolve(typeof factory === 'function' ? factory() : factory);
+    }
+};
+
+var analytics = window.DemoAnalytics || {
+    ready: function () { },
+    error: function () { },
+    start: function () { },
+    success: function () { },
+    fail: function () { },
+    action: function () { },
+    trialClick: function () { }
+};
+
 // ========== DOM Elements ==========
 const dropdown = document.getElementById('dropdown');
 const cameraSource = document.getElementById('camera_source');
@@ -64,6 +88,12 @@ let dynamsoftCustomTemplateContent = null; // pending JSON string applied after 
 
 // Annotation ground truth data (map: filename -> [{text, format, points}])
 let annotationData = null;
+// Why the currently loaded images have (or have not) ground truth to compare
+// against — a ZIP drop, an annotations.json import, or nothing.
+let benchmarkNotice = '';
+// An optional follow-up link for the notice, so a failure that has an obvious
+// next step offers it instead of only naming it in prose.
+let benchmarkNoticeAction = null;
 
 // ========== Multi-Page Documents (PDF / TIFF) ==========
 /* capture() hands a Blob to createImageBitmap()/<img>, so it can only decode
@@ -169,6 +199,7 @@ function fileKind(file) {
     const extension = (file.name.split('.').pop() || '').toLowerCase();
     if (file.type === 'application/pdf' || extension === 'pdf') return 'pdf';
     if (file.type === 'image/tiff' || extension === 'tif' || extension === 'tiff') return 'tiff';
+    if (file.type === 'application/zip' || extension === 'zip') return 'zip';
     if (file.type.startsWith('image/')) return 'image';
     if (file.type.startsWith('video/')) return 'video';
     return 'unknown';
@@ -188,8 +219,155 @@ function readFileAsDataURL(file) {
     });
 }
 
+// ========== Dataset archive (exported by the barcode generator) ==========
+/* The generator exports a whole test dataset as one ZIP: `images/*.png` plus
+   `annotations.json` in the barcode-benchmark/1.0 schema. Reading the archive
+   here means a dataset can be benchmarked as a single drop with its ground
+   truth already attached, instead of extracting it and matching filenames by
+   hand. Its archives store their entries uncompressed (PNG is already
+   compressed), so no inflate step is normally needed; a deflated entry from
+   some other writer goes through DecompressionStream. */
+const ZIP_IMAGE_RE = /\.(png|jpe?g|bmp|gif|webp)$/i;
+const MIME_BY_EXTENSION = {
+    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', bmp: 'image/bmp',
+    gif: 'image/gif', webp: 'image/webp', tif: 'image/tiff', tiff: 'image/tiff'
+};
+
+function mimeForName(name) {
+    const extension = (name.split('.').pop() || '').toLowerCase();
+    return MIME_BY_EXTENSION[extension] || 'application/octet-stream';
+}
+
+async function inflateRaw(bytes) {
+    if (typeof DecompressionStream !== 'function') {
+        throw new Error('This archive uses compression and this browser cannot inflate it. '
+            + 'Re-export the dataset from the barcode generator — its archives are stored, not compressed.');
+    }
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function readZipEntries(file) {
+    const buffer = new Uint8Array(await file.arrayBuffer());
+    const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+
+    /* The end-of-central-directory record is at the end, but a comment may
+       follow it, so scan backwards over the largest comment a ZIP allows. */
+    let eocd = -1;
+    for (let i = buffer.length - 22; i >= 0 && i >= buffer.length - 22 - 65535; i--) {
+        if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error('Not a ZIP archive (no end-of-central-directory record found).');
+
+    const count = view.getUint16(eocd + 10, true);
+    let offset = view.getUint32(eocd + 16, true);
+    const entries = [];
+
+    for (let n = 0; n < count; n++) {
+        if (offset + 46 > buffer.length || view.getUint32(offset, true) !== 0x02014b50) break;
+        const method = view.getUint16(offset + 10, true);
+        const compressedSize = view.getUint32(offset + 20, true);
+        const nameLength = view.getUint16(offset + 28, true);
+        const extraLength = view.getUint16(offset + 30, true);
+        const commentLength = view.getUint16(offset + 32, true);
+        const localOffset = view.getUint32(offset + 42, true);
+        const name = new TextDecoder().decode(buffer.subarray(offset + 46, offset + 46 + nameLength));
+
+        /* The sizes in the local header may be zeroed when a data descriptor is
+           used, so the central directory's values are the ones to trust; the
+           local header is only read to find where the data starts. */
+        const localNameLength = view.getUint16(localOffset + 26, true);
+        const localExtraLength = view.getUint16(localOffset + 28, true);
+        const dataStart = localOffset + 30 + localNameLength + localExtraLength;
+        const raw = buffer.subarray(dataStart, dataStart + compressedSize);
+
+        entries.push({ name: name, method: method, raw: raw });
+        offset += 46 + nameLength + extraLength + commentLength;
+    }
+
+    if (entries.length === 0) throw new Error('The archive contains no entries.');
+
+    const wanted = entries.filter(function (entry) {
+        return entry.name.toLowerCase().endsWith('annotations.json')
+            || ZIP_IMAGE_RE.test(entry.name.split('/').pop() || '');
+    });
+
+    for (const entry of wanted) {
+        if (entry.method === 0) entry.data = entry.raw;
+        else if (entry.method === 8) entry.data = await inflateRaw(entry.raw);
+        else throw new Error('The archive entry "' + entry.name + '" uses an unsupported '
+            + 'compression method (' + entry.method + '). Export the dataset from the barcode generator instead.');
+    }
+    return wanted;
+}
+
+async function loadDatasetZip(file) {
+    showLoading('Reading ' + file.name + '…');
+    try {
+        const entries = await readZipEntries(file);
+        const images = [];
+        let annotation = null;
+
+        entries.forEach(function (entry) {
+            const base = entry.name.split('/').pop();
+            if (entry.name.toLowerCase().endsWith('annotations.json')) {
+                annotation = JSON.parse(new TextDecoder().decode(entry.data));
+                return;
+            }
+            images.push(new File([entry.data], base, { type: mimeForName(base) }));
+        });
+
+        if (images.length === 0) {
+            throw new Error('The archive contains an annotations file but no images.');
+        }
+        if (annotation) applyAnnotationData(annotation);
+        hideLoading();
+
+        await loadPages(images);
+        setLoadingText('');
+
+        if (annotation) {
+            const matched = images.filter(function (image) {
+                return annotationData && annotationData[image.name];
+            }).length;
+            const unmatched = images.length - matched;
+            /* An image with no annotation is still benchmarked — it just has no
+               expected values, so its row reports what was found and nothing
+               else. Say so rather than silently reporting fewer images. */
+            setBenchmarkNotice(images.length + ' image' + (images.length === 1 ? '' : 's')
+                + ' and ' + Object.keys(annotationData || {}).length + ' annotated file'
+                + (Object.keys(annotationData || {}).length === 1 ? '' : 's')
+                + ' loaded from ' + file.name + '.'
+                + (unmatched ? ' ' + unmatched + ' image' + (unmatched === 1 ? ' has' : 's have')
+                    + ' no ground truth entry.' : ''));
+        } else {
+            setBenchmarkNotice(images.length + ' image' + (images.length === 1 ? '' : 's')
+                + ' loaded from ' + file.name + ', but the archive carries no annotations.json, '
+                + 'so there is nothing to score against. A dataset exported by the generator '
+                + 'includes it:',
+            { label: 'build one with the barcode generator', href: '../barcode-qrcode-generator/' });
+        }
+        analytics.action('dataset_zip', { images: images.length, annotated: annotation ? 1 : 0 });
+    } catch (ex) {
+        console.error(ex);
+        hideLoading();
+        alert('Could not read ' + file.name + ': ' + ex.message);
+        /* The alert says what broke; the notice stays on the page with the way
+           out, which a dismissed alert cannot do. */
+        setBenchmarkNotice('Could not read ' + file.name + '. Export a fresh dataset with:',
+            { label: 'the barcode generator', href: '../barcode-qrcode-generator/' });
+        analytics.fail('barcode', 'dataset_zip');
+    }
+}
+
 async function handleFiles(files) {
     if (!files || files.length === 0) return;
+
+    const archives = files.filter(f => fileKind(f) === 'zip');
+    if (archives.length > 0) {
+        await loadDatasetZip(archives[0]);
+        return;
+    }
 
     const documentFiles = files.filter(isScanableImage);
     const videos = files.filter(f => fileKind(f) === 'video');
@@ -270,6 +448,7 @@ async function loadPages(files) {
         imagePages = [];
         imagePreviewContainer.style.display = 'none';
         detectionResult.value = 'Could not read the file: ' + describeFileError(ex) + '\n';
+        analytics.fail('barcode', 'image_file');
     } finally {
         hideLoading();
     }
@@ -451,19 +630,28 @@ function loadImage2Canvas(base64Image) {
         videoFileWrapper.style.display = 'none';
 
         if (!isSDKReady) {
-            alert('Dynamsoft Barcode Reader is not ready yet. Please activate it in Settings.');
+            detectionResult.value = 'Dynamsoft Barcode Reader is still initializing. Please try again in a moment.\n';
             return;
         }
 
         let context = overlayCanvas.getContext('2d');
         context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         try {
-            await resetOrReapplyDynamsoftSettings();
-            let result = await cvr.capture(img.src, dynamsoftTemplate);
+                analytics.start('barcode', 'image_file');
+                await resetOrReapplyDynamsoftSettings();
+                let result = await feedback.run('Scanning the image…', () =>
+                    cvr.capture(img.src, dynamsoftTemplate)
+                );
             showFileResult(context, result);
+            analytics.success('barcode', 'image_file', {
+                barcode_count: (result.items || []).filter(
+                    i => i.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE
+                ).length
+            });
         } catch (ex) {
             console.error(ex);
             detectionResult.value += 'Scanning failed: ' + ex.message + '\n';
+            analytics.fail('barcode', 'image_file');
         }
     };
 }
@@ -494,7 +682,7 @@ function loadVideoFile(file, focus) {
         }
 
         if (!isSDKReady) {
-            detectionResult.value = 'Dynamsoft Barcode Reader is not ready yet. Please activate it in Settings.\n';
+            detectionResult.value = 'Dynamsoft Barcode Reader is still initializing. Please try again in a moment.\n';
             return;
         }
 
@@ -511,6 +699,7 @@ function startFileScanning() {
     fileScanning = true;
     fileScanResults = [];
     detectionResult.value = '';
+    analytics.start('barcode', 'video_file');
     let ctx = videoOverlay.getContext('2d');
     let tempCanvas = document.createElement('canvas');
     let tempCtx = tempCanvas.getContext('2d');
@@ -612,6 +801,8 @@ async function scanVideoFrameDynamsoft(canvas, ctx) {
     if (newResult) {
         detectionResult.value = fileScanResults.join('\n') + '\n\n';
     }
+
+    detectionResult.value = fileScanResults.join('\n') + '\n\n';
 }
 
 // ========== Image Result Rendering ==========
@@ -668,89 +859,87 @@ document.getElementById('pick_file').addEventListener('change', function () {
 });
 
 // ========== SDK Activation ==========
+/* The demos hosted under /codepool/demos/ share one license that is bound to
+   dynamsoft.com, so activation runs on page load and there is no license input
+   in Settings.
+
+   The bound key only activates on dynamsoft.com, so on any other host
+   (localhost, staging, a fork) we fall back to the SDK's public 24-hour trial
+   key, which is accepted on localhost. */
+const BOUND_HOSTS = ['dynamsoft.com'];
+const CODEPOOL_LICENSE_KEY = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAwLTEwMTY0ODQ5MCIsIm1haW5TZXJ2ZXJVUkwiOiJodHRwczovL21sdHMuZHluYW1zb2Z0LmNvbS8iLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMCIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NsdHMuZHluYW1zb2Z0LmNvbS8iLCJjaGVja0NvZGUiOjE0MDA4MDY1Mjl9';
+const TRIAL_LICENSE_KEY = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==';
+
+function isBoundHost() {
+    const host = window.location.hostname.toLowerCase();
+    return BOUND_HOSTS.some((bound) => host === bound || host.endsWith('.' + bound));
+}
+
+function resolveLicenseKey() {
+    if (isBoundHost()) {
+        return CODEPOOL_LICENSE_KEY;
+    }
+    console.info('[demo] Using the SDK trial license: the Codepool license is bound to '
+        + BOUND_HOSTS.join(', ') + ' and cannot activate on "' + window.location.hostname + '".');
+    analytics.action('license_fallback', { host: window.location.hostname });
+    return TRIAL_LICENSE_KEY;
+}
+
+let activationPromise = null;
+
 async function activateDynamsoft() {
-    let inputElement = document.getElementById('dynamsoft_license_key');
-    let licenseKey = (inputElement.value || '').trim() || inputElement.placeholder;
+    if (isSDKReady) return;
+    if (activationPromise) return activationPromise;
 
-    let btn = document.getElementById('dynamsoft_activate_btn');
+    activationPromise = (async () => {
+        const startedAt = performance.now();
+        showLoading('Initializing Dynamsoft Barcode Reader...');
+        try {
+            const licenseKey = resolveLicenseKey();
+            await Dynamsoft.License.LicenseManager.initLicense(licenseKey, true);
 
-    // Already activated with this exact key — nothing to do
-    if (isSDKReady && licenseKey === activatedLicenseKey) return;
+            if (!wasmLoaded) {
+                await Dynamsoft.Core.CoreModule.loadWasm(['DBR']);
+                wasmLoaded = true;
+            }
 
-    btn.disabled = true;
-    btn.textContent = 'Activating...';
-    showLoading('Initializing Dynamsoft Barcode Reader...');
+            if (!cvr) {
+                cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+            }
 
-    try {
-        await Dynamsoft.License.LicenseManager.initLicense(licenseKey, true);
+            // Apply any custom template that was loaded before activation finished
+            if (dynamsoftCustomTemplateContent) {
+                await applyDynamsoftTemplateContent(dynamsoftCustomTemplateContent);
+            } else {
+                await extendDefaultBarcodeFormats(dynamsoftTemplate);
+            }
 
-        if (!wasmLoaded) {
-            await Dynamsoft.Core.CoreModule.loadWasm(['DBR']);
-            wasmLoaded = true;
+            activatedLicenseKey = licenseKey;
+            isSDKReady = true;
+            updateSDKBadge();
+            analytics.ready(performance.now() - startedAt);
+
+            // If the live camera is already open, start scanning right away
+            if (dropdown.value === 'camera' && stream) {
+                startCameraScanning();
+            }
+        } catch (ex) {
+            console.error(ex);
+            isSDKReady = false;
+            updateSDKBadge();
+            analytics.error('activate_failed', (ex && (ex.message || ex)) || 'unknown');
+        } finally {
+            hideLoading();
         }
+    })();
 
-        if (!cvr) {
-            cvr = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
-        }
-
-        // Apply any custom template that was loaded before activation
-        if (dynamsoftCustomTemplateContent) {
-            await applyDynamsoftTemplateContent(dynamsoftCustomTemplateContent);
-        }
-
-        activatedLicenseKey = licenseKey;
-        isSDKReady = true;
-        saveLicenseKey(licenseKey);
-        updateSDKBadge();
-
-        console.log('Dynamsoft Barcode Reader activated');
-        btn.textContent = 'Activated';
-        btn.disabled = false; // allow re-activating with a different key
-
-        // If the live camera is already open, start scanning right away
-        if (dropdown.value === 'camera' && stream) {
-            startCameraScanning();
-        }
-    } catch (ex) {
-        console.error(ex);
-        isSDKReady = false;
-        updateSDKBadge();
-        alert('Failed to activate Dynamsoft Barcode Reader: ' + (ex.message || ex));
-        btn.disabled = false;
-        btn.textContent = 'Activate';
-    } finally {
-        hideLoading();
-    }
+    return activationPromise;
 }
 
-// ========== License Key Caching ==========
-function saveLicenseKey(key) {
-    try { localStorage.setItem('barcodeScanner_dynamsoft_license', key); } catch (e) { }
-}
-
-function loadLicenseKey() {
-    try { return localStorage.getItem('barcodeScanner_dynamsoft_license') || ''; } catch (e) { return ''; }
-}
-
-function restoreLicenseKey() {
-    let saved = loadLicenseKey();
-    if (saved) {
-        document.getElementById('dynamsoft_license_key').value = saved;
-    }
-}
-
-// The SDK is never activated automatically — the user opens Settings and clicks Activate.
+// Activate as soon as the page is interactive — no user action required.
 window.addEventListener('DOMContentLoaded', function () {
-    restoreLicenseKey();
     updateSDKBadge();
-
-    // Typing a different key re-enables the Activate button
-    const licenseInput = document.getElementById('dynamsoft_license_key');
-    licenseInput.addEventListener('input', function () {
-        let btn = document.getElementById('dynamsoft_activate_btn');
-        btn.disabled = false;
-        if (btn.textContent !== 'Activate') btn.textContent = 'Activate';
-    });
+    activateDynamsoft();
 });
 
 // ========== Camera ==========
@@ -827,6 +1016,7 @@ function startCameraScanning() {
     cameraScanning = true;
     cameraScanResults = [];
     scanResult.value = '';
+    analytics.start('barcode', 'camera');
     let ctx = cameraOverlay.getContext('2d');
 
     const captureFrame = async () => {
@@ -928,6 +1118,7 @@ function showCameraResult(result) {
 
     if (txts.length > 0) {
         scanResult.value = cameraScanResults.join('\n') + '\n\n';
+        analytics.success('barcode', 'camera', { barcode_count: txts.length });
     }
 }
 
@@ -1072,6 +1263,7 @@ async function startRecording() {
         recordTimerId = setInterval(function () {
             recordTimer.textContent = formatClipTime((Date.now() - recordStartedAt) / 1000);
         }, 200);
+        analytics.action('record_start', { resolution: videoElement.videoWidth + 'x' + videoElement.videoHeight });
     } catch (ex) {
         console.error(ex);
         alert('Could not start the recorder: ' + ex.message);
@@ -1113,6 +1305,7 @@ function stopRecording() {
         }
 
         showRecording(blob, seconds, width, height);
+        analytics.action('record_stop', { seconds: Math.round(seconds), kb: Math.round(blob.size / 1024) });
     });
 }
 
@@ -1166,12 +1359,14 @@ function hideRecording() {
 
 function discardRecording() {
     hideRecording();
+    analytics.action('record_discard', {});
 }
 
 async function scanRecording() {
     if (!recording) return;
 
     const file = recording.file;
+    analytics.action('record_scan', { seconds: Math.round(recording.seconds) });
 
     /* Hand the clip to the upload path instead of writing a second decoder loop:
        switching to File mode stops the camera, and loadVideoFile() then plays the
@@ -1180,6 +1375,7 @@ async function scanRecording() {
     await selectChanged();
     handleFile(file, true);
 }
+
 // ========== Loading Indicator ==========
 /* Reference-counted: rasterizing a document runs inside loadPages(), and SDK
    activation can overlap with it, so a bare show/hide pair would let one finish
@@ -1217,8 +1413,16 @@ function closeSettings() {
 function updateSDKBadge() {
     let badge = document.getElementById('dynamsoft_status');
     if (badge) {
-        badge.className = 'sdk-badge ' + (isSDKReady ? 'badge-active' : 'badge-inactive');
-        badge.textContent = isSDKReady ? 'Activated' : 'Not Activated';
+        if (isSDKReady) {
+            badge.className = 'sdk-badge badge-active';
+            badge.textContent = 'Activated';
+        } else if (activationPromise) {
+            badge.className = 'sdk-badge badge-inactive';
+            badge.textContent = 'Activation Failed';
+        } else {
+            badge.className = 'sdk-badge badge-inactive';
+            badge.textContent = 'Initializing...';
+        }
     }
 }
 
@@ -1232,6 +1436,7 @@ document.addEventListener('click', function (e) {
 // ========== Mode Toggle ==========
 function setMode(mode) {
     currentMode = mode;
+    analytics.action('mode_switch', { mode: mode });
     document.getElementById('mode_default').classList.toggle('toggle-active', mode === 'default');
     document.getElementById('mode_benchmark').classList.toggle('toggle-active', mode === 'benchmark');
 
@@ -1252,7 +1457,7 @@ async function runBenchmark() {
     if (benchmarkRunning) return;
 
     if (!isSDKReady) {
-        alert('Dynamsoft Barcode Reader is not ready yet. Please activate it in Settings.');
+        alert('Dynamsoft Barcode Reader is still initializing. Please try again in a moment.');
         return;
     }
 
@@ -1293,13 +1498,17 @@ async function runBenchmark() {
 
         let testImg = imgInfo.src ? await loadImageFromSrc(imgInfo.src) : img;
 
-        // Look up ground truth for this image (matched by filename)
+        // Ground truth for this image, matched by filename. The whole entry is
+        // passed through, not just the text: the symbology and the box are
+        // compared as well.
         let groundTruth = null;
+        let conditions = null;
         if (annotationData && annotationData[imgInfo.name]) {
-            groundTruth = annotationData[imgInfo.name].map(b => b.text);
+            groundTruth = annotationData[imgInfo.name].barcodes;
+            conditions = annotationData[imgInfo.name].degradations;
         }
 
-        results.push(await benchmarkSingleImage(testImg, imgInfo.name, groundTruth));
+        results.push(await benchmarkSingleImage(testImg, imgInfo.name, groundTruth, conditions));
     }
 
     progressBar.style.width = '100%';
@@ -1307,6 +1516,10 @@ async function runBenchmark() {
 
     renderBenchmarkResults(results);
     benchmarkRunning = false;
+    analytics.success('benchmark', 'image_set', {
+        image_count: results.length,
+        barcode_count: results.reduce((sum, r) => sum + r.barcodes.length, 0)
+    });
 
     document.getElementById('benchmark_export_btn').style.display = 'inline-flex';
     lastBenchmarkData = results;
@@ -1323,8 +1536,8 @@ function loadImageFromSrc(src) {
     });
 }
 
-// Returns { imageName, barcodes: [{type, text}], time, error, gtResult }
-async function benchmarkSingleImage(testImg, imageName, groundTruth = null) {
+// Returns { imageName, barcodes: [{type, text, points}], time, error, conditions, gtResult }
+async function benchmarkSingleImage(testImg, imageName, groundTruth = null, conditions = null) {
     let barcodes = [];
     let startTime = performance.now();
 
@@ -1334,7 +1547,13 @@ async function benchmarkSingleImage(testImg, imageName, groundTruth = null) {
         if (result.items && result.items.length > 0) {
             for (let item of result.items) {
                 if (item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE) {
-                    barcodes.push({ type: item.formatString || 'Unknown', text: item.text });
+                    /* The box is kept so the benchmark can compare it with the
+                       annotated one; it is never used to decide a match. */
+                    let points = null;
+                    if (item.location && Array.isArray(item.location.points) && item.location.points.length >= 3) {
+                        points = item.location.points.map(function (p) { return [p.x, p.y]; });
+                    }
+                    barcodes.push({ type: item.formatString || 'Unknown', text: item.text, points: points });
                 }
             }
         }
@@ -1345,6 +1564,7 @@ async function benchmarkSingleImage(testImg, imageName, groundTruth = null) {
             barcodes: [],
             time: performance.now() - startTime,
             error: ex.message || String(ex),
+            conditions,
             gtResult: groundTruth ? computeGTResult([], groundTruth) : null
         };
     }
@@ -1354,7 +1574,8 @@ async function benchmarkSingleImage(testImg, imageName, groundTruth = null) {
         barcodes,
         time: performance.now() - startTime,
         error: null,
-        gtResult: groundTruth ? computeGTResult(barcodes.map(b => b.text), groundTruth) : null
+        conditions,
+        gtResult: groundTruth ? computeGTResult(barcodes, groundTruth) : null
     };
 }
 
@@ -1369,6 +1590,36 @@ function renderBenchmarkResults(results) {
     container.innerHTML = buildBenchmarkHtml(results);
 }
 
+/* What the ground-truth columns say about the whole run. Kept in one place so
+   the page and the exported report cannot disagree. */
+function describeGroundTruthSummary(results, totals) {
+    const lines = [];
+    lines.push('Ground truth: <strong>' + totals.tp + '/' + totals.expected + '</strong> decoded'
+        + ' — recall <span class="' + gtRateClass(totals.recall) + '">'
+        + (totals.recall * 100).toFixed(1) + '%</span>'
+        + ', precision <span class="' + gtRateClass(totals.precision) + '">'
+        + (totals.precision * 100).toFixed(1) + '%</span>');
+    if (totals.missed > 0) {
+        lines.push('Missed: <strong class="gt-poor">' + totals.missed + '</strong> expected value'
+            + (totals.missed === 1 ? '' : 's') + ' never came back');
+    }
+    if (totals.spurious > 0) {
+        lines.push('Unmatched decodes: <strong>' + totals.spurious + '</strong> — values that read'
+            + ' but matched no expected value (a wrong read, or a value the annotations do not cover)');
+    }
+    if (totals.formatChecked > 0) {
+        lines.push('Symbology agreement: <strong>' + totals.formatMatched + '/' + totals.formatChecked
+            + '</strong> correct values reported as the annotated symbology');
+    }
+    if (totals.overlapChecked > 0) {
+        lines.push('Box overlap (IoU \u2265 ' + OVERLAP_THRESHOLD + '): <strong>'
+            + totals.overlapOk + '/' + totals.overlapChecked + '</strong> — mean '
+            + (totals.meanOverlap * 100).toFixed(0) + '%. Informational: the annotated box is the'
+            + ' symbol plus its quiet zone, the reported one is the bars.');
+    }
+    return lines;
+}
+
 function buildBenchmarkHtml(results) {
     const hasAnyGT = results.some(r => r.gtResult !== null);
 
@@ -1379,6 +1630,13 @@ function buildBenchmarkHtml(results) {
     let totalTP = 0;
     let totalFP = 0;
     let totalExpected = 0;
+    let totalMissed = 0;
+    let totalSpurious = 0;
+    let totalFormatMatched = 0;
+    let totalFormatChecked = 0;
+    let totalOverlapOk = 0;
+    let totalOverlapChecked = 0;
+    let overlapSum = 0;
 
     for (let r of results) {
         totalBarcodes += r.barcodes.length;
@@ -1389,6 +1647,15 @@ function buildBenchmarkHtml(results) {
             totalTP += r.gtResult.tp;
             totalFP += r.gtResult.fp;
             totalExpected += r.gtResult.total;
+            totalMissed += r.gtResult.fn;
+            totalSpurious += r.gtResult.spurious.length;
+            totalFormatMatched += r.gtResult.formatMatched;
+            totalFormatChecked += r.gtResult.formatChecked;
+            totalOverlapOk += r.gtResult.overlapOk;
+            totalOverlapChecked += r.gtResult.overlapChecked;
+            if (r.gtResult.meanOverlap !== null) {
+                overlapSum += r.gtResult.meanOverlap * r.gtResult.overlapChecked;
+            }
         }
     }
 
@@ -1412,7 +1679,21 @@ function buildBenchmarkHtml(results) {
         html += `<li>Most barcodes: <strong>${escapeHtml(most.imageName)}</strong> (${most.barcodes.length})</li>`;
     }
     if (hasAnyGT) {
-        html += `<li>Ground truth: <strong>${totalTP}/${totalExpected}</strong> detected — rate <span class="${gtRateClass(detectionRate)}">${(detectionRate * 100).toFixed(1)}%</span>, precision <span class="${gtRateClass(precision)}">${(precision * 100).toFixed(1)}%</span></li>`;
+        describeGroundTruthSummary(results, {
+            tp: totalTP,
+            expected: totalExpected,
+            recall: detectionRate,
+            precision: precision,
+            missed: totalMissed,
+            spurious: totalSpurious,
+            formatMatched: totalFormatMatched,
+            formatChecked: totalFormatChecked,
+            overlapOk: totalOverlapOk,
+            overlapChecked: totalOverlapChecked,
+            meanOverlap: totalOverlapChecked ? overlapSum / totalOverlapChecked : 0
+        }).forEach(function (line) {
+            html += `<li>${line}</li>`;
+        });
     }
     if (errors > 0) {
         html += `<li>Errors: <strong style="color:#dc2626;">${errors}</strong></li>`;
@@ -1422,7 +1703,9 @@ function buildBenchmarkHtml(results) {
     // ---- Per-image table ----
     html += '<div class="benchmark-table-wrap"><table class="benchmark-table">';
     if (hasAnyGT) {
-        html += '<thead><tr><th>Image</th><th>Found</th><th>Expected</th><th>Detected ✓</th><th>Rate</th><th>Precision</th><th>Time</th><th>Details</th></tr></thead>';
+        html += '<thead><tr><th>Image</th><th>Found</th><th>Expected</th><th>Correct</th>'
+            + '<th>Missed</th><th>Recall</th><th>Symbology</th><th>Box IoU</th><th>Time</th>'
+            + '<th>Details</th></tr></thead>';
     } else {
         html += '<thead><tr><th>Image</th><th>Barcodes Found</th><th>Time</th><th>Details</th></tr></thead>';
     }
@@ -1435,31 +1718,53 @@ function buildBenchmarkHtml(results) {
         let countClass = (count === maxCount && count > 0) ? 'count-col best-count' : 'count-col';
 
         let detailHtml = '';
+        if (r.conditions) {
+            detailHtml += detailBlock('Conditions',
+                joinCapped(conditionParts(r.conditions), DETAIL_LIST_LIMIT));
+        }
         if (r.error) {
-            detailHtml = `<em style="color:#ef4444;">Error: ${escapeHtml(r.error)}</em>`;
+            detailHtml += detailBlock('Error', r.error, 'missed');
         } else if (count > 0) {
-            detailHtml = '<ul class="barcodes-list">';
-            for (let b of r.barcodes) {
-                detailHtml += `<li>[${escapeHtml(b.type)}] ${escapeHtml(b.text)}</li>`;
-            }
-            detailHtml += '</ul>';
+            detailHtml += detailBlock('Decoded',
+                joinCapped(r.barcodes.map(b => '[' + b.type + '] ' + b.text), DETAIL_LIST_LIMIT));
         } else {
-            detailHtml = '<em>Nothing found</em>';
+            detailHtml += detailBlock('Decoded', 'nothing found', 'muted');
+        }
+        if (r.gtResult && r.gtResult.missed.length > 0) {
+            /* The actionable half: the exact values that never came back. */
+            detailHtml += detailBlock('Missed',
+                joinCapped(r.gtResult.missed, DETAIL_LIST_LIMIT), 'missed');
+        }
+        if (r.gtResult && r.gtResult.formatMismatches.length > 0) {
+            /* Worth naming rather than counting: a value that decoded correctly
+               under an unexpected symbology name is usually a naming difference
+               (UPC-A reported for an EAN-13), not a reading error. */
+            detailHtml += detailBlock('Symbology differs',
+                Array.from(new Set(r.gtResult.formatMismatches)).join(' · '), 'muted');
         }
 
         if (hasAnyGT) {
             let gt = r.gtResult;
             let tp = gt ? gt.tp : '-';
             let expected = gt ? gt.total : '-';
+            let missed = gt ? gt.fn : '-';
             let rateHtml = gt ? `<span class="${gtRateClass(gt.detectionRate)}">${(gt.detectionRate * 100).toFixed(1)}%</span>` : '<em>N/A</em>';
-            let precHtml = gt ? `<span class="${gtRateClass(gt.precision)}">${(gt.precision * 100).toFixed(1)}%</span>` : '<em>N/A</em>';
+            let formatHtml = gt && gt.formatChecked
+                ? `<span class="${gtRateClass(gt.formatMatched / gt.formatChecked)}">${gt.formatMatched}/${gt.formatChecked}</span>`
+                : '<em>—</em>';
+            let overlapHtml = gt && gt.overlapChecked
+                ? `<span class="${gtRateClass(gt.overlapOk / gt.overlapChecked)}">${gt.overlapOk}/${gt.overlapChecked}</span>`
+                    + `<br><small>${(gt.meanOverlap * 100).toFixed(0)}%</small>`
+                : '<em>—</em>';
             html += `<tr>
                 <td class="sdk-col">${escapeHtml(r.imageName)}</td>
                 <td class="${countClass}">${count}</td>
                 <td class="count-col">${expected}</td>
                 <td class="count-col">${tp}</td>
+                <td class="count-col${missed > 0 ? ' missed-count' : ''}">${missed}</td>
                 <td class="rate-col">${rateHtml}</td>
-                <td class="rate-col">${precHtml}</td>
+                <td class="rate-col">${formatHtml}</td>
+                <td class="rate-col">${overlapHtml}</td>
                 <td class="time-col">${r.time.toFixed(0)} ms</td>
                 <td>${detailHtml}</td>
             </tr>`;
@@ -1475,6 +1780,59 @@ function buildBenchmarkHtml(results) {
 
     html += '</tbody></table></div>';
     return html;
+}
+
+/* The per-image conditions recorded by the generator, as one readable line. */
+/* ---- The per-image details cell ---------------------------------------
+   Everything about a row that is not a number goes here, and it is the only
+   cell whose height is not fixed. Rendering it as three one-line blocks with
+   capped, inline values keeps a row readable: an unbounded <ul> of decoded and
+   missed values, next to a conditions line of eighteen raw key/value pairs, made
+   one row 450 px tall — which stretched every other column of that row and read
+   as enormous gaps between rows. The full text stays in the element's title, so
+   nothing is lost, it is just not printed by default. */
+const DETAIL_LIST_LIMIT = 6;
+
+function escapeAttr(value) {
+    return String(value)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function joinCapped(items, limit) {
+    if (items.length <= limit) return items.join(' · ');
+    return items.slice(0, limit).join(' · ') + '  +' + (items.length - limit) + ' more';
+}
+
+function detailBlock(label, text, kind) {
+    return '<div class="detail-block' + (kind ? ' is-' + kind : '') + '">'
+        + '<span class="detail-label">' + escapeHtml(label) + '</span> '
+        + '<span class="detail-values" title="' + escapeAttr(text) + '">'
+        + escapeHtml(text) + '</span></div>';
+}
+
+/* The per-image conditions recorded by the generator, one entry per condition.
+   The generator writes them most-severe-first, so capping the list keeps the
+   part that can explain a miss and drops the tail. */
+function conditionParts(conditions) {
+    const parts = [];
+    Object.keys(conditions).forEach(function (key) {
+        const value = conditions[key];
+        if (key === 'inverted') {
+            if (value) parts.push('inverted');
+            return;
+        }
+        if (value === null || value === undefined) return;
+        parts.push(key + ' ' + (typeof value === 'number' ? trimNumber(value) : value));
+    });
+    return parts;
+}
+
+/* Annotations written before the generator trimmed its conditions carry three
+   decimals of precision nobody reads. */
+function trimNumber(value) {
+    const fixed = Number(value).toFixed(2);
+    return fixed.replace(/\.?0+$/, '') || '0';
 }
 
 function escapeHtml(str) {
@@ -1516,8 +1874,20 @@ function exportBenchmarkResults() {
   .gt-good { color: #16a34a; }
   .gt-ok { color: #d97706; }
   .gt-poor { color: #dc2626; }
-  .barcodes-list { margin: 0; padding-left: 16px; }
-  .barcodes-list li { margin-bottom: 2px; font-size: 0.85em; font-family: monospace; }
+  .count-col.missed-count { color: #dc2626; }
+  .detail-block { margin-bottom: 4px; line-height: 1.5; }
+  .detail-block:last-child { margin-bottom: 0; }
+  .detail-label { display: inline; font-size: 0.68rem; font-weight: 700; letter-spacing: .05em;
+    text-transform: uppercase; color: #64748b; margin-right: 6px; }
+  .detail-values { display: inline; font-family: monospace; font-size: 0.74rem;
+    word-break: break-word; }
+  .benchmark-table td:last-child { min-width: 340px; max-width: 520px; }
+  .benchmark-table tbody td { vertical-align: middle; }
+  .benchmark-table tbody td:last-child { vertical-align: top; }
+  .detail-block.is-missed .detail-values, .detail-block.is-missed .detail-label { color: #dc2626; }
+  .detail-block.is-muted .detail-values { color: #64748b; font-family: inherit; font-style: italic; }
+  .report-note { background: #fff8ee; border: 1px solid #f6c893; border-left: 4px solid #fe8e14;
+    border-radius: 4px; padding: 10px 14px; font-size: 0.85rem; color: #323234; margin-bottom: 16px; }
   .benchmark-summary { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-top: 8px; }
   .benchmark-summary h4 { margin: 0 0 10px; font-size: 1rem; color: #334155; }
   .benchmark-summary ul { margin: 8px 0 0; padding-left: 20px; font-size: 0.9rem; line-height: 1.8; }
@@ -1526,10 +1896,17 @@ function exportBenchmarkResults() {
 </head>
 <body>
 <div class="report-header">
-  <h1>📊 Barcode Scanner Benchmark Report</h1>
+  <h1>Barcode scanner benchmark report</h1>
   <p><strong>Generated:</strong> ${escapeHtml(timestamp)}</p>
   <p><strong>Images tested:</strong> ${imageCount}</p>
   <p><strong>SDK:</strong> Dynamsoft Barcode Reader</p>
+  ${annotationData
+            ? `<p><strong>Ground truth:</strong> annotations loaded for ${Object.keys(annotationData).length} image(s)</p>`
+            : `<p class="report-note">This run had no ground truth, so it reports what was found and how
+       fast, not whether it was right. A dataset with expected values for every symbol can be
+       generated at
+       <a href="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/">dynamsoft.com/codepool/demos/barcode-qrcode-generator</a>
+       — export the ZIP and drop it on the scanner.</p>`}
 </div>
 ${reportHtml}
 </body>
@@ -1545,11 +1922,51 @@ ${reportHtml}
 }
 
 // ========== Dynamsoft Template ==========
+
+/* The stock `ReadBarcodes_Default` preset enables 32 of the 52 formats it
+   knows about and leaves DotCode and both Pharmacode tracks out. That is a
+   reasonable default for a general scanner, and a trap for this page: the
+   barcode generator produces those two as well, so a benchmark run against a
+   dataset containing them reports misses that are not reading failures — the
+   reader was never asked. Measured on bundle 11.6.3200: a clean DotCode and a
+   clean Pharmacode both decode as soon as the bits are set, and neither decodes
+   with the preset alone.
+   
+   The extra bits are added through the simplified-settings API rather than a
+   hand-written template — see `initSettings()` vs `updateSettings()` in the
+   notes at the top of this file's README. */
+const EXTRA_BARCODE_FORMATS = ['BF_DOTCODE', 'BF_PHARMACODE_ONE_TRACK', 'BF_PHARMACODE_TWO_TRACK'];
+
+async function extendDefaultBarcodeFormats(taskName) {
+    if (!window.Dynamsoft || !Dynamsoft.DBR || !Dynamsoft.DBR.EnumBarcodeFormat) return;
+    const enumFormats = Dynamsoft.DBR.EnumBarcodeFormat;
+    const settings = await cvr.getSimplifiedSettings(taskName);
+    let mask = BigInt(settings.barcodeSettings.barcodeFormatIds);
+    const added = [];
+    EXTRA_BARCODE_FORMATS.forEach(function (name) {
+        const bit = enumFormats[name];
+        if (bit === undefined) return;
+        if ((mask & BigInt(bit)) !== BigInt(bit)) {
+            mask |= BigInt(bit);
+            added.push(name);
+        }
+    });
+    if (added.length === 0) return;
+    settings.barcodeSettings.barcodeFormatIds = mask;
+    await cvr.updateSettings(taskName, settings);
+    console.log('Dynamsoft Barcode Reader: enabled ' + added.join(', ')
+        + ' on top of the default preset.');
+}
+
 async function resetOrReapplyDynamsoftSettings() {
     if (dynamsoftCustomTemplateContent) {
         await cvr.initSettings(dynamsoftCustomTemplateContent);
     } else {
         await cvr.resetSettings();
+        /* resetSettings() restores the stock preset, so the extra formats have
+           to be re-applied or the first capture after a reset silently loses
+           them — which is exactly the case the benchmark runs in. */
+        await extendDefaultBarcodeFormats(dynamsoftTemplate);
     }
 }
 
@@ -1611,36 +2028,70 @@ function clearDynamsoftTemplate() {
     const clearBtn = document.getElementById('dynamsoft_template_clear_btn');
     if (clearBtn) clearBtn.style.display = 'none';
     if (cvr && isSDKReady) {
-        cvr.resetSettings().catch(() => { });
+        /* Resetting restores the stock preset, so the extra formats this demo
+           adds have to be re-applied — otherwise clearing a template silently
+           costs DotCode and Pharmacode until the page is reloaded. */
+        cvr.resetSettings()
+            .then(function () { return extendDefaultBarcodeFormats(dynamsoftTemplate); })
+            .catch(function () { });
     }
 }
 
 // ========== Annotation Ground Truth ==========
+/* Shared by the annotations.json import and the dataset ZIP, so both paths
+   agree on what a valid annotation file is. The schema is the one the reference
+   datasets use (`barcode-benchmark/1.0`):
+     { images: [ { file, barcodes: [ { text, format, points, ... } ], degradations } ] }
+   `format`, `points` and `degradations` are optional; `text` is what the
+   benchmark matches on. Everything else is carried through so the report can
+   name the conditions an image was captured under. */
+function applyAnnotationData(data) {
+    if (!data || !data.images || !Array.isArray(data.images)) {
+        throw new Error('Invalid format. Expected an "images" array.');
+    }
+    const map = {};
+    for (const entry of data.images) {
+        if (entry.file && Array.isArray(entry.barcodes)) {
+            map[entry.file] = {
+                barcodes: entry.barcodes,
+                degradations: entry.degradations || null,
+                width: entry.width || null,
+                height: entry.height || null
+            };
+        }
+    }
+    annotationData = map;
+    return map;
+}
+
+function describeAnnotationSet(map) {
+    const files = Object.keys(map);
+    const totalBarcodes = files.reduce((sum, file) => sum + map[file].barcodes.length, 0);
+    const withFormat = files.some(file => map[file].barcodes.some(b => b.format));
+    const withPoints = files.some(file => map[file].barcodes
+        .some(b => Array.isArray(b.points) && b.points.length >= 3));
+    const details = [];
+    if (withFormat) details.push('symbologies');
+    if (withPoints) details.push('boxes');
+    return '\u2713 ' + files.length + ' image' + (files.length === 1 ? '' : 's') + ', '
+        + totalBarcodes + ' barcode' + (totalBarcodes === 1 ? '' : 's') + ' loaded'
+        + (details.length ? ' (' + details.join(' + ') + ' compared)' : '');
+}
+
 function importAnnotations(input) {
     const file = input.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function (e) {
+        const statusEl = document.getElementById('annotation_status');
         try {
-            const data = JSON.parse(e.target.result);
-            if (!data.images || !Array.isArray(data.images)) {
-                throw new Error('Invalid format. Expected an "images" array.');
-            }
-            annotationData = {};
-            for (const entry of data.images) {
-                if (entry.file && Array.isArray(entry.barcodes)) {
-                    annotationData[entry.file] = entry.barcodes;
-                }
-            }
-            const count = Object.keys(annotationData).length;
-            const totalBarcodes = Object.values(annotationData).reduce((sum, barcodes) => sum + barcodes.length, 0);
-            const statusEl = document.getElementById('annotation_status');
-            statusEl.textContent = `\u2713 ${count} images, ${totalBarcodes} barcodes loaded`;
+            const map = applyAnnotationData(JSON.parse(e.target.result));
+            statusEl.textContent = describeAnnotationSet(map);
             statusEl.style.color = 'var(--success-color)';
             document.getElementById('annotation_clear_btn').style.display = 'inline-flex';
+            setBenchmarkNotice('', null);
         } catch (err) {
             annotationData = null;
-            const statusEl = document.getElementById('annotation_status');
             statusEl.textContent = `Error: ${err.message}`;
             statusEl.style.color = '#ef4444';
             document.getElementById('annotation_clear_btn').style.display = 'none';
@@ -1656,6 +2107,37 @@ function clearAnnotations() {
     if (statusEl) statusEl.textContent = '';
     const clearBtn = document.getElementById('annotation_clear_btn');
     if (clearBtn) clearBtn.style.display = 'none';
+    setBenchmarkNotice('', null);
+}
+
+/* Built as DOM nodes rather than markup: a message can contain a file name from
+   an uploaded archive, which is not ours to trust. */
+function renderBenchmarkNotice() {
+    const el = document.getElementById('benchmark_notice');
+    if (!el) return;
+    el.textContent = '';
+    if (!benchmarkNotice) {
+        el.style.display = 'none';
+        return;
+    }
+    el.appendChild(document.createTextNode(benchmarkNotice + ' '));
+    if (benchmarkNoticeAction) {
+        const link = document.createElement('a');
+        link.href = benchmarkNoticeAction.href;
+        link.className = 'link';
+        link.setAttribute('data-demo-cta', 'generator');
+        link.textContent = benchmarkNoticeAction.label;
+        el.appendChild(link);
+    }
+    el.style.display = 'block';
+}
+
+/* `action` is { label, href }, always pointing at the barcode generator: that is
+   where a dataset with expected values comes from. */
+function setBenchmarkNotice(text, action) {
+    benchmarkNotice = text || '';
+    benchmarkNoticeAction = action || null;
+    renderBenchmarkNotice();
 }
 
 function matchBarcodeText(detected, expected) {
@@ -1668,23 +2150,224 @@ function matchBarcodeText(detected, expected) {
     return false;
 }
 
-function computeGTResult(detectedTexts, expectedTexts) {
+/* Format names arrive in two spellings: `EnumBarcodeFormat` (QR_CODE,
+   DATAMATRIX, EAN_13 — what an annotation file carries) and `formatString`
+   (QRCode, DataMatrix, EAN13 — what the reader reports). Strip everything that
+   is not alphanumeric and compare upper case. */
+function normalizeFormatName(name) {
+    return String(name || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/* A few spellings mean the same symbology and would otherwise be reported as a
+   disagreement. Kept small and explicit: every entry here was observed by
+   round-tripping the barcode generator's output through this reader.
+     CODE_39 vs CODE_39_EXTENDED — the reader reports the decoding mode; the
+       symbology is Code 39 either way.
+     MSI / PHARMACODE — the enum carries the variant, the format string may not.
+     UPC_A vs EAN_13 — an EAN-13 whose first digit is 0 is reported as a
+       12-digit UPC-A. The text comparison already accepts that pair as the same
+       value, so the symbology has to follow, or a correct read would be
+       reported as a disagreement.
+     AZTEC_CODE / DATA_MATRIX — common alternative spellings. */
+const FORMAT_ALIASES = {
+    CODE39EXTENDED: 'CODE39',
+    MSI: 'MSICODE',
+    PHARMACODE: 'PHARMACODEONETRACK',
+    PHARMACODETWOTRACK: 'PHARMACODEONETRACK',
+    AZTECCODE: 'AZTEC',
+    DATAMATRIXCODE: 'DATAMATRIX',
+    UPCA: 'EAN13'
+};
+
+function canonicalFormatKey(name) {
+    const normalized = normalizeFormatName(name);
+    return FORMAT_ALIASES[normalized] || normalized;
+}
+
+function formatsAgree(a, b) {
+    return canonicalFormatKey(a) === canonicalFormatKey(b);
+}
+
+/* A detected box counts as overlapping when its intersection over union with
+   the annotated box reaches this. Loose on purpose: the annotated quad is the
+   symbol plus its quiet zone, while a reader reports the bars, and a rotated
+   symbol read axis-aligned loses area. The figure is reported as information —
+   a text match is never downgraded because the box disagrees. */
+const OVERLAP_THRESHOLD = 0.5;
+
+/* ---- Box overlap (the "Box IoU" column) -------------------------------
+   Intersection over union of two quads. This lives here rather than in a
+   shared file so the page has no cross-directory script that can fail to
+   load and silently cost a column. The generator's dataset mode has its own
+   copy for the crop maths; the only thing the two share is the shoelace
+   formula, so there is no metric for them to disagree about.
+
+   `hull()` normalises the point order first: a detector may start at any
+   corner and wind either way, and an inside test that assumes one winding
+   returns an empty intersection for the other — a quiet way to report zero
+   overlap for a box that is right. */
+function hull(points) {
+    var cx = 0, cy = 0;
+    for (var i = 0; i < points.length; i++) { cx += points[i][0]; cy += points[i][1]; }
+    cx /= points.length; cy /= points.length;
+    return points.slice().sort(function (p, q) {
+        return Math.atan2(p[1] - cy, p[0] - cx) - Math.atan2(q[1] - cy, q[0] - cx);
+    });
+}
+
+function polygonArea(poly) {
+    if (!poly || poly.length < 3) return 0;
+    var sum = 0;
+    for (var i = 0; i < poly.length; i++) {
+        var a = poly[i], b = poly[(i + 1) % poly.length];
+        sum += a[0] * b[1] - b[0] * a[1];
+    }
+    return Math.abs(sum) / 2;
+}
+
+function crossPoint(p1, p2, a, b) {
+    var d1 = p2[0] - p1[0], d2 = p2[1] - p1[1];
+    var e1 = b[0] - a[0], e2 = b[1] - a[1];
+    var denom = d1 * e2 - d2 * e1;
+    if (Math.abs(denom) < 1e-12) return p1.slice();
+    var t = ((a[0] - p1[0]) * e2 - (a[1] - p1[1]) * e1) / denom;
+    return [p1[0] + d1 * t, p1[1] + d2 * t];
+}
+
+function clipPoly(subject, clip) {
+    if (!subject || subject.length < 3 || !clip || clip.length < 3) return [];
+    var cx = 0, cy = 0;
+    for (var i = 0; i < clip.length; i++) { cx += clip[i][0]; cy += clip[i][1]; }
+    cx /= clip.length; cy /= clip.length;
+
+    var out = subject.slice();
+    var eps = 1e-9;
+    for (var e = 0; e < clip.length && out.length; e++) {
+        var a = clip[e], b = clip[(e + 1) % clip.length];
+        var ex = b[0] - a[0], ey = b[1] - a[1];
+        var side = ex * (cy - a[1]) - ey * (cx - a[0]);
+        var input = out;
+        out = [];
+        for (var j = 0; j < input.length; j++) {
+            var cur = input[j];
+            var prev = input[(j + input.length - 1) % input.length];
+            var curV = ex * (cur[1] - a[1]) - ey * (cur[0] - a[0]);
+            var prevV = ex * (prev[1] - a[1]) - ey * (prev[0] - a[0]);
+            var curIn = side > 0 ? curV >= -eps : curV <= eps;
+            var prevIn = side > 0 ? prevV >= -eps : prevV <= eps;
+            if (curIn) {
+                if (!prevIn) out.push(crossPoint(prev, cur, a, b));
+                out.push(cur);
+            } else if (prevIn) {
+                out.push(crossPoint(prev, cur, a, b));
+            }
+        }
+    }
+    return out;
+}
+
+function quadIoU(quadA, quadB) {
+    if (!quadA || !quadB || quadA.length < 3 || quadB.length < 3) return 0;
+    var a = hull(quadA), b = hull(quadB);
+    var interArea = polygonArea(clipPoly(a, b));
+    var unionArea = polygonArea(a) + polygonArea(b) - interArea;
+    return unionArea > 0 ? interArea / unionArea : 0;
+}
+
+/* The annotated points are [[x,y], ...]; the reader reports [{x,y}, ...]. */
+function toPairs(points) {
+    if (!points || !points.length) return null;
+    var out = [];
+    for (var i = 0; i < points.length; i++) {
+        var p = points[i];
+        if (!p || typeof p.x !== 'number' || typeof p.y !== 'number') return null;
+        out.push([p.x, p.y]);
+    }
+    return out.length >= 3 ? out : null;
+}
+
+/* Compare what was decoded against the ground truth for one image.
+   `detected`: [{ type, text, points }]   `expected`: [{ text, format, points }]
+   Text decides correctness. Format agreement and box overlap are reported
+   separately and never change the match — a reader that returns the right
+   value in an unexpected symbology name still read the barcode. */
+function computeGTResult(detectedItems, expectedItems) {
     const matchedExpectedIndices = new Set();
     const matchedDetectedIndices = new Set();
-    for (let i = 0; i < expectedTexts.length; i++) {
-        for (let j = 0; j < detectedTexts.length; j++) {
-            if (!matchedDetectedIndices.has(j) && matchBarcodeText(detectedTexts[j], expectedTexts[i])) {
+    const pairs = [];
+
+    for (let i = 0; i < expectedItems.length; i++) {
+        for (let j = 0; j < detectedItems.length; j++) {
+            if (!matchedDetectedIndices.has(j) && matchBarcodeText(detectedItems[j].text, expectedItems[i].text)) {
                 matchedExpectedIndices.add(i);
                 matchedDetectedIndices.add(j);
+                pairs.push({ expected: i, detected: j });
                 break;
             }
         }
     }
+
+    let formatMatched = 0, formatChecked = 0;
+    let overlapChecked = 0, overlapOk = 0, overlapSum = 0;
+    pairs.forEach(function (pair) {
+        const detected = detectedItems[pair.detected];
+        const expected = expectedItems[pair.expected];
+
+        if (normalizeFormatName(detected.type) && normalizeFormatName(expected.format)) {
+            formatChecked++;
+            if (formatsAgree(detected.type, expected.format)) formatMatched++;
+        }
+
+        const expectedQuad = expected.points && expected.points.length >= 3 ? expected.points : null;
+        const detectedQuad = detected.points;
+        if (expectedQuad && detectedQuad) {
+            const iou = quadIoU(
+                toPairs(expectedQuad.map(p => ({ x: p[0], y: p[1] }))),
+                toPairs(detectedQuad.map(p => ({ x: p[0], y: p[1] })))
+            );
+            overlapChecked++;
+            overlapSum += iou;
+            if (iou >= OVERLAP_THRESHOLD) overlapOk++;
+        }
+    });
+
     const tp = matchedExpectedIndices.size;
-    const fp = detectedTexts.length - matchedDetectedIndices.size;
-    const detectionRate = expectedTexts.length > 0 ? tp / expectedTexts.length : 0;
+    const fp = detectedItems.length - matchedDetectedIndices.size;
+    const detectionRate = expectedItems.length > 0 ? tp / expectedItems.length : 0;
     const precision = (tp + fp) > 0 ? tp / (tp + fp) : (tp > 0 ? 1 : 0);
-    return { tp, fp, fn: expectedTexts.length - tp, detectionRate, precision, total: expectedTexts.length };
+
+    return {
+        tp,
+        fp,
+        fn: expectedItems.length - tp,
+        total: expectedItems.length,
+        detectionRate,
+        precision,
+        formatMatched,
+        formatChecked,
+        overlapChecked,
+        overlapOk,
+        meanOverlap: overlapChecked ? overlapSum / overlapChecked : null,
+        // The specific values that were expected and never came back — the
+        // actionable half of the report.
+        missed: expectedItems
+            .filter(function (item, index) { return !matchedExpectedIndices.has(index); })
+            .map(function (item) { return item.text; }),
+        // Decodes that matched no expected value: spurious reads, or a value the
+        // annotation does not know about.
+        spurious: detectedItems
+            .filter(function (item, index) { return !matchedDetectedIndices.has(index); })
+            .map(function (item) { return item.text; }),
+        formatMismatches: pairs
+            .filter(function (pair) {
+                const a = normalizeFormatName(detectedItems[pair.detected].type);
+                const b = normalizeFormatName(expectedItems[pair.expected].format);
+                return a && b && !formatsAgree(a, b);
+            })
+            .map(function (pair) {
+                return expectedItems[pair.expected].format + ' → ' + detectedItems[pair.detected].type;
+            })
+    };
 }
 
 function gtRateClass(rate) {
