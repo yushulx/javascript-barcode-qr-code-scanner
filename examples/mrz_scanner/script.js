@@ -89,7 +89,6 @@ async function initFreeModels() {
         // Enable buttons for free features
         document.getElementById('btnLoad').disabled = false;
         document.getElementById('btnCamera').disabled = false;
-        document.getElementById('btnPaste').disabled = false;
 
         console.log("✅ Face Detection initialized");
     } catch (ex) {
@@ -208,91 +207,20 @@ document.getElementById('btnLoad').addEventListener('click', () => {
     input.click();
 });
 
-// Paste from Clipboard
-//
-// This button and Ctrl+V are NOT the same path, and Ctrl+V is the more capable
-// one: the document `paste` event (below) needs no permission and works in every
-// browser, while `navigator.clipboard.read()` needs a Chromium browser, the
-// clipboard-read permission, and a focused document. When this button fails, the
-// message says so and points at Ctrl+V rather than dead-ending.
-//
-// Two things made the button look dead rather than blocked:
-//
-// 1. `read()` is a permission request, not a read. Chrome puts the prompt in the
-//    address bar, which is easy to miss, and until it is answered the promise
-//    neither resolves nor rejects — so the click produced nothing at all. The
-//    button now says what it is waiting for and gives up after six seconds.
-// 2. It used to start disabled and stay that way if the models failed to load.
-//    A disabled button swallows the click and cannot explain itself, so the
-//    element is always clickable now and the handler reports what is missing.
-//
-// The image lookup is also not `types[0]`: most apps put `text/html` first on
-// the clipboard when you copy a screenshot, so `getType` used to hand back an
-// HTML blob that was fed to the decoder as if it were an image.
-const PASTE_READ_TIMEOUT_MS = 6000;
-
-function setPasteButtonBusy(busy) {
-    const btn = document.getElementById('btnPaste');
-    if (!btn) return;
-    btn.disabled = busy;
-    btn.textContent = busy ? 'Waiting…' : 'Paste';
-}
-
-document.getElementById('btnPaste').addEventListener('click', async () => {
-    if (!isFreeModelsReady) {
-        els.status.textContent = 'Still loading the face models — Paste will work when they are ready.';
-        alert("Please wait for models to load.");
-        return;
-    }
-    if (!isMRZReady) {
-        els.status.textContent = mrzInitFailed
-            ? 'The MRZ SDK failed to load, so a pasted image could not be read. Reload the page to try again.'
-            : 'Still loading the MRZ SDK — an image pasted now would be shown but not read. Give it a moment.';
-        return;
-    }
-    if (!navigator.clipboard || typeof navigator.clipboard.read !== 'function') {
-        alert("This browser does not let a button read the clipboard. Please press Ctrl+V instead — that works here.");
-        return;
-    }
-
-    let items;
-    setPasteButtonBusy(true);
-    els.status.textContent = 'Waiting for clipboard permission — choose Allow in the address bar, or press Ctrl+V.';
-    try {
-        items = await Promise.race([
-            navigator.clipboard.read(),
-            new Promise((_, reject) => setTimeout(
-                () => reject(new Error('clipboard-timeout')), PASTE_READ_TIMEOUT_MS))
-        ]);
-    } catch (err) {
-        console.error(err);
-        const text = ((err && err.name) || '') + ' ' + ((err && err.message) || '');
-        const message = /clipboard-timeout/.test(text)
-            ? "The clipboard permission prompt was not answered. Press Ctrl+V — it needs no permission."
-            : /focus/i.test(text)
-                ? "The page lost focus while reading the clipboard. Click the page, then press Ctrl+V."
-                : "Clipboard access was blocked. Press Ctrl+V instead — that works here.";
-        els.status.textContent = message;
-        alert(message);
-        return;
-    } finally {
-        setPasteButtonBusy(false);
-    }
-
-    // Ask for the image entry itself. `types[0]` is frequently text/html.
-    els.status.textContent = 'Reading from the clipboard…';
-    for (const item of items) {
-        const imageType = (item.types || []).find(t => t.startsWith('image/'));
-        if (!imageType) continue;
-        const blob = await item.getType(imageType);
-        lastInputSource = 'clipboard';
-        processFile(blob);
-        return;
-    }
-
-    els.status.textContent = 'No image on the clipboard.';
-    alert("No image found in the clipboard. Copy a screenshot, or press Ctrl+V.");
-});
+/* Pasting is the browser's own event, not a button.
+ *
+ * There used to be a Paste button here that called `navigator.clipboard.read()`.
+ * It was removed rather than patched, because the API cannot be made reliable
+ * from a click: it asks for a permission in the address bar (easy to miss, and
+ * the promise stays pending until it is answered), it needs a focused document,
+ * and on Windows Chrome it can resolve with items whose `getType()` then fails —
+ * so the button ended up either doing nothing or leaving "Reading from the
+ * clipboard…" on screen with no image.
+ *
+ * The `paste` event at the bottom of this file has none of those failure modes:
+ * no permission, no focus requirement, and it works in every browser. The UI
+ * therefore points at Ctrl+V instead of offering a control that may not work.
+ */
 
 // Drag and Drop
 els.dropZone.addEventListener('dragover', (e) => {
@@ -1450,7 +1378,14 @@ function clearResults() {
 
 // Paste event handler
 document.addEventListener('paste', (event) => {
-    if (!isMRZReady) return;
+    if (!isMRZReady) {
+        /* Ctrl+V used to fail silently here too: the event fires, nothing is
+           read, and the page looks broken. Say which part is not ready. */
+        els.status.textContent = mrzInitFailed
+            ? 'The MRZ SDK failed to load, so a pasted image could not be read. Reload the page to try again.'
+            : 'Still loading the MRZ SDK — paste again in a moment.';
+        return;
+    }
     const items = (event.clipboardData || event.originalEvent.clipboardData).items;
 
     for (const item of items) {
