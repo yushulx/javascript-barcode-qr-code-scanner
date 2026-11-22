@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@300;400;500&display=swap');
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -6,11 +8,20 @@
 
 :root {
     --dy-orange: #fe8e14;
+    --dy-orange-hover: #e07d0b;
     --dy-gray: #999999;
-    --dy-black-2b: #2b2b2b;
+    --dy-gray-900: #323234;
+    --dy-gray-700: #606060;
+    --dy-gray-300: #cccccc;
+    --dy-gray-200: #dddddd;
+    --dy-gray-50: #f5f5f5;
+    --dy-black-2b: #323234;
     --dy-black-34: #343434;
     --white: #ffffff;
     --overlay: rgba(0, 0, 0, 0.55);
+
+    --font-heading: 'Oswald', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 html,
@@ -20,13 +31,24 @@ body {
     overflow: hidden;
     background: var(--dy-black-2b);
     color: var(--white);
-    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-body);
     touch-action: manipulation;
+}
+
+/* The app screens are fixed overlays; the footer is the only in-flow node, so
+   a column flex body keeps it anchored under the screens instead of at the top
+   (where the fixed header would collide with it). */
+body {
+    display: flex;
+    flex-direction: column;
 }
 
 .screen {
     position: fixed;
-    inset: 0;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
     flex-direction: column;
     background: var(--dy-black-2b);
@@ -34,6 +56,96 @@ body {
 
 .hidden {
     display: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Header — Dynamsoft logo lockup, top-left over the camera viewfinder
+   --------------------------------------------------------------------------- */
+
+.demo-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 9px 12px;
+    background: transparent;
+    pointer-events: none;
+}
+
+.demo-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 100%;
+    pointer-events: auto;
+}
+
+.brand-logo {
+    display: block;
+    height: 22px;
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.18);
+    flex: 0 0 auto;
+}
+
+.demo-nav {
+    display: flex;
+    gap: 14px;
+    margin-top: 4px;
+    font-size: 0.85rem;
+    /* The header overlay swallows pointer events; the links need them back. */
+    pointer-events: auto;
+}
+
+.demo-nav a {
+    color: rgba(255, 255, 255, 0.72);
+    text-decoration: none;
+}
+
+.demo-nav a:hover {
+    color: var(--dy-orange);
+}
+
+.demo-header h1 {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--white);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+/* "Free" tag in the page heading. Demos are free to use and the claim only
+   lived in <title>/<meta description>; spelling it out next to the h1 puts it
+   in front of both the reader and the crawler that ranks the visible text.
+   The orange is the brand accent — never used for body copy — and the label is
+   decorative repetition of adjacent text, so it is not announced twice. */
+.brand-tag {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 1px 7px 2px;
+    border: 1px solid rgba(254, 142, 20, 0.55);
+    border-radius: 4px;
+    background: rgba(254, 142, 20, 0.15);
+    color: var(--dy-orange, #fe8e14);
+    font-family: var(--font-heading);
+    font-size: 0.68em;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: 0.1em;
 }
 
 .overlay {
@@ -44,75 +156,6 @@ body {
     justify-content: center;
     background: #1e1e1e;
     z-index: 120;
-}
-
-#license-screen {
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle at 10% 10%, #4a4a4a 0%, #2b2b2b 45%, #1e1e1e 100%);
-}
-
-.license-wrap {
-    width: min(560px, 92vw);
-    background: #343434;
-    border: 1px solid #4a4a4a;
-    border-radius: 14px;
-    padding: 22px;
-    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.4);
-}
-
-.license-wrap h1 {
-    font-size: 26px;
-    margin-bottom: 8px;
-}
-
-.license-subtitle {
-    color: #d0d0d0;
-    font-size: 14px;
-    margin-bottom: 16px;
-}
-
-.license-subtitle a {
-    color: #7eb8d4;
-    text-decoration: underline;
-}
-
-.license-subtitle a:hover {
-    color: #a8d4e8;
-}
-
-.license-label {
-    display: block;
-    font-size: 13px;
-    color: #d8d8d8;
-    margin-bottom: 6px;
-}
-
-.license-input {
-    width: 100%;
-    height: 44px;
-    border: 1px solid #5a5a5a;
-    background: #252525;
-    color: #ffffff;
-    border-radius: 8px;
-    padding: 0 10px;
-    margin-bottom: 12px;
-}
-
-.license-input:focus {
-    outline: 2px solid rgba(254, 142, 20, 0.35);
-    border-color: var(--dy-orange);
-}
-
-.license-btn {
-    border: 0;
-    border-radius: 8px;
-    height: 42px;
-    min-width: 150px;
-    background: var(--dy-orange);
-    color: #fff;
-    font-weight: 700;
-    cursor: pointer;
 }
 
 .init-content {
@@ -261,6 +304,25 @@ body {
 
 #next-btn {
     justify-self: end;
+}
+
+/* The three icon buttons carry inline SVG now instead of text glyphs, so they
+   need explicit centring and icon sizing (font-size no longer does the work). */
+.icon-button,
+.ghost-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-button svg {
+    width: 22px;
+    height: 22px;
+}
+
+.ghost-icon svg {
+    width: 26px;
+    height: 26px;
 }
 
 .capture-button {
@@ -464,7 +526,7 @@ input[type="range"] {
     position: absolute;
     inset: 0;
     border-radius: 16px;
-    background: #6a6a6a;
+    background: var(--dy-gray-700);
     transition: 0.2s;
 }
 
@@ -481,7 +543,7 @@ input[type="range"] {
 }
 
 .toggle-switch input:checked + .toggle-slider {
-    background: #6ac4bb;
+    background: var(--dy-orange);
 }
 
 .toggle-switch input:checked + .toggle-slider::before {
@@ -722,6 +784,13 @@ button {
     .icon-text-btn {
         height: 34px;
     }
+
+    /* The header is nowrap and the product name is what identifies the page,
+       so the tag is what gives way on phones. The claim is still in the meta
+       description and the JSON-LD offer. */
+    .brand-tag {
+        display: none;
+    }
 }
 
 /* Wide screens: center the control bars instead of stretching their
@@ -746,4 +815,38 @@ button {
         grid-template-columns: repeat(3, minmax(0, 200px));
         justify-content: center;
     }
+}
+
+/* Demo footer: attribution, tutorial link, and trial CTA */
+.demo-footer {
+    margin-top: auto;
+    padding: 14px 16px 20px;
+    text-align: center;
+    color: var(--dy-gray);
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.demo-footer a {
+    color: var(--dy-gray-200);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.demo-footer a:hover {
+    color: var(--dy-orange, #fe8e14);
+}
+
+.demo-footer .demo-footer-cta {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    background: rgba(254, 142, 20, 0.16);
+    text-decoration: none;
+}
+
+.demo-footer .demo-footer-cta:hover {
+    background: rgba(254, 142, 20, 0.32);
+    color: #fff;
 }

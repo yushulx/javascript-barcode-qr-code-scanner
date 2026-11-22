@@ -120,6 +120,27 @@ body {
     white-space: nowrap;
 }
 
+/* "Free" tag in the header. The demos are free to use and that claim used to
+   live only in <title>/<meta description>; putting it in the visible header
+   states it where a reader — and a crawler ranking the page text — sees it.
+   Orange is the brand accent, never used for body copy, and the label is
+   decorative repetition of adjacent text so it is not announced twice. */
+.brand-tag {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 1px 7px 2px;
+    border: 1px solid rgba(254, 142, 20, 0.55);
+    border-radius: 4px;
+    background: rgba(254, 142, 20, 0.14);
+    color: var(--dy-orange, #fe8e14);
+    font-family: var(--font-heading);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: 0.1em;
+}
+
 .header-nav {
     margin-left: auto;
     display: flex;
@@ -604,6 +625,12 @@ a:hover {
 }
 
 @media (max-width: 640px) {
+
+    /* The "Free" tag is dropped first so the product name survives; below this
+       width the name itself goes too and the logo alone identifies the page. */
+    .brand-tag {
+        display: none;
+    }
 
     .brand-product,
     .brand-divider {

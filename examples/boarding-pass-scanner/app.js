@@ -1,66 +1,77 @@
 /*
- * Boarding Pass Scanner
+ * Online Boarding Pass Scanner — Codepool online demo.
  *
- * Dynamsoft Barcode Reader decodes the symbol; the IATA BCBP payload is parsed
- * by bcbp.js, a standalone Resolution 792 parser.
+ * Decodes the 2D symbol on a boarding pass with Dynamsoft Barcode Reader and
+ * parses the IATA BCBP payload into structured fields with bcbp.js.
  *
- * Structure note: everything below is shared with the copy deployed under
- * dynamsoft.com/codepool/demos/. The ONLY difference between the two is the
- * "License" section — this example asks the visitor for a key, the hosted copy
- * resolves one from the hostname. Keeping that to one function means the two
- * files can be diffed by eye.
+ * Dynamsoft Barcode Reader locates and decodes the symbol; the IATA BCBP field
+ * layout is then read by bcbp.js, a standalone Resolution 792 parser.
+ *
+ * Differs from the GitHub example (examples/boarding-pass-scanner/) in exactly
+ * one place: the license section. This copy resolves a key from the hostname
+ * instead of asking the visitor for one.
  */
 (function () {
   'use strict';
 
+  /* ---------------------------------------------------------------------------
+     Shared tooling shims. Both files are loaded by index.html; the shims keep
+     the page working if either is blocked or fails to load.
+     --------------------------------------------------------------------------- */
+  var feedback = window.ScannerFeedback || {
+    begin: function () { },
+    end: function () { },
+    isBusy: function () { return false; },
+    run: function (label, factory) {
+      return Promise.resolve(typeof factory === 'function' ? factory() : factory);
+    }
+  };
+
+  var analytics = window.DemoAnalytics || {
+    ready: function () { }, error: function () { }, start: function () { },
+    success: function () { }, fail: function () { }, action: function () { },
+    trialClick: function () { }
+  };
+
   /* =========================================================================
      License
 
-     Self-hosted deployments need their own Dynamsoft license. Paste your key,
-     or press "Use Trial License" for the SDK's public 24-hour key.
+     The demo is hosted at www.dynamsoft.com/codepool/demos/. Its license is
+     bound to the dynamsoft.com domain, so it only activates there. Served from
+     anywhere else — localhost, staging, a fork — that key cannot activate, so
+     fall back to the SDK's public 24-hour trial key, which is accepted on
+     localhost, and the page still runs.
      ========================================================================= */
 
+  var BOUND_HOSTS = ['dynamsoft.com'];
+
+  // Codepool license — bound to dynamsoft.com, shared by the /codepool/demos/ pages.
+  var CODEPOOL_LICENSE_KEY = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAwLTEwMTY0ODQ5MCIsIm1haW5TZXJ2ZXJVUkwiOiJodHRwczovL21sdHMuZHluYW1zb2Z0LmNvbS8iLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMCIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NsdHMuZHluYW1zb2Z0LmNvbS8iLCJjaGVja0NvZGUiOjE0MDA4MDY1Mjl9';
+
+  // SDK public trial key — no domain binding, good for 24 hours.
   var TRIAL_LICENSE_KEY = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==';
 
-  /* Replaced in the hosted copy, which has no setup screen and activates
-     immediately. Returning a resolved key keeps bootstrap() identical. */
-  function acquireLicense() {
-    return new Promise(function (resolve) {
-      var screen = document.getElementById('license-setup');
-      var input = document.getElementById('license-key');
-      var submit = document.getElementById('license-submit');
-      var trial = document.getElementById('use-trial');
-
-      licenseUi.setBusy = function (busy) {
-        submit.disabled = busy;
-        trial.disabled = busy;
-        submit.textContent = busy ? 'Initializing…' : 'Initialize Scanner';
-      };
-      licenseUi.hide = function () {
-        screen.style.display = 'none';
-        document.getElementById('scanner-app').classList.remove('hidden');
-      };
-
-      submit.addEventListener('click', function () {
-        var key = input.value.trim();
-        if (!key) {
-          alert('Please enter a license key');
-          return;
-        }
-        resolve(key);
-      });
-
-      trial.addEventListener('click', function () { resolve(TRIAL_LICENSE_KEY); });
-
-      input.addEventListener('keydown', function (event) {
-        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) submit.click();
-      });
+  function isBoundHost() {
+    var host = window.location.hostname.toLowerCase();
+    return BOUND_HOSTS.some(function (bound) {
+      return host === bound || host.endsWith('.' + bound);
     });
   }
 
-  /* No-ops until acquireLicense() fills them in. The hosted copy leaves them
-     empty because it has neither a setup screen nor a submit button. */
+  function resolveLicenseKey() {
+    if (isBoundHost()) return CODEPOOL_LICENSE_KEY;
+    console.info('[demo] Using the SDK trial license: the Codepool license is bound to '
+      + BOUND_HOSTS.join(', ') + ' and cannot activate on "' + window.location.hostname + '".');
+    analytics.action('license_fallback', { host: window.location.hostname });
+    return TRIAL_LICENSE_KEY;
+  }
+
+  /* The hosted copy has no setup screen, so these stay no-ops. */
   var licenseUi = { setBusy: function () { }, hide: function () { } };
+
+  function acquireLicense() {
+    return Promise.resolve(resolveLicenseKey());
+  }
 
   /* =========================================================================
      Configuration
@@ -104,6 +115,7 @@
     sdkReady: false,
     resultsOpen: false,
     configuredScope: null,
+    decodeBusy: false,
     lastResult: null,
     /* When on, a pass without a valid signature is refused rather than just
        read: unsigned is the legal default in BCBP, so whether it is acceptable
@@ -132,27 +144,37 @@
     buildSamples();
     updateModeUI();
 
+    var startedAt = now();
+    showLoading('Starting the boarding pass scanner…');
+
     acquireLicense().then(function (licenseKey) {
       licenseUi.setBusy(true);
       return initSDK(licenseKey).then(function () {
         licenseUi.hide();
+        hideLoading();
+        analytics.ready(now() - startedAt);
         return startCameraMode().catch(function (cameraError) {
           /* No camera, permission denied, or the device is still being released.
              Upload mode needs no camera, so fall back rather than stranding the
              visitor on an empty page. */
           console.error('Camera unavailable, falling back to Upload mode:', cameraError);
+          analytics.action('camera_fallback', {
+            reason: String((cameraError && cameraError.message) || cameraError).slice(0, 120)
+          });
           return startUploadMode();
         });
       }, function (error) {
-        /* initSDK failed, which almost always means the key is wrong or is
-           bound to a different domain. */
+        var message = (error && (error.message || error)) || 'Unknown error';
         console.error(error);
-        licenseUi.setBusy(false);
-        alert('Dynamsoft could not activate with that license:\n\n'
-          + ((error && error.message) || error)
-          + '\n\nCheck the key, and that it is allowed for this domain, then try again.');
+        analytics.error('activate_failed', message);
+        showLoading('Failed to start the scanner: ' + message
+          + '\n\nPlease refresh the page and try again.');
       });
     });
+  }
+
+  function now() {
+    return (window.performance && performance.now) ? performance.now() : Date.now();
   }
 
   function cacheElements() {
@@ -165,9 +187,12 @@
     els.results = document.getElementById('results');
     els.resultsContent = document.getElementById('results-content');
     els.resultsTitle = document.getElementById('results-title');
+    els.resultsBody = els.results.querySelector('.results-body');
     els.scopeSelect = document.getElementById('scope-select');
     els.requireSignature = document.getElementById('require-signature');
     els.sampleRow = document.getElementById('sample-row');
+    els.loading = document.getElementById('loading-overlay');
+    els.loadingText = document.getElementById('loading-text');
   }
 
   function initSDK(licenseKey) {
@@ -175,6 +200,7 @@
        CaptureVisionRouter.createInstance() throws. */
     return Dynamsoft.License.LicenseManager.initLicense(licenseKey, true)
       .then(function () {
+        showLoading('Loading the barcode module…');
         /* The barcode module is all this page needs: it decodes the symbol, and
            the IATA BCBP layout is then read by bcbp.js. */
         return Dynamsoft.Core.CoreModule.loadWasm(['DBR']);
@@ -184,6 +210,15 @@
       })
       .then(function (view) {
         cameraView = view;
+        /* DCE sizes the video with object-fit "contain" by default: the whole
+           frame stays visible inside the viewfinder. On a phone in portrait
+           the stream is 720x1280 (tall), while the viewfinder element is wide
+           and short — contain turns the preview into a narrow pillar flanked
+           by black bars, which reads as "the camera area is tiny". "cover"
+           fills the element and crops the overflow instead. Decoding still
+           runs on the full video frames, so this changes only the picture,
+           never what the reader sees. */
+        if (typeof view.setVideoFit === 'function') view.setVideoFit('cover');
         return Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
       })
       .then(function (enhancer) {
@@ -205,7 +240,7 @@
           onDecodedBarcodesReceived: function (result) {
             if (state.resultsOpen || state.mode !== 'camera') return;
             var items = (result && result.barcodeResultItems) || [];
-            if (items.length) showResults(items, currentCameraFrame());
+            if (items.length) showResults(items, 'camera', currentCameraFrame());
           }
         };
         state.sdkReady = true;
@@ -294,6 +329,7 @@
     }).then(function () {
       cvRouter.addResultReceiver(receiver);
       showTip('Point the camera at the barcode on a boarding pass.');
+      analytics.start('camera', 'camera');
     });
   }
 
@@ -308,6 +344,7 @@
       return cameraEnhancer.isOpen() ? Promise.resolve(cameraEnhancer.close()) : undefined;
     }).then(function () {
       showTip('Load an image of a boarding pass barcode.');
+      analytics.start('upload', 'upload');
     });
   }
 
@@ -327,9 +364,11 @@
 
   function switchMode(mode) {
     if (state.mode === mode || !state.sdkReady) return;
+    analytics.action('mode_change', { mode: mode });
     var start = mode === 'camera' ? startCameraMode : startUploadMode;
     Promise.resolve(start()).catch(function (error) {
       console.error(error);
+      analytics.error('mode_switch_failed', String((error && error.message) || error).slice(0, 120));
       showTip(mode === 'camera'
         ? 'Could not start the camera. Switch to Upload mode instead.'
         : 'Could not switch to Upload mode. Please refresh the page and try again.', true);
@@ -346,6 +385,16 @@
   function showTip(message, isError) {
     els.tip.textContent = message;
     els.tip.classList.toggle('is-error', !!isError);
+  }
+
+  function showLoading(message) {
+    if (!els.loading) return;
+    els.loadingText.innerText = message;
+    els.loading.classList.remove('hidden');
+  }
+
+  function hideLoading() {
+    if (els.loading) els.loading.classList.add('hidden');
   }
 
   /* =========================================================================
@@ -411,21 +460,30 @@
     }).then(barcodeItemsFrom);
   }
 
-  function scanImageSource(src) {
+  function scanImageSource(src, source) {
     if (!state.sdkReady) {
       showTip('The scanner is still starting. Try again in a moment.', true);
       return;
     }
+    if (state.decodeBusy) return;
+
+    state.decodeBusy = true;
     showTip('Reading the image…');
-    return decodeImage(src).then(function (items) {
+    return feedback.run('Decoding the barcode…', function () {
+      return decodeImage(src);
+    }).then(function (items) {
       if (!items.length) {
+        analytics.fail(source, 'none');
         showTip('No barcode was found in that image. Try a larger or sharper crop of the barcode.', true);
         return;
       }
-      showResults(items, src);
+      showResults(items, source, src);
     }).catch(function (error) {
       console.error(error);
+      analytics.error('image_decode_failed', String((error && error.message) || error).slice(0, 120));
       showTip('That image could not be read: ' + ((error && error.message) || error), true);
+    }).then(function () {
+      state.decodeBusy = false;
     });
   }
 
@@ -435,7 +493,10 @@
       showTip('That file is not an image. Upload a PNG, JPG, BMP or WebP picture of a boarding pass barcode.', true);
       return;
     }
-    readAsDataURL(file).then(scanImageSource).catch(function (error) {
+    analytics.action('image_load', { type: file.type, size: file.size });
+    readAsDataURL(file).then(function (src) {
+      return scanImageSource(src, 'upload');
+    }).catch(function (error) {
       console.error(error);
       showTip('That file could not be read.', true);
     });
@@ -473,7 +534,7 @@
      Results
      ========================================================================= */
 
-  function showResults(items, imageSrc) {
+  function showResults(items, source, imageSrc) {
     var payload = String(items[0].text || '');
     var format = formatName(items[0].formatString || items[0].format);
 
@@ -483,6 +544,7 @@
         + ', but the SDK returned no text for it. This usually means the symbol uses a'
         + ' binary or otherwise unsupported encoding.'));
       openResults();
+      analytics.fail(source, 'no-text');
       return;
     }
 
@@ -518,6 +580,18 @@
       ? 'Boarding pass read \u2014 ' + decoded.passengerName + ', ' + decoded.route + '.'
       : 'Barcode read, but it is not a BCBP boarding pass.');
     openResults();
+
+    if (decoded.ok) {
+      analytics.success(source, 'barcode', {
+        format: format,
+        version: decoded.version === null ? 'none' : String(decoded.version),
+        legs: decoded.legs.length,
+        fields: decoded.allFields.filter(function (f) { return f.value !== ''; }).length,
+        checks_passed: decoded.checks.filter(function (c) { return c.ok; }).length
+      });
+    } else {
+      analytics.fail(source, 'not-bcbp');
+    }
   }
 
   /* The image section. Shown for a file, a drop, a paste or a sample; camera
@@ -546,6 +620,7 @@
     }
     toggle.addEventListener('click', function () {
       setZoom(!figure.classList.contains('is-zoomed'));
+      analytics.action('image_zoom', { zoomed: figure.classList.contains('is-zoomed') });
     });
     /* Clicking the picture itself is the obvious gesture, so it does the same. */
     img.addEventListener('click', function () {
@@ -788,7 +863,9 @@
   function openResults() {
     state.resultsOpen = true;
     els.results.classList.add('is-open');
-    els.results.scrollTop = 0;
+    /* The panel scrolls internally, so reset that container rather than the
+       overlay, which no longer scrolls. */
+    els.resultsBody.scrollTop = 0;
   }
 
   function closeResults() {
@@ -864,7 +941,8 @@
         /* The chips sit inside the drop zone, whose own click handler opens the
            file picker. Without this the chip would do both. */
         event.stopPropagation();
-        scanImageSource('./sample-images/' + sample.file);
+        analytics.action('sample_load', { sample: sample.label });
+        scanImageSource('./sample-images/' + sample.file, 'sample');
       });
       els.sampleRow.appendChild(chip);
     });
@@ -881,6 +959,7 @@
 
     els.scopeSelect.addEventListener('change', function () {
       state.scope = els.scopeSelect.value;
+      analytics.action('scope_change', { scope: state.scope });
       applySettings().then(function () {
         showTip(state.scope === 'boarding'
           ? 'Looking for boarding pass symbologies: PDF417, Aztec, QR Code and Data Matrix.'
@@ -948,6 +1027,7 @@
         ? JSON.stringify(toJson(state.lastResult.decoded), null, 2)
         : state.lastResult.payload;
       navigator.clipboard.writeText(text).then(function () {
+        analytics.action('copy_json', { length: text.length });
         copyButton.textContent = 'Copied';
         setTimeout(function () { copyButton.textContent = 'Copy JSON'; }, 1400);
       });

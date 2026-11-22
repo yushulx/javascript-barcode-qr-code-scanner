@@ -13,11 +13,8 @@
 (function () {
   'use strict';
 
-  /* ---------------------------------------------------------------------------
-     Analytics shim — only the hosted Codepool copy loads the shared tracker.
-     The GitHub example has no ../shared/analytics.js, so every call is a no-op
-     there rather than a crash.
-     --------------------------------------------------------------------------- */
+  /* Analytics shim — the shared tracker is loaded by index.html, but it can be
+     blocked by an ad blocker or simply fail to load, so every call is guarded. */
   var analytics = window.DemoAnalytics || {
     ready: function () { }, error: function () { }, action: function () { }
   };
@@ -93,10 +90,12 @@
 
     if (!window.bwipjs) {
       els.decode_status.textContent = 'The bwip-js encoder did not load. Check the network and reload the page.';
+      analytics.error('encoder_missing', 'bwip-js did not load');
       return;
     }
     if (!window.Bcbp) {
       els.decode_status.textContent = 'bcbp.js did not load, so the BCBP payload cannot be built.';
+      analytics.error('codec_missing', 'bcbp.js did not load');
       return;
     }
 
@@ -171,13 +170,10 @@
 
   function compartmentSelect(selected) {
     var E = window.Bcbp.ENUMS.compartment;
-    var codes = ['F', 'J', 'C', 'W', 'Y'].map(function (code) {
-      return { code: code, label: code + ' \u2014 ' + E[code] };
-    });
     var select = document.createElement('select');
     select.className = 'form-control';
-    codes.forEach(function (entry) {
-      select.appendChild(new Option(entry.label, entry.code));
+    ['F', 'J', 'C', 'W', 'Y'].forEach(function (code) {
+      select.appendChild(new Option(code + ' \u2014 ' + E[code], code));
     });
     select.value = selected || 'Y';
     return select;

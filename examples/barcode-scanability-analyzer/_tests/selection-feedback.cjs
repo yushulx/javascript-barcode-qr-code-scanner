@@ -7,7 +7,7 @@ async function main() {
   try {
     const page = await browser.newPage({ viewport: { width: 1100, height: 850 } });
     await page.route('**/dist/dbr.bundle.js', route => route.abort());
-    await page.goto(process.env.ANALYZER_URL || 'http://localhost:4180/');
+    await page.goto(process.env.ANALYZER_URL || 'http://localhost:4173/demos/barcode-scanability-analyzer/');
     await page.waitForFunction(() => document.querySelector('#status').textContent.startsWith('Reader unavailable'));
     await page.click('#manual_toggle');
     await page.fill('#selection_x', '100'); await page.fill('#selection_y', '100');

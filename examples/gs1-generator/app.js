@@ -43,6 +43,9 @@
     asset: { brand: 'PROPERTY OF NORTHFIELD', name: 'Returnable transit pallet', detail: 'Scan on return to depot', price: 'Asset' },
     pricemarked: { brand: 'NORTHFIELD', name: 'Cheddar truckle', detail: 'Matured 12 months · price marked', price: '' },
     qr: { brand: 'NORTHFIELD', name: 'Single-origin cocoa', detail: 'Scan for provenance', price: '£5.95' },
+    retail2d: { brand: 'NORTHFIELD', name: 'Whole Bean Coffee', detail: 'Roasted arabica · 500 g · 2D at the till', price: '£7.49' },
+    logistics: { brand: 'NORTHFIELD LOGISTICS', name: 'Pallet — GS1 logistics label', detail: 'SSCC + contents · keep dry', price: 'SSCC' },
+    udi: { brand: 'CALDERA MEDICAL', name: 'Surgical stapler — single use', detail: 'UDI direct-part marking · lot + expiry + serial', price: 'Rx only' },
     custom: { brand: 'NORTHFIELD', name: 'Custom reference', detail: 'Built from the elements below', price: '' }
   };
 
@@ -72,6 +75,11 @@
     scenario: 'pharma',
     symbology: 'gs1datamatrix',
     rows: [],
+    /* A scenario may print a second symbol on the label — the legacy EAN-13
+       beside the Sunrise 2027 DataMatrix, or the contents GS1-128 under the
+       SSCC. `extra` holds its symbology, its rows and (when it cannot be
+       drawn) the reason. Null for single-symbol scenarios. */
+    extra: null,
     previewMode: 'label',
     /* Row indexes whose value just changed, so renderElements() can mark them
        briefly. Random values look alike, and without this a click on Randomize
@@ -344,11 +352,11 @@
      whose modules are no longer resolvable cannot be decoded however good the
      scanner is — the label would then be a test of nothing. Keeping the module
      size an integer number of pixels keeps every bar edge crisp at any size. */
-  function encodeSymbol(maxWidth, maxHeight) {
-    var encoder = P.toEncoderInput(state.rows, state.symbology);
+  function encodeSymbol(rows, symbologyId, maxWidth, maxHeight) {
+    var encoder = P.toEncoderInput(rows, symbologyId);
     if (encoder.error) return Promise.reject(new Error(encoder.error));
 
-    var render = RENDER[state.symbology] || { scale: 4 };
+    var render = RENDER[symbologyId] || { scale: 4 };
     var scale = render.scale;
 
     function attempt() {
@@ -363,7 +371,7 @@
         paddingheight: 4
       };
       if (render.height) options.height = render.height;
-      if (render.columns && state.symbology === 'databarexpandedstacked') {
+      if (render.columns && symbologyId === 'databarexpandedstacked') {
         options.columns = render.columns;
       }
 
@@ -490,8 +498,9 @@
   /* The label: what packaging looks like, with the symbol where it belongs.
      The symbol gets a full-width band rather than a corner, because a logistic
      GS1-128 with five data elements is a lot of bars to fit, and squeezing it
-     into a narrow column is how a test label ends up undecodable. */
-  function drawLabel(ctx, symbol, width, height, fitted) {
+     into a narrow column is how a test label ends up undecodable. `symbol2` is
+     the second symbol a scenario may print — null for single-symbol labels. */
+  function drawLabel(ctx, symbol, symbol2, width, height, fitted) {
     var product = PRODUCTS[state.scenario] || PRODUCTS.custom;
     var padX = 46;
 
@@ -580,42 +589,43 @@
     roundRect(ctx, bandLeft, bandTop, bandWidth, bandBottom - bandTop, 8);
     ctx.fill();
 
-    /* The HRI has to be measured before the symbol can be positioned, because it
-       sits directly underneath and the symbol must leave room for it. */
-    ctx.font = '400 12px "Courier New", Courier, monospace';
-    var hriLines = wrapText(ctx, P.toHRI(state.rows), bandWidth - 40, 3);
-    var hriHeight = hriLines.length * 17 + 10;
-
+    /* One panel per symbol. Two linear symbols (the logistics label's pair of
+       GS1-128s) stack full-width; anything else sits side by side — a 2D
+       symbol belongs beside the legacy linear one, not on top of it. */
     var inset = 12;
-    var innerLeft = bandLeft + inset;
-    var innerWidth = bandWidth - inset * 2;
-    var innerTop = bandTop + inset;
-    var innerHeight = bandBottom - bandTop - inset * 2 - hriHeight;
+    var panels;
 
-    ctx.fillStyle = '#ffffff';
-    roundRect(ctx, innerLeft, innerTop, innerWidth, innerHeight, 4);
-    ctx.fill();
+    if (symbol2) {
+      var extraSym = P.SYM_BY_ID[state.extra.symbology] || {};
+      var primarySym = P.SYM_BY_ID[state.symbology] || {};
+      var stacked = extraSym.kind === '1D' && primarySym.kind === '1D';
+      if (stacked) {
+        var halfHeight = Math.floor((bandBottom - bandTop - inset * 2 - 6) / 2);
+        panels = [
+          { x: bandLeft + inset, y: bandTop + inset,
+            w: bandWidth - inset * 2, h: halfHeight },
+          { x: bandLeft + inset, y: bandTop + inset + halfHeight + 6,
+            w: bandWidth - inset * 2, h: halfHeight, secondary: true }
+        ];
+      } else {
+        var columnWidth = Math.floor((bandWidth - inset * 2 - 24) / 2);
+        var panelHeight = bandBottom - bandTop - inset * 2;
+        panels = [
+          { x: bandLeft + inset, y: bandTop + inset, w: columnWidth, h: panelHeight },
+          { x: bandLeft + inset + columnWidth + 24, y: bandTop + inset,
+            w: columnWidth, h: panelHeight, secondary: true }
+        ];
+      }
+    } else {
+      panels = [{
+        x: bandLeft + inset, y: bandTop + inset,
+        w: bandWidth - inset * 2, h: bandBottom - bandTop - inset * 2
+      }];
+    }
 
-    var availableWidth = innerWidth - 20;
-    var availableHeight = innerHeight - 16;
-    var drawScale = Math.min(1, availableWidth / symbol.width, availableHeight / symbol.height);
-    var drawWidth = Math.max(1, Math.round(symbol.width * drawScale));
-    var drawHeight = Math.max(1, Math.round(symbol.height * drawScale));
-    var drawX = Math.round(innerLeft + (innerWidth - drawWidth) / 2);
-    var drawY = Math.round(innerTop + (innerHeight - drawHeight) / 2);
-
-    ctx.imageSmoothingEnabled = drawScale < 1;
-    ctx.drawImage(symbol, drawX, drawY, drawWidth, drawHeight);
-    ctx.imageSmoothingEnabled = true;
-
-    /* HRI under the symbol, centred on it - the way GS1 prints it. */
-    ctx.textAlign = 'center';
-    ctx.fillStyle = INK;
-    hriLines.forEach(function (line, index) {
-      ctx.fillText(line, innerLeft + innerWidth / 2,
-          bandBottom - hriHeight + 16 + index * 17);
+    panels.forEach(function (panel) {
+      drawSymbolPanel(ctx, panel, panel.secondary ? symbol2 : symbol);
     });
-    ctx.textAlign = 'left';
 
     /* --- footer --------------------------------------------------------- */
     ctx.strokeStyle = HAIRLINE;
@@ -634,6 +644,47 @@
     var note = 'GS1 test label \u00b7 synthetic data';
     if (!fitted) note += ' \u00b7 symbol scaled to fit';
     ctx.fillText(note, width - padX, height - 40);
+    ctx.textAlign = 'left';
+  }
+
+  /* One symbol inside the band: a white panel, the symbol centred in it, and
+     the HRI underneath — the way GS1 prints it. The HRI has to be measured
+     before the symbol can be positioned, because the symbol must leave room
+     for it. The secondary panel gets a two-line HRI; the primary keeps three. */
+  function drawSymbolPanel(ctx, panel, symbol) {
+    var secondary = !!panel.secondary;
+    var hriText = secondary ? P.toHRI(state.extra.rows) : P.toHRI(state.rows);
+    var maxLines = secondary ? 2 : 3;
+
+    ctx.font = '400 12px "Courier New", Courier, monospace';
+    var hriLines = wrapText(ctx, hriText, panel.w - 20, maxLines);
+    var hriHeight = hriLines.length * 17 + 10;
+
+    var innerHeight = panel.h - hriHeight;
+
+    ctx.fillStyle = '#ffffff';
+    roundRect(ctx, panel.x, panel.y, panel.w, innerHeight, 4);
+    ctx.fill();
+
+    var availableWidth = panel.w - 20;
+    var availableHeight = innerHeight - 16;
+    var drawScale = Math.min(1, availableWidth / symbol.width, availableHeight / symbol.height);
+    var drawWidth = Math.max(1, Math.round(symbol.width * drawScale));
+    var drawHeight = Math.max(1, Math.round(symbol.height * drawScale));
+    var drawX = Math.round(panel.x + (panel.w - drawWidth) / 2);
+    var drawY = Math.round(panel.y + (innerHeight - drawHeight) / 2);
+
+    ctx.imageSmoothingEnabled = drawScale < 1;
+    ctx.drawImage(symbol, drawX, drawY, drawWidth, drawHeight);
+    ctx.imageSmoothingEnabled = true;
+
+    /* HRI under the symbol, centred on it - the way GS1 prints it. */
+    ctx.textAlign = 'center';
+    ctx.fillStyle = INK;
+    hriLines.forEach(function (line, index) {
+      ctx.fillText(line, panel.x + panel.w / 2,
+          panel.y + panel.h - hriHeight + 16 + index * 17);
+    });
     ctx.textAlign = 'left';
   }
 
@@ -658,24 +709,73 @@
 
   /* The space the symbol may occupy in the current preview mode. Asking for a
      symbol that fits means the label never has to scale one down, which is the
-     difference between a crisp test image and a blurred one. */
+     difference between a crisp test image and a blurred one.
+
+     When the scenario prints a second symbol, the budget is split by the same
+     layout drawLabel uses: two linear symbols stack full-width, anything else
+     sits side by side in two columns. */
   function previewBudget() {
     var canvas = els.previewCanvas;
     if (state.previewMode === 'symbol') {
-      return { width: canvas.width - 80, height: canvas.height - 80 };
+      /* Symbol-only exports the primary symbol; the label mode is where the
+         second symbol belongs. */
+      return {
+        primary: { width: canvas.width - 80, height: canvas.height - 80 },
+        extra: null,
+        stacked: false
+      };
     }
+
+    var padX = 46;
+    var inset = 12;
+    var bandWidth = canvas.width - padX * 2;
+    var innerWidth = bandWidth - inset * 2;
+    var innerHeight = canvas.height - 220 - 76 - inset * 2;
+    var hriAllowance = 3 * 17 + 10;
+
+    var single = {
+      primary: {
+        width: innerWidth - 20,
+        height: innerHeight - 16 - hriAllowance
+      },
+      extra: null,
+      stacked: false
+    };
+
+    var extra = state.extra;
+    if (!extra) return single;
+
+    var extraSym = P.SYM_BY_ID[extra.symbology] || {};
+    var primarySym = P.SYM_BY_ID[state.symbology] || {};
+    var stacked = extraSym.kind === '1D' && primarySym.kind === '1D';
+
+    if (stacked) {
+      /* Two full-width linear symbols, one above the other; the primary's HRI
+         is up to three lines, the secondary's two. */
+      var halfHeight = Math.floor((innerHeight - 6) / 2) - 6;
+      return {
+        primary: { width: innerWidth - 20, height: halfHeight - 16 - 3 * 17 - 10 },
+        extra: { width: innerWidth - 20, height: halfHeight - 16 - 2 * 17 - 10 },
+        stacked: true
+      };
+    }
+
+    /* Side by side: the primary keeps its three-line HRI, the secondary a
+       shorter one beneath its own column. */
+    var columnWidth = Math.floor((innerWidth - 24) / 2);
     return {
-      width: canvas.width - 2 * 46 - 2 * 12 - 20,
-      height: canvas.height - 220 - 76 - 2 * 12 - 10 - 3 * 17 - 16
+      primary: { width: columnWidth - 20, height: innerHeight - 16 - hriAllowance },
+      extra: { width: columnWidth - 20, height: innerHeight - 16 - 2 * 17 - 10 },
+      stacked: false
     };
   }
 
-  function renderPreview(symbol, fitted) {
+  function renderPreview(symbol, symbol2, fitted) {
     var canvas = els.previewCanvas;
     var ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (state.previewMode === 'label') {
-      drawLabel(ctx, symbol, canvas.width, canvas.height, fitted);
+      drawLabel(ctx, symbol, symbol2, canvas.width, canvas.height, fitted);
     } else {
       drawSymbolOnly(ctx, symbol, canvas.width, canvas.height);
     }
@@ -763,10 +863,14 @@
 
     var tbody = els.expectedRows;
     tbody.replaceChildren();
-    P.expectedElements(rows).forEach(function (element) {
+    var symbolTag = null;
+
+    function addExpectedRow(element) {
       var tr = node('tr');
       tr.appendChild(node('td', null, '(' + element.ai + ')'));
-      tr.appendChild(node('td', null, element.title));
+      var titleCell = node('td', null, element.title);
+      if (symbolTag) titleCell.appendChild(node('span', 'hint', ' ' + symbolTag));
+      tr.appendChild(titleCell);
 
       var valueCell = node('td');
       valueCell.appendChild(node('span', null, element.display));
@@ -780,7 +884,23 @@
       tr.appendChild(checkCell);
 
       tbody.appendChild(tr);
-    });
+    }
+
+    /* A scenario with a second symbol gets its elements in the same oracle, so
+       the expected result covers every symbol the label carries. */
+    P.expectedElements(rows).forEach(addExpectedRow);
+    if (state.extra && state.extra.rows) {
+      symbolTag = '(2nd symbol · ' + extraLabel() + ')';
+      P.expectedElements(state.extra.rows).forEach(addExpectedRow);
+    } else if (state.extra && state.extra.skipReason) {
+      var noteRow = node('tr', 'extra-note');
+      var noteCell = node('td');
+      noteCell.colSpan = 4;
+      noteCell.appendChild(node('span', 'hint',
+        'No second symbol on the label: ' + state.extra.skipReason + '.'));
+      noteRow.appendChild(noteCell);
+      tbody.appendChild(noteRow);
+    }
 
     var link = P.expectedDigitalLink(rows);
     els.expectedDigitalLink.textContent = link || '— none: a Digital Link needs a GTIN or an ITIP.';
@@ -810,6 +930,10 @@
   }
 
   function updateEverything(source) {
+    /* A derived second symbol (the Sunrise 2027 EAN-13) tracks the primary
+       rows, so it is recomputed before anything is validated or drawn. */
+    refreshExtra();
+
     var issues = P.validate(state.rows, state.symbology);
     var blocked = P.hasErrors(issues);
 
@@ -845,45 +969,80 @@
     els.renderStatus.textContent = 'Generating…';
     els.downloadBtn.disabled = true;
 
-    return encodeSymbol(budget.width, budget.height).then(function (result) {
-      if (token !== renderToken) return false;
-      renderPreview(result.canvas, result.fitted);
-      lastRun = {
-        encoder: result.encoder,
-        canvas: result.canvas,
-        fitted: result.fitted,
-        symbology: state.symbology,
-        scenario: state.scenario,
-        elementString: P.toElementString(state.rows)
-      };
-      var notes = [];
-      if (!result.fitted) {
-        notes.push('the symbol is wider than the frame and is being scaled down');
-      } else if (result.reduced && result.scale <= 1) {
-        /* One pixel per module is the floor. It decodes from a clean image, but a
-           camera has little margin, so say so rather than let a weak test image
-           be mistaken for a weak reader. */
-        notes.push('module size is down to 1 px to fit the label — shorten the payload for a '
-          + 'test image that a camera can read comfortably');
-      } else if (result.reduced) {
-        notes.push('module size reduced to ' + result.scale + ' px to fit the label');
+    return encodeSymbol(state.rows, state.symbology, budget.primary.width, budget.primary.height)
+      .then(function (result) {
+      if (token !== renderToken) return null;
+
+      /* The second symbol encodes into its own half of the band. A failure to
+         render it is a note, not a dead render: the primary symbol is still a
+         valid test image. */
+      var extraPending = null;
+      var extraNotes = [];
+      if (state.extra && budget.extra) {
+        if (state.extra.rows) {
+          var extraIssues = P.validate(state.extra.rows, state.extra.symbology);
+          if (!P.hasErrors(extraIssues)) {
+            extraPending = encodeSymbol(state.extra.rows, state.extra.symbology,
+                budget.extra.width, budget.extra.height).catch(function (error) {
+              extraNotes.push('the second symbol (' + extraLabel()
+                + ') could not be rendered: '
+                + String((error && error.message) || error).slice(0, 80));
+              return null;
+            });
+          } else {
+            extraNotes.push('the second symbol is not encodable, so it is omitted from the label');
+          }
+        } else if (state.extra.skipReason) {
+          extraNotes.push('no second symbol: ' + state.extra.skipReason);
+        }
       }
 
-      els.renderStatus.textContent = 'Rendered ' + (P.SYM_BY_ID[state.symbology] || {}).label
-        + ' · symbol ' + result.canvas.width + ' × ' + result.canvas.height + ' px'
-        + ' · export ' + els.previewCanvas.width + ' × ' + els.previewCanvas.height + ' px'
-        + (notes.length ? ' · ' + notes.join(' · ') : '');
-      els.renderStatus.classList.toggle('is-error', !result.fitted);
-      els.downloadBtn.disabled = false;
-      if (source && source !== 'init') {
-        analytics.action('render', {
-          scenario: state.scenario,
+      return Promise.resolve(extraPending).then(function (extraResult) {
+        if (token !== renderToken) return false;
+        renderPreview(result.canvas, extraResult ? extraResult.canvas : null, result.fitted);
+        lastRun = {
+          encoder: result.encoder,
+          canvas: result.canvas,
+          fitted: result.fitted,
           symbology: state.symbology,
-          elements: state.rows.length,
-          mode: state.previewMode
-        });
-      }
-      return true;
+          scenario: state.scenario,
+          elementString: P.toElementString(state.rows)
+        };
+        var notes = [];
+        if (!result.fitted) {
+          notes.push('the symbol is wider than the frame and is being scaled down');
+        } else if (result.reduced && result.scale <= 1) {
+          /* One pixel per module is the floor. It decodes from a clean image, but a
+             camera has little margin, so say so rather than let a weak test image
+             be mistaken for a weak reader. */
+          notes.push('module size is down to 1 px to fit the label — shorten the payload for a '
+            + 'test image that a camera can read comfortably');
+        } else if (result.reduced) {
+          notes.push('module size reduced to ' + result.scale + ' px to fit the label');
+        }
+        if (extraResult && extraResult.reduced) {
+          notes.push('second symbol module size reduced to ' + extraResult.scale + ' px');
+        }
+        extraNotes.forEach(function (note) { notes.push(note); });
+
+        els.renderStatus.textContent = 'Rendered ' + (P.SYM_BY_ID[state.symbology] || {}).label
+          + (extraResult ? ' + ' + extraLabel() + ' — 2 symbols on the label' : '')
+          + ' · symbol ' + result.canvas.width + ' × ' + result.canvas.height + ' px'
+          + ' · export ' + els.previewCanvas.width + ' × ' + els.previewCanvas.height + ' px'
+          + (notes.length ? ' · ' + notes.join(' · ') : '');
+        els.renderStatus.classList.toggle('is-error', !result.fitted);
+        els.downloadBtn.disabled = false;
+        if (source && source !== 'init') {
+          analytics.action('render', {
+            scenario: state.scenario,
+            symbology: state.symbology,
+            elements: state.rows.length,
+            symbols: extraResult ? 2 : 1,
+            mode: state.previewMode
+          });
+        }
+        return true;
+      });
     }).catch(function (error) {
       if (token !== renderToken) return false;
       console.error(error);
@@ -904,11 +1063,69 @@
    * Scenarios
    * ------------------------------------------------------------------ */
 
+  function currentScenario() {
+    return P.SCENARIOS.filter(function (entry) { return entry.id === state.scenario; })[0]
+      || P.SCENARIOS[0];
+  }
+
+  /* Build the second symbol a scenario prints on the label.
+     Two kinds of secondary exist:
+       - `build`  — an independent payload (the logistics contents GS1-128),
+                    generated when the scenario is applied or randomized;
+       - `derive` — a pure function of the primary rows (the Sunrise 2027
+                    EAN-13 derived from AI 01), rebuilt on every update so an
+                    edited GTIN keeps the two symbols in agreement.
+     When a derived symbol has no valid form — a GTIN-14 whose packaging
+     indicator is not 0 has no EAN-13 equivalent — the rows are left null and
+     the reason is carried instead, so the label can say why the symbol is
+     missing rather than silently dropping it. */
+  function makeExtra() {
+    var spec = currentScenario().secondary;
+    if (!spec) {
+      state.extra = null;
+      return;
+    }
+
+    if (spec.derive === 'gtin13') {
+      var gtinRow = state.rows.filter(function (item) { return item.ai === '01'; })[0];
+      var gtin = gtinRow ? gtinRow.value : '';
+      if (/^\d{14}$/.test(gtin) && gtin.charAt(0) === '0') {
+        state.extra = { symbology: spec.symbology, label: spec.label, rows: [{ ai: '01', value: gtin }] };
+      } else {
+        state.extra = {
+          symbology: spec.symbology, label: spec.label, rows: null,
+          skipReason: /^\d{14}$/.test(gtin)
+            ? 'this GTIN-14 has packaging indicator ' + gtin.charAt(0)
+              + ', which has no EAN-13 equivalent'
+            : 'AI 01 is not a 14-digit GTIN'
+        };
+      }
+      return;
+    }
+
+    state.extra = spec.build
+      ? { symbology: spec.symbology, label: spec.label, rows: spec.build() }
+      : null;
+  }
+
+  /* Derived extras must track edits to the primary rows; built extras are
+     rebuilt only when the scenario is applied or randomized. */
+  function refreshExtra() {
+    var spec = currentScenario().secondary;
+    if (spec && spec.derive) makeExtra();
+  }
+
+  function extraLabel() {
+    var sym = state.extra ? P.SYM_BY_ID[state.extra.symbology] : null;
+    return (sym && sym.label) || 'second symbol';
+  }
+
   function applyScenario(id, source) {
     var scenario = P.SCENARIOS.filter(function (entry) { return entry.id === id; })[0] || P.SCENARIOS[0];
     state.scenario = scenario.id;
     state.rows = scenario.build();
     state.symbology = scenario.symbology;
+    makeExtra();
     els.scenario.value = scenario.id;
     els.symbology.value = scenario.symbology;
     els.scenarioNote.textContent = scenario.note;
@@ -947,6 +1164,9 @@
         return { ai: item.ai, value: entry ? entry.sample() : item.value };
       });
     }
+    /* A built secondary is part of the random data; a derived one follows the
+       primary rows and will be recomputed by the update cycle. */
+    makeExtra();
 
     state.highlight = [];
     state.rows.forEach(function (item, index) {

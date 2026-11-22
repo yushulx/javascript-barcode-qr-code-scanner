@@ -209,6 +209,12 @@ async function ensureCamera() {
     if (cameraView) return;
     showLoading('Starting the camera…');
     cameraView = await Dynamsoft.DCE.CameraView.createInstance();
+    /* DCE defaults to object-fit "contain", which letterboxes a portrait
+       camera stream inside a wide-short viewfinder (a phone held upright
+       shows a narrow pillar with black bars). "cover" fills the viewfinder
+       and crops the overflow instead; decoding still uses the full frames,
+       so this changes only the picture, never what the reader sees. */
+    if (typeof cameraView.setVideoFit === 'function') cameraView.setVideoFit('cover');
     cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
     els.cameraView.replaceChildren(cameraView.getUIElement());
     hideLoading();

@@ -234,6 +234,22 @@
             build: function () { return [row('01')]; }
         },
         {
+            id: 'retail2d',
+            label: 'Retail 2D (Sunrise 2027) \u2014 GTIN + expiry + batch + serial',
+            note: 'A Sunrise 2027 pack: the same GTIN carried by a GS1 DataMatrix at the till, '
+                + 'with the legacy EAN-13 printed beside it. Scanning the label returns two symbols '
+                + 'for one product \u2014 the case where a retail system deduplicates the GTIN.',
+            symbology: 'gs1datamatrix',
+            build: function () { return [row('01'), row('17'), row('10'), row('21')]; },
+            secondary: {
+                symbology: 'ean13',
+                label: 'EAN-13',
+                derive: 'gtin13',
+                note: 'Derived from AI 01. A GTIN-14 whose packaging indicator is 0 is a GTIN-13 '
+                    + 'with a leading zero, so the same product can keep a legacy EAN-13 on the pack.'
+            }
+        },
+        {
             id: 'fresh',
             label: 'Fresh food — GTIN + weight + price',
             note: 'Variable-measure produce weighed at the counter. DataBar Expanded is the '
@@ -254,12 +270,35 @@
             }
         },
         {
+            id: 'udi',
+            label: 'GS1 UDI \u2014 medical device (DI + lot + expiry + serial)',
+            note: 'A medical-device package labelled under the GS1 UDI standard: the Device '
+                + 'Identifier in AI 01, the manufacturing date in AI 11, and the lot, expiry and '
+                + 'serial a quality system traces. GS1 DataMatrix is the usual direct-part carrier.',
+            symbology: 'gs1datamatrix',
+            build: function () { return [row('01'), row('11'), row('10'), row('17'), row('21')]; }
+        },
+        {
             id: 'carton',
             label: 'Logistics carton — SSCC',
             note: 'A shipping carton identified by its Serial Shipping Container Code. '
                 + 'GS1-128 is the usual carrier because the SSCC is only 18 digits.',
             symbology: 'gs1_128',
             build: function () { return [row('00')]; }
+        },
+        {
+            id: 'logistics',
+            label: 'GS1 logistics label \u2014 SSCC + contents',
+            note: 'A two-symbol logistics label: the SSCC in a GS1-128, and a second GS1-128 '
+                + 'naming the contents \u2014 the GTIN and count in AI 02/37 with the batch and '
+                + 'expiry a warehouse needs. One label, two barcodes, one scan pass.',
+            symbology: 'gs1_128',
+            build: function () { return [row('00')]; },
+            secondary: {
+                symbology: 'gs1_128',
+                label: 'Contents (02) GTIN + (37) count + (10) batch + (17) expiry',
+                build: function () { return [row('02'), row('37'), row('10'), row('17')]; }
+            }
         },
         {
             id: 'itf',

@@ -4,46 +4,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Online GS1 Barcode Generator | Dynamsoft</title>
+    <title>Free Online GS1 Barcode Generator | Dynamsoft Codepool Demo</title>
     <meta name="description"
-        content="Free online GS1 barcode generator. Build a valid GS1 element string — GTIN, expiry date, batch/lot, serial, SSCC — render it as GS1 DataBar, DataBar Expanded, GS1 DataMatrix, GS1 QR Code, GS1-128, ITF-14 or EAN-13, and download a realistic test label to check a GS1 scanner.">
+        content="Free online GS1 barcode generator. Build a valid GS1 element string — GTIN, expiry date, batch/lot, serial, SSCC — render it as GS1 DataBar, DataBar Expanded, GS1 DataMatrix, GS1 QR Code, GS1-128, ITF-14 or EAN-13, and download a realistic test label to check a GS1 scanner. Industry presets — Sunrise 2027 retail 2D, GS1 logistics labels and GS1 UDI — print realistic multi-barcode labels.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/gs1-barcode-generator/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Free Online GS1 Barcode Generator | Dynamsoft Codepool Demo">
+    <meta property="og:description"
+        content="Free online GS1 barcode generator. Build a valid GS1 element string — GTIN, expiry date, batch/lot, serial, SSCC — render it as GS1 DataBar, DataBar Expanded, GS1 DataMatrix, GS1 QR Code, GS1-128, ITF-14 or EAN-13, and download a realistic test label to check a GS1 scanner. Industry presets — Sunrise 2027 retail 2D, GS1 logistics labels and GS1 UDI — print realistic multi-barcode labels.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/gs1-barcode-generator/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/gs1-barcode-generator/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
 
-    <!--
-      ASSET VERSION (?v=): the site serves these files with
-      Cache-Control: max-age=86400, so browsers trust their cached copy for a
-      full day. Bump the ?v= value on EVERY change to styles.css, gs1-payload.js
-      or app.js, otherwise returning visitors keep the stale copy for up to 24h.
-    -->
-    <link rel="icon" href="favicon.svg?v=20260917a" type="image/svg+xml">
+
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="styles.css?v=20260917a">
+    <link rel="stylesheet" href="styles.css">
     <!-- Barcode encoder (bwip-js / BWIPP) — the only third-party dependency -->
     <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js.min.js"></script>
     <!-- GS1 payload model: AI catalogue, validation, HRI, expected parse -->
-    <script src="gs1-payload.js?v=20260917a"></script>
+    <script src="gs1-payload.js"></script>
+
 </head>
 
 <body>
+
     <header class="site-header">
         <div class="site-header-inner">
-            <a class="brand" href="https://www.dynamsoft.com/" aria-label="Dynamsoft — back to dynamsoft.com">
-                <img class="brand-logo" src="dynamsoft-logo.svg?v=20260917a" width="159" height="39" alt="Dynamsoft">
+            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
+                aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
             </a>
             <span class="brand-divider" aria-hidden="true"></span>
-            <span class="brand-product">GS1 Generator</span>
+            <span class="brand-product">Free GS1 Generator</span>
             <nav class="header-nav" aria-label="Dynamsoft">
-                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/">Barcode Reader</a>
-                <a class="nav-link" href="https://www.dynamsoft.com/docs/">Documentation</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
+                    data-demo-cta="barcode-reader">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/" data-demo-cta="docs">Documentation</a>
                 <a class="btn btn-primary"
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">30-Day
-                    Free Trial</a>
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">30-Day Free Trial</a>
             </nav>
         </div>
     </header>
 
     <div class="page-intro">
-        <h1>GS1 barcode generator</h1>
+        <h1>Free GS1 barcode generator</h1>
         <p>
             Build a valid GS1 element string, render it in the symbology a real supply chain would use,
             and download a test label — together with the exact result a conformant scanner should
@@ -304,24 +312,27 @@
                 </svg>
                 Generated locally on an HTML5 canvas — synthetic sample data only, nothing is uploaded and no
                 licence key is required.
+                Running this page is free because it activates a Codepool license bound to dynamsoft.com.
+                The source on GitHub is a separate thing — self-hosting it needs your own Dynamsoft license.
             </p>
             <div class="footer-links">
                 <span>
                     Built with plain JavaScript and
-                    <a href="https://github.com/metafloor/bwip-js">bwip-js</a>. Read the symbols back with
-                    <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft Barcode Reader</a>.
+                    <a href="https://github.com/metafloor/bwip-js" data-demo-cta="bwip-js">bwip-js</a>. Read the
+                    symbols back with
+                    <a href="https://www.dynamsoft.com/barcode-reader/overview/"
+                        data-demo-cta="barcode-reader">Dynamsoft Barcode Reader</a>.
                 </span>
-                <a href="https://www.dynamsoft.com/codepool/demos/gs1-barcode-scanner/">Open the GS1 barcode
-                    scanner</a>
+                <a href="https://www.dynamsoft.com/codepool/demos/gs1-barcode-scanner/" data-demo-cta="scanner">Open the GS1 barcode scanner</a>
                 <a class="btn btn-primary footer-cta"
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">Get
-                    a 30-day free trial license</a>
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
             </div>
         </div>
     </footer>
 
     <!-- UI, canvas rendering and PNG export -->
-    <script src="app.js?v=20260917a"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>
