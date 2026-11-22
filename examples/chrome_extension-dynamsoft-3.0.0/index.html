@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dynamsoft Barcode Scanner - Hello World</title>
+    <script src="libs/dynamsoft-barcode-reader-bundle/dist/dbr.bundle.js"></script>
+    <script src="libs/dynamsoft-document-viewer/dist/ddv.js"></script>
+    <script src="libs/pdfjs/pdf.min.js"></script>
+    <link rel="stylesheet" href="main.css">
+</head>
+
+<body>
+
+    <div id="loading-indicator" class="loading-indicator">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Main Container with Two Columns -->
+    <div class="main-container">
+        <!-- Left Column: Main Content -->
+        <div class="main-content">
+            <!-- Settings Panel -->
+            <div id="settingsPanel" class="settings-panel">
+                <div class="settings-header">
+                    <h2>⚙️ Settings</h2>
+                    <button id="closeSettings" class="close-btn">×</button>
+                </div>
+                <div class="settings-content">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-title">📍 Show Floating Icon</div>
+                            <div class="setting-description">
+                                Display a floating icon on web pages to quickly reopen the scanner panel.
+                            </div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="showFloatingIconToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-item" style="display: block;">
+                        <div class="setting-info">
+                            <div class="setting-title">🔑 Custom License Key</div>
+                            <div class="setting-description">
+                                Enter your Dynamsoft license key to override the Google auth license. This is useful if
+                                your trial license has expired.
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <input type="text" id="licenseKeyInput" placeholder="Enter your license key here..."
+                                style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 13px; margin-bottom: 8px;"
+                                autocomplete="off" spellcheck="false">
+                            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                                <button id="saveLicenseBtn"
+                                    style="flex: 1; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">Save</button>
+                                <button id="clearLicenseBtn"
+                                    style="flex: 1; padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;">Clear</button>
+                            </div>
+                            <div id="licenseStatus"
+                                style="font-size: 12px; padding: 6px 10px; border-radius: 4px; display: none;"></div>
+                            <div style="font-size: 11px; color: #888; margin-top: 6px;">
+                                💡 Get a license from <a
+                                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                                    target="_blank" rel="noopener" style="color: #667eea;">Dynamsoft License Portal</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h1>Dynamsoft Barcode Scanner & ZXing</h1>
+            <div class="engine-toggle" id="engineToggle">
+                <div class="engine-option">
+                    <input type="radio" id="engineDynamsoft" name="engineOption" value="dynamsoft" checked>
+                    <label for="engineDynamsoft">Dynamsoft (trial or license)</label>
+                </div>
+                <div class="engine-option">
+                    <input type="radio" id="engineZxing" name="engineOption" value="zxing">
+                    <label for="engineZxing">ZXing-WASM (free, no login)</label>
+                </div>
+                <div class="engine-hint" id="engineHint"></div>
+            </div>
+            <div class="license-row">
+                <span id="loginStatus">Get your free 30-day trial license</span>
+                <button id="loginButton">
+                    <svg width="18" height="18" viewBox="0 0 18 18" class="google-icon">
+                        <path fill="#4285F4"
+                            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" />
+                        <path fill="#34A853"
+                            d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" />
+                        <path fill="#FBBC05"
+                            d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.96H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.04l3.007-2.333z" />
+                        <path fill="#EA4335"
+                            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.96L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" />
+                    </svg>
+                    Login with Google
+                </button>
+            </div>
+            <div class="controls">
+                <button id="scan" title="Scan with Camera">📷</button>
+                <label for="file" class="file-label" title="Upload File">
+                    📁
+                    <input type="file" id="file" accept="image/png,image/jpeg,application/pdf"
+                        title="Select image or PDF file" />
+                </label>
+                <button id="screenshot" title="Capture Screenshot">✂️</button>
+            </div>
+
+            <!-- Drag and Drop Zone -->
+            <div id="dropZone" class="drop-zone">
+                <div class="drop-zone-content">
+                    <div class="drop-icon">📥</div>
+                    <div class="drop-text">Drag & Drop images or PDFs here</div>
+                    <div class="drop-subtext">or click buttons above</div>
+                </div>
+            </div>
+
+            <div id="divScanner">
+                <div id="container"></div>
+                <div id="imageContainer">
+                    <div id="pageNavigation" class="page-navigation">
+                        <button id="prevPage" class="nav-btn">◀ Previous</button>
+                        <span id="pageInfo" class="page-info">Page 1 of 1</span>
+                        <button id="nextPage" class="nav-btn">Next ▶</button>
+                    </div>
+                    <canvas id="imageCanvas"></canvas>
+                </div>
+            </div>
+            <textarea id="result" placeholder="Scan result will appear here..." readonly></textarea>
+        </div>
+
+        <!-- Right Column: Fixed Sidebar -->
+        <div class="right-sidebar">
+            <div class="sidebar-section">
+                <button id="openSettings" class="sidebar-btn" title="Settings">
+                    ⚙️
+                </button>
+            </div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-section">
+                <button id="helpBtn" class="sidebar-btn" title="Help & Documentation">
+                    📖
+                </button>
+            </div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-section">
+                <a href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform"
+                    target="_blank" rel="noopener" class="sidebar-btn" title="Get Dynamsoft Trial License">
+                    🛒
+                </a>
+            </div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-section user-section">
+                <div id="userInfo" class="user-info">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-name">Guest</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
