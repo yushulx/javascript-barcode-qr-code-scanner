@@ -59,7 +59,7 @@
             </svg>
             <span>Camera</span>
           </label>
-          <label class="mode-option" data-mode="image">
+          <label class="mode-option" data-mode="upload">
             <svg class="mode-icon" viewBox="0 0 24 24" width="20" height="20">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <path d="M14 2v6h6" />
@@ -76,6 +76,22 @@
         <!-- Camera view container (the SDK mounts its own UI element here) -->
         <div id="camera-view"></div>
       </div>
+
+      <!-- Upload zone: click, drag & drop, or paste. Replaces the SDK's own
+           image picker so switching modes never pops a file dialog. -->
+      <div id="upload-zone" class="upload-zone" hidden>
+        <svg class="upload-zone-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        <p class="upload-zone-title">Upload or paste a file</p>
+        <p class="upload-zone-hint">
+          Click to browse, drop an image here, or paste one from the clipboard with
+          <kbd>Ctrl</kbd>&thinsp;+&thinsp;<kbd>V</kbd> (<kbd>⌘</kbd>&thinsp;+&thinsp;<kbd>V</kbd> on macOS)
+        </p>
+      </div>
+      <input type="file" id="upload-input" accept="image/*" hidden>
 
       <!-- Results container -->
       <div id="results" class="results-container">
@@ -162,7 +178,7 @@
           // Hide license setup and show scanner
           document.getElementById('license-setup').style.display = 'none';
           document.getElementById('scanner-app').classList.remove('hidden');
-          await this.startCapturingMode();
+          await this.startCameraMode();
         } catch (error) {
           console.error('License initialization failed:', error);
           alert('Failed to initialize with the provided license key. Please check the key and try again.');
@@ -219,7 +235,6 @@
         await this.components.cvRouter.updateSettings("ReadDenseBarcodes", settings);
 
         this.components.receiver = {
-          onCapturedResultReceived: (result) => this.handleCapturedResult(result),
           onDecodedBarcodesReceived: (result) => this.handleBarcodeResult(result)
         };
 
@@ -229,21 +244,6 @@
       /* ------------------------------------------------------------------ *
        * Scanning                                                            *
        * ------------------------------------------------------------------ */
-
-      // Handle captured results (used to report "nothing found" in image mode)
-      handleCapturedResult(result) {
-        if (!this.components.cameraEnhancer) return;
-        if (this.components.cameraEnhancer.singleFrameMode === "disabled"
-          || !this.components.cameraEnhancer.isOpen()) return;
-
-        const hasBarcodes = (result.items || []).some(item =>
-          item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE
-        );
-
-        if (!hasBarcodes) {
-          this.showResults("No PDF417 Barcode Found!");
-        }
-      }
 
       // Handle successful barcode detection
       async handleBarcodeResult(result) {
@@ -418,7 +418,8 @@
         this.updateModeUI();
 
         if (this.isInitialized && this.components.cameraEnhancer) {
-          this.startCapturingMode().catch((error) => {
+          const start = mode === 'camera' ? this.startCameraMode() : this.startUploadMode();
+          Promise.resolve(start).catch((error) => {
             console.error('Failed to switch capture mode:', error);
             alert('Failed to switch mode: ' + error.message);
           });
@@ -436,20 +437,21 @@
 
         modeSwitch.setAttribute('data-active', this.currentMode);
 
-        if (this.currentMode === 'camera') {
-          tipMessage.textContent = 'Aim at the barcode on the driver\'s license.';
-        } else {
-          tipMessage.textContent = 'Tap the gallery button to pick an image containing a driver license barcode.';
-        }
+        const isUpload = this.currentMode === 'upload';
+        document.getElementById('main-container').style.display = isUpload ? 'none' : 'flex';
+        document.getElementById('upload-zone').hidden = !isUpload;
+        // In upload mode the drop zone carries the instruction, so the tip is noise.
+        tipMessage.hidden = isUpload;
+        tipMessage.textContent = 'Aim at the barcode on the driver\'s license.';
       }
 
-      // Start (or restart) frame capture in the current mode.
+      // Camera mode: continuous video frames are pushed through the router.
       //
       // The CameraEnhancer is created once in initSDK() and reused here: a
       // CameraView can only host one enhancer, so creating a second one for the
       // same view on every mode switch leaves the previous instance tearing the
       // camera down in parallel and open() fails with "Camera closed.".
-      async startCapturingMode() {
+      async startCameraMode() {
         const elements = {
           mainContainer: document.getElementById('main-container'),
           tipMessage: document.getElementById('tip-message'),
@@ -467,15 +469,31 @@
         if (this.components.cameraEnhancer.isOpen()) {
           await this.components.cameraEnhancer.close();
         }
-        // "disabled" keeps a continuous video stream, "image" hands frame
-        // capture to the user and shows a gallery button in the built-in UI.
-        this.components.cameraEnhancer.singleFrameMode =
-          this.currentMode === 'camera' ? 'disabled' : 'image';
+        this.components.cameraEnhancer.singleFrameMode = 'disabled';
         await this.openCamera();
 
         this.components.cvRouter.setInput(this.components.cameraEnhancer);
         await this.components.cvRouter.startCapturing("ReadDenseBarcodes");
         this.components.cvRouter.addResultReceiver(this.components.receiver);
+      }
+
+      // Upload mode: no camera and no continuous capture. A still image is
+      // decoded on demand with CaptureVisionRouter.capture(), which means the
+      // SDK never opens a file dialog of its own — the page owns the drop zone,
+      // the picker and paste.
+      //
+      // (singleFrameMode = 'image' is deliberately not used: the SDK's built-in
+      // image view opens the OS file picker as soon as it is activated, so there
+      // is no way to present a drop zone first.)
+      async startUploadMode() {
+        const mainContainer = document.getElementById('main-container');
+        mainContainer.style.display = 'none';
+
+        this.components.cvRouter.removeResultReceiver(this.components.receiver);
+        await this.components.cvRouter.stopCapturing();
+        if (this.components.cameraEnhancer.isOpen()) {
+          await this.components.cameraEnhancer.close();
+        }
       }
 
       // Open the camera, retrying once: right after a mode switch the previous
@@ -489,6 +507,162 @@
           await new Promise((resolve) => setTimeout(resolve, 400));
           await this.components.cameraEnhancer.open();
         }
+      }
+
+      /* ------------------------------------------------------------------ *
+       * Upload, drag & drop and clipboard paste
+       * ------------------------------------------------------------------ */
+
+      loadImageFromFile(file) {
+        return new Promise((resolve, reject) => {
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(img);
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('the file could not be read as an image'));
+          };
+          img.src = url;
+        });
+      }
+
+      // Convert a loaded image into the DSImageData shape
+      // CaptureVisionRouter.capture() expects.
+      //
+      // This is exactly what the SDK builds internally when its own image view
+      // hands a picked file to the router — an RGBA byte buffer straight out of
+      // getImageData(), stride 4 x width and format 10 (IPF_ABGR_8888). Passing
+      // a Blob, HTMLImageElement or canvas instead takes a different internal
+      // path and silently returns no results.
+      imageToDsImageData(img) {
+        const MAX_WIDTH = 4000;
+        let width = img.naturalWidth || img.width;
+        let height = img.naturalHeight || img.height;
+        if (width > MAX_WIDTH) {
+          height = Math.round(height * MAX_WIDTH / width);
+          width = MAX_WIDTH;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const data = ctx.getImageData(0, 0, width, height);
+        return {
+          bytes: new Uint8Array(data.data.buffer, data.data.byteOffset, data.data.length),
+          width: width,
+          height: height,
+          stride: 4 * width,
+          format: 10
+        };
+      }
+
+      // capture() returns barcodes in `items`; the streaming receiver used in
+      // camera mode reports them as `barcodeResultItems`.
+      barcodeItemsOf(result) {
+        if (!result) return [];
+        if (result.barcodeResultItems && result.barcodeResultItems.length) {
+          return result.barcodeResultItems;
+        }
+        return (result.items || []).filter(item =>
+          item.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE);
+      }
+
+      // Pull an image File out of a paste event, if there is one.
+      imageFromClipboard(event) {
+        const data = event.clipboardData || window.clipboardData;
+        if (!data) return null;
+
+        if (data.files && data.files.length) {
+          for (let i = 0; i < data.files.length; i++) {
+            if (data.files[i].type && data.files[i].type.indexOf('image/') === 0) {
+              return data.files[i];
+            }
+          }
+        }
+        if (data.items) {
+          for (let j = 0; j < data.items.length; j++) {
+            if (data.items[j].type && data.items[j].type.indexOf('image/') === 0) {
+              const file = data.items[j].getAsFile();
+              if (file) return file;
+            }
+          }
+        }
+        return null;
+      }
+
+      // Decode a user-supplied image and hand the barcode to the same parser
+      // that camera mode uses.
+      async scanUploadedFile(file) {
+        try {
+          const img = await this.loadImageFromFile(file);
+          const result = await this.components.cvRouter.capture(
+            this.imageToDsImageData(img), 'ReadDenseBarcodes');
+
+          const barcodes = this.barcodeItemsOf(result);
+          if (!barcodes.length) {
+            this.showResults('No PDF417 barcode found in this image. Try a sharper photo of the back of the license.');
+            return;
+          }
+          Dynamsoft.DCE.Feedback.beep();
+          await this.parseDriverLicense(barcodes[0].bytes);
+        } catch (error) {
+          console.error('Upload failed:', error);
+          this.showResults('Could not read that image: ' + error.message);
+        }
+      }
+
+      // Wire the drop zone: click to browse, drag & drop, and clipboard paste.
+      // All three end up in scanUploadedFile(), so the SDK's own file dialog is
+      // never involved and switching to Upload mode cannot pop one.
+      initUploadZone() {
+        const zone = document.getElementById('upload-zone');
+        const input = document.getElementById('upload-input');
+
+        zone.addEventListener('click', () => input.click());
+
+        input.addEventListener('change', (event) => {
+          const files = event.target.files;
+          if (files && files.length) {
+            this.scanUploadedFile(files[0]);
+          }
+          // Reset so picking the same file twice fires change again.
+          event.target.value = '';
+        });
+
+        ['dragenter', 'dragover'].forEach(type => {
+          zone.addEventListener(type, (event) => {
+            event.preventDefault();
+            zone.classList.add('dragover');
+          });
+        });
+        ['dragleave', 'drop'].forEach(type => {
+          zone.addEventListener(type, (event) => {
+            event.preventDefault();
+            zone.classList.remove('dragover');
+          });
+        });
+        zone.addEventListener('drop', (event) => {
+          const files = event.dataTransfer && event.dataTransfer.files;
+          if (files && files.length) {
+            this.scanUploadedFile(files[0]);
+          }
+        });
+
+        // Paste is listened for on the document so it also works right after the
+        // user clicks anywhere on the page, not only over the drop zone.
+        document.addEventListener('paste', (event) => {
+          if (this.currentMode !== 'upload') return;
+          const file = this.imageFromClipboard(event);
+          if (!file) return;
+          event.preventDefault();
+          this.scanUploadedFile(file);
+        });
       }
 
       /* ------------------------------------------------------------------ *
@@ -511,8 +685,11 @@
         if (this.boundClickToHide) {
           document.removeEventListener('mousedown', this.boundClickToHide);
         }
-        // Resume scanning in whichever mode is currently active.
-        this.components.cvRouter?.startCapturing("ReadDenseBarcodes");
+        // Only camera mode has a continuous pipeline to resume; upload mode is
+        // driven on demand by the drop zone.
+        if (this.currentMode === 'camera') {
+          this.components.cvRouter?.startCapturing("ReadDenseBarcodes");
+        }
       }
 
       handleClickToHide(event) {
@@ -528,6 +705,7 @@
       init() {
         this.initLicenseSetup();
         this.initEventHandlers();
+        this.initUploadZone();
         this.updateModeUI();
         console.log('Driver License Scanner initialized');
       }
