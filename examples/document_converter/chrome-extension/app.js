@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentZoom = 1.0;
     let draggedThumbnailIndex = -1;
     let currentObjectUrl = null;
+    let liveEditorPage = null; // Page object whose editor is currently on screen
 
     // --- IndexedDB Setup ---
     const dbName = 'DocScannerDB';
@@ -991,6 +992,10 @@ document.addEventListener('DOMContentLoaded', () => {
         draggedThumbnailIndex = -1;
         viewerPanel.classList.remove('drop-zone-active');
     } function selectPage(index) {
+        // Still runs against the page being left: currentPageIndex has not
+        // moved yet, and its editor is about to be replaced.
+        syncLiveEditorContent();
+
         if (pages.length === 0) {
             deleteAllButton.style.display = 'none';
         } else {
@@ -1060,6 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const page = pages[currentPageIndex];
         largeViewContainer.innerHTML = '';
+        liveEditorPage = null;
 
         // Revoke previous object URL to avoid memory leaks
         if (currentObjectUrl) {
@@ -1081,6 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => {
             editorDiv.className = "text-editor-page";
             editorDiv.innerHTML = page.htmlContent;
             editorDiv.id = 'text-editor'; // For easy access
+            liveEditorPage = page;
 
             // Basic styling for the editor page to look like a document
             editorDiv.style.width = '800px'; // Fixed width for document feel
@@ -1325,11 +1332,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Saving ---
 
+    // Typing only updates the contentEditable node; a page's stored htmlContent
+    // catches up when its Save button is used. Without this, exports silently
+    // contain the pre-edit content and can come out blank.
+    function syncLiveEditorContent() {
+        const editorDiv = document.getElementById('text-editor');
+        if (editorDiv && liveEditorPage) {
+            liveEditorPage.htmlContent = editorDiv.innerHTML;
+        }
+    }
+
     savePdfButton.addEventListener('click', async () => {
         if (pages.length === 0) {
             alert('No pages to save.');
             return;
         }
+
+        syncLiveEditorContent();
 
         // We use the browser's print functionality because jsPDF requires large custom font files 
         // to support non-Latin characters (like Chinese/Japanese) correctly. 
@@ -1405,6 +1424,8 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('No pages to save.');
             return;
         }
+
+        syncLiveEditorContent();
 
         // Create HTML content
         let htmlContent = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Document</title></head><body>';
