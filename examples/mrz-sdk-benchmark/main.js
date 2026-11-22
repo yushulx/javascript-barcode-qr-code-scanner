@@ -20,19 +20,19 @@ const VENDOR_META = {
 // Default license keys
 const DEFAULT_DYNAMSOFT_LICENSE = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==';
 const DEFAULT_SCANBOT_LICENSE =
-  "pifvdWYP/6m4fgRiDnWGzuRqzeEiQl" +
-  "nL52G2KTUoZ1RBb/5wWGPp7VUjDLQ6" +
-  "iZuvwwogf80LjZl61A+j+9uTaLWPca" +
-  "ZxJJRHtQuNnZx5/6GQx6kAoS9PcGhu" +
-  "Hq9P5tT7PvPJiO2vf/A2Z7uVPLchl8" +
-  "WzUJI8QSY01VVZOWuxbPDMIRJ8fgYW" +
-  "4rGJHe2ZZFsAdL4Q2NYLJ6b81BLfL9" +
-  "yLVYpY3nG+FmL4dT9yCiZVr0aHATNA" +
-  "035adb6Kl9ei2sxe9fFdDwJrgojXcf" +
-  "8RpCcygkehJkUuI5GaEc0B7VGr3VnY" +
-  "66EI34RfbQH8gJejocob/kV1hkfjAm" +
-  "C8Jip4HQvTPw==\nU2NhbmJvdFNESw" +
-  "psb2NhbGhvc3QKMTc4NTg4Nzk5OQo4" +
+  "DKpym1CzRUQJ4QBJe8C3CBHGHAjSw2" +
+  "A2k6t/ftjUGtyOm1pvvL3e6D/AfsFq" +
+  "rXBjWvgkN8lHoL1b5Q/NbkZ99+6NDc" +
+  "qQOXnLs+NKKUZKhPz5xeB922P7J7Cg" +
+  "Qui5s+KiE/902BZhFrdkX3Cz1edWdB" +
+  "DMsxa4FgR+Xhaet+sDoA0vRxTa9bQh" +
+  "qHuEAYlBQAqzEjH/BWwQre24cb6o7L" +
+  "zqg1xs+pJhKoLoR/5E9lpuUzBTdyGC" +
+  "//77p8GItvxLHZD2rHOauu6KLmn1fR" +
+  "j2LtTB5Os81fsmVbL8hjgpMh5v8in/" +
+  "DKe+kJfI2hI/XwvpbT0n+0TYpU+eGt" +
+  "TitPlx2v0AwA==\nU2NhbmJvdFNESw" +
+  "psb2NhbGhvc3QKMTc5NDM1NTE5OQo4" +
   "Mzg4NjA3Cjg=\n";
 
 const SCANBOT_CDN_ENGINE = 'https://cdn.jsdelivr.net/npm/scanbot-web-sdk@9/bundle/bin/complete/';
