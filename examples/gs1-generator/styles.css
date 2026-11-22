@@ -1,0 +1,1003 @@
+/* Barcode & QR Code Generator — Codepool demo styles.
+
+   Visual language follows the Dynamsoft style guide
+   (https://dynamsoft.github.io/styleguide/style-guide.html):
+     - brand orange  #FE8E14  (CTA / accent only)
+     - brand gray    #323234  (headings, body copy)
+     - grays         #606060 #999999 #CCCCCC #DDDDDD #F5F5F5
+     - headings      Oswald        body copy  Open Sans
+
+   Only the page chrome is branded; the barcodes themselves are rendered
+   black on white so they stay scannable. */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@300;400;500&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Brand */
+    --dy-orange: #fe8e14;
+    --dy-orange-hover: #e07d0b;
+    --dy-orange-tint: #fff8ee;
+    --dy-orange-edge: #f6c893;
+
+    /* Neutrals */
+    --dy-gray-900: #323234;
+    --dy-gray-700: #606060;
+    --dy-gray-500: #999999;
+    --dy-gray-300: #cccccc;
+    --dy-gray-200: #dddddd;
+    --dy-gray-100: #eeeeee;
+    --dy-gray-50: #f5f5f5;
+
+    /* Accent used for inline text links, so orange stays reserved for CTAs */
+    --dy-link: #306877;
+    --dy-link-hover: #27555f;
+
+    /* Verified check digit */
+    --dy-ok: #1e7a4b;
+
+    /* Error state (validation / render failures) */
+    --dy-error: #b3261e;
+    --dy-error-tint: #fdf2f1;
+    --dy-error-edge: #f0c9c6;
+
+    --white: #ffffff;
+
+    --font-heading: 'Oswald', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Open Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'Courier New', Courier, monospace;
+
+    --radius: 6px;
+    --radius-sm: 4px;
+    --shell: 1200px;
+}
+
+body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--dy-gray-900);
+    background: var(--white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------------------------------------------------------------------------
+   Corporate header — logo left, product name, orange trial CTA right
+   --------------------------------------------------------------------------- */
+
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--white);
+    border-bottom: 1px solid var(--dy-gray-200);
+}
+
+.site-header-inner {
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    min-height: 68px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+}
+
+.brand-logo {
+    display: block;
+    height: 26px;
+    width: auto;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 26px;
+    background: var(--dy-gray-200);
+}
+
+.brand-product {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    white-space: nowrap;
+}
+
+.header-nav {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+/* Scoped to .nav-link so it never overrides the CTA button's own colors. */
+.header-nav .nav-link {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dy-gray-700);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.header-nav .nav-link:hover {
+    color: var(--dy-orange);
+}
+
+/* ---------------------------------------------------------------------------
+   Page intro
+   --------------------------------------------------------------------------- */
+
+/* NOTE: body is a column flex container (to pin the footer to the bottom), and
+   a flex item with `margin: auto` on the cross axis loses `align-items:
+   stretch` — it shrinks to its content width instead of filling the row. Every
+   centered shell below therefore needs an explicit `width: 100%` so that
+   `max-width` + `margin: 0 auto` still centers a full-width block. */
+
+.page-intro {
+    width: 100%;
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 3rem 1.5rem 2.25rem;
+}
+
+.page-intro h1 {
+    font-family: var(--font-heading);
+    font-size: clamp(1.9rem, 4vw, 2.5rem);
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--dy-gray-900);
+    margin-bottom: 0.75rem;
+}
+
+.page-intro p {
+    font-size: 1.0625rem;
+    color: var(--dy-gray-700);
+    max-width: 62ch;
+}
+
+/* ---------------------------------------------------------------------------
+   Tip / notice callout
+   --------------------------------------------------------------------------- */
+
+.notice-banner {
+    width: 100%;
+    max-width: var(--shell);
+    margin: 0 auto 2.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--dy-orange-tint);
+    border: 1px solid var(--dy-orange-edge);
+    border-left: 4px solid var(--dy-orange);
+    border-radius: var(--radius-sm);
+    color: var(--dy-gray-900);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.notice-banner svg {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    margin-top: 1px;
+    color: var(--dy-orange-hover);
+}
+
+.notice-banner strong {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Layout
+   --------------------------------------------------------------------------- */
+
+.container {
+    width: 100%;
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    flex: 1 0 auto;
+}
+
+.card {
+    background: var(--white);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1.15rem 1.5rem 0.9rem;
+    background: var(--dy-gray-50);
+    border-bottom: 1px solid var(--dy-gray-200);
+}
+
+.card-header h2 {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    color: var(--dy-gray-900);
+    padding-bottom: 0.6rem;
+    position: relative;
+}
+
+.card-header h2::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 32px;
+    height: 2px;
+    background: var(--dy-orange);
+}
+
+.card-body {
+    padding: 1.75rem 1.5rem;
+}
+
+.card-body p {
+    margin-bottom: 0.9rem;
+}
+
+.card-body p:last-child {
+    margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Forms
+   --------------------------------------------------------------------------- */
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.form-row:last-of-type {
+    margin-bottom: 0;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--dy-gray-900);
+    margin-bottom: 0.4rem;
+    display: block;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--dy-gray-900);
+    background: var(--white);
+    border: 1px solid var(--dy-gray-300);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    min-width: 0;
+}
+
+.form-control:hover {
+    border-color: var(--dy-gray-500);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--dy-orange);
+    box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.18);
+}
+
+select.form-control {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23606060' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1.15rem;
+    padding-right: 2.4rem;
+    appearance: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Buttons — orange solid for the primary action, outlined for the rest
+   --------------------------------------------------------------------------- */
+
+.button-group {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 0.8rem 1.6rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn svg {
+    flex: 0 0 auto;
+    width: 1.05em;
+    height: 1.05em;
+}
+
+.button-group .btn {
+    flex: 1 1 0;
+    min-width: 170px;
+}
+
+.btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.35);
+}
+
+.btn-primary {
+    background: var(--dy-orange);
+    color: var(--white);
+}
+
+.btn-primary:hover {
+    background: var(--dy-orange-hover);
+}
+
+.btn-secondary {
+    background: var(--white);
+    color: var(--dy-gray-900);
+    border-color: var(--dy-gray-300);
+}
+
+.btn-secondary:hover {
+    background: var(--dy-gray-50);
+    border-color: var(--dy-gray-900);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------------
+   Validation / render errors
+   --------------------------------------------------------------------------- */
+
+.form-error {
+    margin-top: 1.25rem;
+    padding: 0.9rem 1.1rem;
+    background: var(--dy-error-tint);
+    border: 1px solid var(--dy-error-edge);
+    border-left: 4px solid var(--dy-error);
+    border-radius: var(--radius-sm);
+    color: var(--dy-error);
+    font-size: 0.9rem;
+    line-height: 1.55;
+    display: none;
+}
+
+.form-error.is-visible {
+    display: block;
+}
+
+/* ---------------------------------------------------------------------------
+   Canvas stage
+   --------------------------------------------------------------------------- */
+
+.canvas-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius-sm);
+    padding: 1.5rem;
+    overflow-x: auto;
+}
+
+.canvas-wrapper canvas {
+    max-width: 100%;
+    height: auto;
+    background: var(--white);
+    border: 1px solid var(--dy-gray-200);
+}
+
+/* ---------------------------------------------------------------------------
+   Symbology reference table
+   --------------------------------------------------------------------------- */
+
+.spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.spec-table caption {
+    caption-side: top;
+    text-align: left;
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    color: var(--dy-gray-900);
+    padding-bottom: 0.6rem;
+}
+
+.spec-table th,
+.spec-table td {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--dy-gray-200);
+    vertical-align: top;
+}
+
+.spec-table thead th {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    background: var(--dy-gray-50);
+    border-bottom: 1px solid var(--dy-gray-300);
+    white-space: nowrap;
+}
+
+.spec-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.spec-table td:first-child {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.spec-table td.kind {
+    color: var(--dy-gray-700);
+    white-space: nowrap;
+}
+
+.spec-table code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+
+/* ---------------------------------------------------------------------------
+   Hints and inline copy
+   --------------------------------------------------------------------------- */
+
+.hint {
+    font-size: 0.85rem;
+    color: var(--dy-gray-700);
+    margin-top: 0.75rem;
+    line-height: 1.6;
+}
+
+.hint.is-error {
+    color: var(--dy-error);
+}
+
+.hint code,
+.card-body code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+
+a {
+    color: var(--dy-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+a:hover {
+    color: var(--dy-link-hover);
+}
+
+.hint a {
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Footer
+   --------------------------------------------------------------------------- */
+
+.demo-footer {
+    flex: 0 0 auto;
+    margin-top: 3rem;
+    background: var(--dy-gray-50);
+    border-top: 1px solid var(--dy-gray-200);
+    padding: 2rem 1.5rem;
+}
+
+.demo-footer-inner {
+    max-width: var(--shell);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.demo-footer .disclaimer {
+    font-size: 0.85rem;
+    color: var(--dy-gray-700);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.demo-footer .disclaimer svg {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    color: var(--dy-orange-hover);
+}
+
+.demo-footer .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+    color: var(--dy-gray-700);
+}
+
+.demo-footer .footer-cta {
+    margin-left: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
+
+/* Collapse the nav links first, but keep the trial CTA: on small screens the
+   orange button is the main branding cue, so it must not disappear with them. */
+@media (max-width: 900px) {
+    .header-nav .nav-link {
+        display: none;
+    }
+
+    .header-nav {
+        gap: 0;
+    }
+}
+
+@media (max-width: 640px) {
+
+    .brand-product,
+    .brand-divider {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-intro {
+        padding: 2rem 1rem 1.5rem;
+    }
+
+    .container {
+        padding: 0 1rem;
+    }
+
+    .card-body {
+        padding: 1.25rem 1rem;
+    }
+
+    .card-header {
+        padding: 1rem 1rem 0.75rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    .button-group .btn {
+        width: 100%;
+    }
+
+    .canvas-wrapper {
+        padding: 0.75rem;
+    }
+
+    .demo-footer .footer-cta {
+        margin-left: 0;
+    }
+
+    .spec-table {
+        font-size: 0.82rem;
+    }
+
+    .spec-table th,
+    .spec-table td {
+        padding: 0.5rem 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-intro h1 {
+        font-size: 1.6rem;
+    }
+
+    .card-header h2 {
+        font-size: 1.05rem;
+    }
+
+    .form-control {
+        font-size: 0.9rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.9rem;
+    }
+
+    .button-group .btn {
+        min-width: 0;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Print
+   --------------------------------------------------------------------------- */
+
+@media print {
+
+    .site-header,
+    .demo-footer,
+    .button-group,
+    .form-error,
+    .page-intro p {
+        display: none;
+    }
+
+    body {
+        background: var(--white);
+    }
+
+    .card {
+        break-inside: avoid;
+    }
+
+    .canvas-wrapper {
+        border: none;
+        background: var(--white);
+        padding: 0;
+    }
+}
+
+/* ===========================================================================
+   GS1 generator additions
+   Built on the shared generator sheet above: same tokens, same card, form and
+   button language. Only the controls this page adds are defined here.
+   =========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   Data element editor — one row per AI
+   --------------------------------------------------------------------------- */
+
+.element-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-bottom: 0.25rem;
+}
+
+.element-row {
+    display: grid;
+    grid-template-columns: minmax(190px, 1fr) minmax(150px, 1.4fr) auto;
+    gap: 0.6rem;
+    align-items: start;
+    padding: 0.75rem;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius-sm);
+}
+
+.element-row.has-error {
+    background: var(--dy-error-tint);
+    border-color: var(--dy-error-edge);
+}
+
+.element-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.element-field label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    margin-bottom: 0.25rem;
+}
+
+.element-row .form-control {
+    padding: 0.5rem 0.65rem;
+    font-size: 0.9rem;
+}
+
+.element-row select.form-control {
+    padding-right: 2.1rem;
+    background-size: 1rem;
+    background-position: right 0.55rem center;
+}
+
+.element-value-mono {
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+}
+
+.element-issues {
+    grid-column: 1 / -1;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--dy-error);
+}
+
+.element-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    margin-top: 1.35rem;
+    background: var(--white);
+    border: 1px solid var(--dy-gray-300);
+    border-radius: var(--radius-sm);
+    color: var(--dy-gray-700);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.element-remove:hover {
+    background: var(--dy-error-tint);
+    border-color: var(--dy-error-edge);
+    color: var(--dy-error);
+}
+
+.element-remove svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.element-remove:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.add-element {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+}
+
+.chip-button {
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--dy-gray-900);
+    background: var(--white);
+    border: 1px solid var(--dy-gray-300);
+    border-radius: 40px;
+    padding: 0.35rem 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.chip-button:hover {
+    background: var(--dy-orange-tint);
+    border-color: var(--dy-orange-edge);
+}
+
+.chip-label {
+    width: 100%;
+    font-size: 0.8rem;
+    color: var(--dy-gray-700);
+    margin-bottom: 0.15rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Notes / validation summary
+   --------------------------------------------------------------------------- */
+
+.note-list {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0.75rem 0.9rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    line-height: 1.55;
+}
+
+.note-list:first-child {
+    margin-top: 0;
+}
+
+.note-list li {
+    position: relative;
+    padding-left: 1.1rem;
+}
+
+.note-list li + li {
+    margin-top: 0.35rem;
+}
+
+.note-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+}
+
+.note-list.is-error {
+    color: var(--dy-error);
+    background: var(--dy-error-tint);
+    border: 1px solid var(--dy-error-edge);
+}
+
+.note-list.is-warn {
+    color: #7a4a05;
+    background: var(--dy-orange-tint);
+    border: 1px solid var(--dy-orange-edge);
+}
+
+.note-list.is-info {
+    color: var(--dy-gray-700);
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+}
+
+.note-list strong {
+    font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+   Segmented control for the preview mode
+   --------------------------------------------------------------------------- */
+
+.segmented {
+    display: inline-flex;
+    padding: 3px;
+    background: var(--dy-gray-100);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 40px;
+    margin-bottom: 1.1rem;
+}
+
+.segmented button {
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--dy-gray-700);
+    background: transparent;
+    border: none;
+    border-radius: 40px;
+    padding: 0.45rem 1.15rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.segmented button[aria-pressed="true"] {
+    background: var(--white);
+    color: var(--dy-gray-900);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* ---------------------------------------------------------------------------
+   Code blocks for the payload renderings
+   --------------------------------------------------------------------------- */
+
+.code-line {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--dy-gray-900);
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-left: 3px solid var(--dy-orange);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 0.8rem;
+    overflow-wrap: anywhere;
+}
+
+.code-line .sep {
+    color: var(--dy-orange-hover);
+    font-weight: 700;
+}
+
+.field-block {
+    margin-bottom: 1.1rem;
+}
+
+.field-block:last-child {
+    margin-bottom: 0;
+}
+
+.field-block .field-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    margin-bottom: 0.3rem;
+}
+
+.check-ok {
+    color: var(--dy-ok, #1e7a4b);
+    font-weight: 700;
+}
+
+.check-bad {
+    color: var(--dy-error);
+    font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+    .element-row {
+        grid-template-columns: 1fr;
+    }
+
+    .element-remove {
+        margin-top: 0;
+        width: 100%;
+        height: 36px;
+    }
+}
