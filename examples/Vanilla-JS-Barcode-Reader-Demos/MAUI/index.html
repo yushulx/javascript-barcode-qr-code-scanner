@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta name="description" content="Quickly read barcodes with Dynamsoft Barcode Reader from a live camera stream." />
+  <meta name="keywords" content="barcode, camera" />
+  <title>Dynamsoft Barcode Reader Sample</title>
+  <style>
+    #camera-view-container {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div id="camera-view-container"></div>
+  <script src="./HybridWebView.js"></script>
+  <script src="./distributables/dbr.bundle.js"></script>
+  <script>
+    window.addEventListener(
+      "HybridWebViewMessageReceived",
+      function (e) {
+        console.log("Raw message: " + e.detail.message);
+        if (e.detail.message === "stop") {
+          stopScanning();
+        }else if (e.detail.message === "start") {
+          startScanning();
+        }
+      }
+    );
+    /** LICENSE ALERT - README
+     * To use the library, you need to first specify a license key using the API "initLicense()" as shown below.
+     */
+    Dynamsoft.Core.CoreModule.engineResourcePaths.rootDirectory = "distributables";
+    Dynamsoft.License.LicenseManager.initLicense("DLS2eyJoYW5kc2hha2VDb2RlIjoiMTAwMjI3NzYzLVRYbFFjbTlxIiwibWFpblNlcnZlclVSTCI6Imh0dHBzOi8vbWx0cy5keW5hbXNvZnQuY29tIiwib3JnYW5pemF0aW9uSUQiOiIxMDAyMjc3NjMiLCJzdGFuZGJ5U2VydmVyVVJMIjoiaHR0cHM6Ly9zbHRzLmR5bmFtc29mdC5jb20iLCJjaGVja0NvZGUiOjE4OTc4MDUzNDV9");
+
+    /**
+     * You can visit https://www.dynamsoft.com/customer/license/trialLicense?utm_source=samples&product=dbr&package=js to get your own trial license good for 30 days.
+     * Note that if you downloaded this sample from Dynamsoft while logged in, the above license key may already be your own 30-day trial license.
+     * For more information, see https://www.dynamsoft.com/barcode-reader/docs/web/programming/javascript/user-guide/index.html?ver=10.5.3000&cVer=true#specify-the-license&utm_source=samples or contact support@dynamsoft.com.
+     * LICENSE ALERT - THE END
+     */
+
+    // Optional. Used to load wasm resources in advance, reducing latency between video playing and barcode decoding.
+    Dynamsoft.Core.CoreModule.loadWasm(["DBR"]);
+    // Defined globally for easy debugging.
+    let cameraEnhancer, cvRouter, cameraView;
+
+    (async () => {
+      try {
+        // Create a `CameraEnhancer` instance for camera control and a `CameraView` instance for UI control.
+        cameraView = await Dynamsoft.DCE.CameraView.createInstance();
+        cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
+        // Get default UI and append it to DOM.
+        document.querySelector("#camera-view-container").append(cameraView.getUIElement());
+
+        // Create a `CaptureVisionRouter` instance and set `CameraEnhancer` instance as its image source.
+        cvRouter = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+        cvRouter.setInput(cameraEnhancer);
+
+        // Define a callback for results.
+        cvRouter.addResultReceiver({
+          onDecodedBarcodesReceived: (result) => {
+            console.log(result);
+            let barcodeResults = [];
+            if (result.barcodeResultItems) {
+              for (let i = 0; i < result.barcodeResultItems.length; i++) {
+                let barcodeResult = result.barcodeResultItems[i];
+                let simpleResult = {
+                  barcodeText: barcodeResult.text,
+                  barcodeFormat: barcodeResult.formatString,
+                };
+                barcodeResults.push(simpleResult);
+              }
+            };
+            console.log(barcodeResults);
+            if (barcodeResults.length > 0) {
+              // Send the results to the MAUI app.
+              window.HybridWebView.SendRawMessage(JSON.stringify(barcodeResults));
+            }
+          },
+        });
+
+        // Filter out unchecked and duplicate results.
+        const filter = new Dynamsoft.Utility.MultiFrameResultCrossFilter();
+        // Filter out unchecked barcodes.
+        filter.enableResultCrossVerification("barcode", true);
+        // Filter out duplicate barcodes within 3 seconds.
+        filter.enableResultDeduplication("barcode", true);
+        await cvRouter.addResultFilter(filter);
+
+        // Open camera and start scanning barcode.
+        await cameraEnhancer.open();
+        cameraView.setScanLaserVisible(true);
+        await cvRouter.startCapturing("ReadBarcodes_SpeedFirst");
+      } catch (ex) {
+        let errMsg = ex.message || ex;
+        console.error(errMsg);
+        alert(errMsg);
+      }
+    })();
+
+    function stopScanning(){
+      cameraView.setScanLaserVisible(false);
+      cvRouter.stopCapturing();
+      cameraEnhancer.close();
+    }
+
+    async function startScanning(){
+      cameraView.setScanLaserVisible(true);
+      await cameraEnhancer.open();
+      await cvRouter.startCapturing("ReadBarcodes_SpeedFirst");
+    }
+  </script>
+</body>
+
+</html>

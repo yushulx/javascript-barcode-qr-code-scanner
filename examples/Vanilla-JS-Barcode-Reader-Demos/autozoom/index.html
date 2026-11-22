@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>QR Code Scanner with Auto-Zoom</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0" />
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.5000/dist/dbr.bundle.js"></script>
+  <style>
+    #enhancerUIContainer {
+      height: 480px;
+      max-width: 100%;
+    }
+
+    .results {
+      border: 1px black solid;
+      margin: 10px 0;
+      padding: 5px;
+      height: 75px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <h2>QR Code Scanner with Auto-Zoom</h2>
+  <label>
+    Camera:
+    <select id="select-camera"></select>
+  </label>
+  <label>
+    Resolution:
+    <select id="select-resolution">
+      <option value="640x480">640x480</option>
+      <option value="1280x720">1280x720</option>
+      <option value="1920x1080" selected>1920x1080</option>
+      <option value="3840x2160">3840x2160</option>
+    </select>
+  </label>
+  <label>
+    Zoom Factor:
+    <span id="zoomFactor">1</span>
+  </label>
+  <button onclick="startCamera();">Start Camera</button>
+  <br/>
+  <div class="results">
+    <div>Results:</div>
+    <ol></ol>
+  </div>
+  <div id="enhancerUIContainer"></div>
+  <script type="text/javascript">
+    let cameras = [];
+    let track;
+    let router;
+    let cameraEnhancer;
+    let interval;
+    window.onload = async function(){
+      await Dynamsoft.License.LicenseManager.initLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9");
+      await initDCE();
+      await initCVR();
+      await listCameras();
+    }
+
+    async function initDCE(){
+      let cameraView = await Dynamsoft.DCE.CameraView.createInstance();
+      cameraEnhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance(cameraView);
+      cameraEnhancer.enableEnhancedFeatures(Dynamsoft.DCE.EnumEnhancedFeatures.EF_AUTO_ZOOM);
+      document.querySelector("#enhancerUIContainer").append(cameraView.getUIElement());
+      cameraEnhancer.on("played", () => {
+        startCheckingZoomFactor();
+      });
+    }
+
+    async function initCVR(){
+      await Dynamsoft.Core.CoreModule.loadWasm(["DBR"]);
+      router = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+      router.setInput(cameraEnhancer);
+
+      router.addResultReceiver({ onDecodedBarcodesReceived: (result) => {
+        displayResults(result);
+      }});
+
+      let filter = new Dynamsoft.Utility.MultiFrameResultCrossFilter();
+      filter.enableResultCrossVerification("barcode", true);
+      filter.enableResultDeduplication("barcode", true);
+      await router.addResultFilter(filter);
+    }
+
+    function displayResults(result){
+      if (result.barcodeResultItems.length > 0) {   
+        let ol = document.querySelector(".results ol");
+        ol.innerHTML = "";
+        for (let index = 0; index < result.barcodeResultItems.length; index++) {
+          const item = result.barcodeResultItems[index];
+          const li = document.createElement("li");
+          li.innerText = item.formatString+": "+item.text;
+          ol.appendChild(li);
+        }
+      }
+    }
+
+    async function listCameras(){
+      let cameraSelect = document.getElementById("select-camera");
+      cameras = await cameraEnhancer.getAllCameras();
+      for (let i = 0; i < cameras.length; i++){
+        let camera = cameras[i];
+        cameraSelect.appendChild(new Option(camera.label,camera.deviceId));
+      }
+    }
+    
+    async function startCamera(){
+      let selectedCamera = cameras[document.getElementById("select-camera").selectedIndex];
+      let selectedResolution = document.getElementById("select-resolution").selectedOptions[0].value;
+      let width = parseInt(selectedResolution.split("x")[0]);
+      let height = parseInt(selectedResolution.split("x")[1]);
+      await cameraEnhancer.selectCamera(selectedCamera);
+      await cameraEnhancer.setResolution({width:width, height:height});
+      await cameraEnhancer.open();
+      await router.startCapturing("ReadSingleBarcode");
+    }
+
+    function startCheckingZoomFactor(){
+      stopCheckingZoomFactor();
+      const checkZoomFactor = () => {
+        document.getElementById("zoomFactor").innerText = cameraEnhancer.getZoomSettings().factor;
+      }
+      interval = setInterval(checkZoomFactor,200);
+    }
+
+    function stopCheckingZoomFactor(){
+      clearInterval(interval);
+    }
+  </script>
+</body>
+</html>

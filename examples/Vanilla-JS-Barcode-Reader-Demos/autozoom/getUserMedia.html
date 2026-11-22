@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>QR Code Scanner with Auto-Zoom</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0" />
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.5000/dist/dbr.bundle.js"></script>
+  <style>
+    video {
+      max-width: 100%;
+    }
+    
+    .results {
+      border: 1px black solid;
+      margin: 10px 0;
+      padding: 5px;
+      height: 75px;
+      overflow: auto;
+    }
+
+    .scanner {
+      position: relative;
+    }
+
+    .scanner video {
+      position: absolute;
+    }
+
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .barcode-polygon {
+      stroke: green;
+      stroke-width: 2px;
+      fill: rgba(0, 255, 0, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <h2>QR Code Scanner with Auto-Zoom</h2>
+  <label>
+    Camera:
+    <select id="select-camera"></select>
+  </label>
+  <label>
+    Resolution:
+    <select id="select-resolution">
+      <option value="640x480">640x480</option>
+      <option value="1280x720">1280x720</option>
+      <option value="1920x1080" selected>1920x1080</option>
+      <option value="3840x2160">3840x2160</option>
+    </select>
+  </label>
+  <label>
+    Zoom Factor:
+    <input type="number" min="0" max="2" id="zoomInput" value="0" onchange="setZoom();">
+  </label>
+  <label>
+    Enable Auto-Zoom:
+    <input type="checkbox" id="autoZoomInput" checked>
+  </label>
+  <button onclick="startCamera();">Start Camera</button>
+  <br/>
+  <div class="results">
+    <div>Results:</div>
+    <ol></ol>
+  </div>
+  <div class="scanner">
+    <video id="video" muted autoplay="autoplay" playsinline="playsinline" webkit-playsinline></video>
+    <svg id="overlay"></svg>
+  </div>
+  <script type="text/javascript">
+    let cameras = [];
+    let track;
+    let router;
+    let interval;
+    let processing = false;
+    let intermediateResultManager;
+    let overlay = document.getElementById("overlay");
+    let currentResult;
+    let zoomedDate;
+    window.onload = async function(){
+      await requestCameraPermission();
+      await listCameras();
+      checkBrowserCapabilities();
+      await initCVR();
+      document.getElementById("video").addEventListener("loadeddata",function(){
+        let video = document.getElementById("video");
+        overlay.setAttribute("viewBox","0 0 "+video.videoWidth+" "+video.videoHeight);
+        overlay.style.width = video.clientWidth;
+        overlay.style.height = video.clientHeight;
+        startProcessing();
+      })
+    }
+
+    async function initCVR(){
+      await Dynamsoft.License.LicenseManager.initLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9");
+      await Dynamsoft.Core.CoreModule.loadWasm(["DBR"]);
+      router = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+      intermediateResultManager = router.getIntermediateResultManager();
+      const intermediateResultReceiver = new Dynamsoft.CVR.IntermediateResultReceiver();
+      intermediateResultReceiver.onLocalizedBarcodesReceived = (result, info) => {
+        //console.log(result);
+        if (document.getElementById("autoZoomInput").checked) {
+          if (currentResult && currentResult.items && currentResult.items.length == 0) {     
+            if (result.localizedBarcodes.length > 0) {
+              let zoomInput = document.getElementById("zoomInput");
+              if (parseFloat(zoomInput.value) <= 1.0) {
+                console.log("not zoomed. try to zoom");
+                zoomIn(result.localizedBarcodes[0]);
+              }else{
+                console.log("zoomed. zoom out if time out");
+                zoomOutIfTimeOut();
+              }
+            }
+          }
+        }
+        drawOverlay(result.localizedBarcodes);
+      };
+      intermediateResultManager.addResultReceiver(intermediateResultReceiver);
+    }
+
+    function zoomIn(localizedBarcode){
+      if (localizedBarcode.confidence > 75) {
+        document.getElementById("zoomInput").value = calculatedFactor(localizedBarcode);
+        setZoom();
+      }
+    }
+
+    function zoomOutIfTimeOut(){
+      let currentDate = new Date();
+      let elapsed = currentDate.getTime() - zoomedDate.getTime();
+      console.log("elapsed: "+elapsed)
+      if (elapsed > 5 * 1000) {
+        console.log("timed out");
+        document.getElementById("zoomInput").value = 1;
+        setZoom();
+      }
+    }
+
+    function calculatedFactor(localizedBarcode){
+      let left = localizedBarcode.location.points[0].x;
+      let top = localizedBarcode.location.points[0].y;
+      let video = document.getElementById("video");
+      let width = video.videoWidth;
+      if (left < width/2) {
+        let croppedWidth = Math.max(0,left - 50);
+        if (croppedWidth == 0) {
+          return 1.0;
+        }
+        let maxCroppedWidth = top;
+        croppedWidth = Math.min(maxCroppedWidth,croppedWidth);
+        return width / (width - (croppedWidth * 2));
+      }else{
+        return 1.0;
+      }
+    }
+
+    function startProcessing(){
+      stopProcessing();
+      interval = setInterval(captureFrameAndProcess,200);
+    }
+
+    function stopProcessing(){
+      clearInterval(interval);
+    }
+
+    async function captureFrameAndProcess(){
+      if (!router) {
+        return;
+      }
+      processing = true;
+      currentResult = await router.capture(document.getElementsByTagName("video")[0],"ReadSingleBarcode");
+      displayResults(currentResult);
+      processing = false;
+    }
+
+    function drawOverlay(localizedBarcodes){
+      overlay.innerHTML = "";
+      let group = document.createElementNS("http://www.w3.org/2000/svg","g");
+      for (let index = 0; index < localizedBarcodes.length; index++) {
+        const localizedBarcode = localizedBarcodes[index];
+        if (localizedBarcode.confidence > 75) {
+          let points = localizedBarcode.location.points;
+          let polygon = document.createElementNS("http://www.w3.org/2000/svg","polygon");
+          polygon.setAttribute("points",getPointsData(points));
+          polygon.setAttribute("class","barcode-polygon");
+          group.appendChild(polygon)
+        }
+      }
+      overlay.appendChild(group);
+    }
+
+    function getPointsData(points){
+      var pointsData = points[0].x+","+points[0].y+" ";
+      pointsData = pointsData+points[1].x+","+points[1].y+" ";
+      pointsData = pointsData+points[2].x+","+points[2].y+" ";
+      pointsData = pointsData+points[3].x+","+points[3].y;
+      return pointsData;
+    }
+
+    function displayResults(result){
+      let ol = document.querySelector(".results ol");
+      ol.innerHTML = "";
+      if (result && result.items) {
+        for (let index = 0; index < result.items.length; index++) {
+          const item = result.items[index];
+          if (item.type !== Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE) continue;
+          const li = document.createElement("li");
+          li.innerText = item.formatString+": "+item.text;
+          ol.appendChild(li);
+        }
+      }
+    }
+
+    function checkBrowserCapabilities(){
+      if (navigator.mediaDevices.getSupportedConstraints().zoom) {
+        console.log("Browser supports zoom");
+      }else{
+        alert("The browser does not support zoom.");
+      }
+    }
+
+    function checkCameraCapabilities(){
+      const video = document.querySelector('video');
+      const videoTracks = video.srcObject.getVideoTracks();
+      track = videoTracks[0];
+      let capabilities = track.getCapabilities();
+      console.log(capabilities);
+      if ('zoom' in capabilities) {
+        let min = capabilities["zoom"]["min"];
+        let max = capabilities["zoom"]["max"];
+        document.getElementById("zoomInput").setAttribute("min",min);
+        document.getElementById("zoomInput").setAttribute("max",max);
+        document.getElementById("zoomInput").value  = 0;
+      }else{
+        alert("This camera does not support zoom");
+      }
+    }
+    
+    async function setZoom(){
+      try {
+        zoomedDate = new Date();
+        let expectedZoom = document.getElementById("zoomInput").value;
+        console.log("set zoom to "+expectedZoom);
+        const constraints = {advanced: [{zoom: expectedZoom}]};
+        await track.applyConstraints(constraints);  
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
+    async function listCameras(){
+      let cameraSelect = document.getElementById("select-camera");
+      let allDevices = await navigator.mediaDevices.enumerateDevices();
+      for (let i = 0; i < allDevices.length; i++){
+        let device = allDevices[i];
+        if (device.kind == 'videoinput'){
+          cameras.push(device);
+          cameraSelect.appendChild(new Option(device.label,device.deviceId));
+        }
+      }
+    }
+    async function requestCameraPermission() {
+      try {
+        const constraints = {video: true, audio: false};
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        closeStream(stream);
+      } catch (error) {
+        console.log(error);
+        throw error;
+      }
+    }
+
+    function closeStream(stream){
+      if (stream) {
+        const tracks = stream.getTracks();
+        for (let i=0;i<tracks.length;i++) {
+          const track = tracks[i];
+          track.stop();  // stop the opened tracks
+        }
+      }
+    }
+
+    async function startCamera(){
+      let selectedCamera = cameras[document.getElementById("select-camera").selectedIndex];
+      closeStream(document.getElementById("video").srcObject);
+      let selectedResolution = document.getElementById("select-resolution").selectedOptions[0].value;
+      let width = parseInt(selectedResolution.split("x")[0]);
+      let height = parseInt(selectedResolution.split("x")[1]);
+      
+      const videoConstraints = {
+        video: {width:width, height:height, deviceId: selectedCamera.deviceId, zoom: true}, 
+        audio: false
+      };
+      try {
+        const cameraStream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+        document.getElementById("video").srcObject = cameraStream;
+        checkCameraCapabilities();
+      } catch (error) {
+        alert(error);
+      }
+    }
+  </script>
+</body>
+</html>

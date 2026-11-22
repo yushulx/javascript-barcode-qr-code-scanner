@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta
+      name="viewport"
+      content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-camera-enhancer@3.3.4/dist/dce.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@9.6.20/dist/dbr.js"></script>
+    <!--<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>-->
+    <title>QR Code Scanner in uniapp</title>
+    <style>
+      .scanner {
+        display: none;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .scanner.active {
+        display: block;
+      }
+
+      .controls button {
+        width: 10em;
+        height: 10em;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: space-around;
+        position: fixed;
+        top: calc(35% - 5em);
+        left: 50%;
+        width: 100%;
+        transform: translate(-50%);
+      }
+      .app {
+        position: fixed;
+        top: 0;
+        top: env(safe-area-inset-top);
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="text/javascript">
+      var userAgent = navigator.userAgent;
+      if (/miniProgram/i.test(userAgent) && /micromessenger/i.test(userAgent)) {
+        // for weixin mini program
+        document.write('<script type="text/javascript" src="https://res.wx.qq.com/open/js/jweixin-1.4.0.js"><\/script>');
+      }
+    </script>
+    <script type="text/javascript" src="https://js.cdn.aliyun.dcloud.net.cn/dev/uni-app/uni.webview.1.5.2.js"></script>
+
+    <script>
+      document.addEventListener('UniAppJSBridgeReady', function() {
+        uni.webView.getEnv(function(res) {
+          console.log('当前环境：' + JSON.stringify(res));
+        });
+        // uni.webView.navigateTo(...)
+      });
+   </script>
+    <div class="app">
+      <div class="controls">
+        <button class="scanButton" onclick="startScan();">Scan From Camera</button>
+        <input type="file" onchange="readFromImage();" name="file" accept=".jpg,.jpeg,.png,.bmp" id="file" style="display:none">
+        <button class="fileButton" onclick="document.getElementById('file').click()" >Read From Image</button>
+      </div>
+      <div class="status"></div>
+    </div>
+    <div class="scanner">
+    </div>
+    <script>
+      let enhancer;
+      let reader;
+      let interval;
+      let processing = false;
+      let hasCamera = true;
+      init();
+      async function init(){
+        hideControls();
+        updateStatus("Initializing...");
+        
+        try {
+          await requestCameraPermission();
+        }catch (e) {
+          console.log(e);
+          hasCamera = false;
+          document.getElementsByClassName("scanButton")[0].style.display = "none";
+          alert("No camera detected. Please read barcodes from an image");
+        }
+        
+        if (getUrlParam("startScan") !== "true") {
+          revealControls();
+        }
+        
+        if (getUrlParam("license")) {
+          Dynamsoft.DBR.BarcodeScanner.license = getUrlParam("license");
+        }else{
+          Dynamsoft.DBR.BarcodeScanner.license = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ=='; // one-day trial
+        }
+        
+        reader = await Dynamsoft.DBR.BarcodeScanner.createInstance();
+        
+        if (hasCamera) {
+          enhancer = await Dynamsoft.DCE.CameraEnhancer.createInstance();
+          enhancer.on("played", (playCallbackInfo) => {
+            console.log("camera started");
+            startProcessingLoop();
+          });
+          enhancer.on("cameraClose", playCallBackInfo => {
+            stopScan();
+            if (window.uni) {
+              window.uni.postMessage({
+                data: {
+                  action: 'closed'
+                }
+              });
+            }
+          });
+          await enhancer.setUIElement(Dynamsoft.DCE.CameraEnhancer.defaultUIElementURL);
+          let container = document.getElementsByClassName("scanner")[0];
+          container.appendChild(enhancer.getUIElement());
+          if (getUrlParam("startScan") === "true") {
+            startScan();
+          }
+          updateStyleForiOS();
+        }
+        updateStatus("");
+      }
+
+      function updateStyleForiOS(){
+        document.getElementsByClassName("dce-sel-camera")[0].parentElement.style = "position: absolute;left: 0;top: 0;top: env(safe-area-inset-top);";
+        document.getElementsByClassName("dce-btn-close")[0].style = "position: absolute;right: 0;top: 0;top: env(safe-area-inset-top);";
+      }
+
+      function hideControls(){
+        document.getElementsByClassName("controls")[0].style.display = "none";
+      }
+      
+      function revealControls(){
+        document.getElementsByClassName("controls")[0].style.display = "";
+      }
+
+      function startProcessingLoop(isBarcode){
+        stopProcessingLoop();
+        interval = setInterval(captureAndDecode,100); // read barcodes
+      }
+
+      function stopProcessingLoop(){
+        if (interval) {
+          clearInterval(interval);
+          interval = undefined;
+        }
+        processing = false;
+      }
+
+      async function captureAndDecode() {
+        if (!enhancer || !reader) {
+          return
+        }
+        if (enhancer.isOpen() === false) {
+          return;
+        }
+        if (processing == true) {
+          return;
+        }
+        processing = true; // set processing to true so that the next frame will be skipped if the processing has not completed.
+        let frame = enhancer.getFrame();
+        if (frame) {  
+          let results = await reader.decode(frame);
+          if (results.length > 0) {
+            updateStatus("Found "+results.length+((results.length>1)?" results":" result"));
+            stopScan();
+            sendBarcodeResults(results);
+          }
+          processing = false;
+        }
+      };
+
+      function startScan(){
+        if (!enhancer || !reader) {
+          alert("Please wait for the initialization of Dynamsoft Barcode Reader");
+          return;
+        }
+        document.getElementsByClassName("scanner")[0].classList.add("active");
+        updateRuntimeSettings(false);
+        enhancer.open(true); //start the camera
+      }
+        
+      function stopScan(){
+        stopProcessingLoop();
+        enhancer.close(true);
+        document.getElementsByClassName("scanner")[0].classList.remove("active");
+        revealControls();
+      }
+      
+      function sendBarcodeResults(results){
+        const message = {
+          data: {
+            action: 'scanned',
+            results: JSON.stringify(results)
+          }
+        }
+        console.log("postmessage");
+        console.log(message);
+        if (window.uni) {
+          window.uni.postMessage(message);
+        }
+        if (window.wx) {
+          alert("You are in the Weixin environment. Please copy the program's link or share it to turn back.")
+        }
+      }
+
+      async function readFromImage(){
+        let fileInput = document.getElementById("file");
+        if (fileInput.files.length > 0) {
+          let file = fileInput.files[0];
+          await updateRuntimeSettings(true);
+          let results = await reader.decode(file);
+          updateStatus("Found "+results.length+((results.length>1)?" results":" result"));
+          sendBarcodeResults(results);
+        }
+      }
+      
+      async function updateRuntimeSettings(staticImage){
+        let settings = await reader.getRuntimeSettings();
+        if (staticImage) {
+          settings.expectedBarcodesCount = 512
+        }else{
+          settings.expectedBarcodesCount = 1;
+        }
+        await reader.updateRuntimeSettings(settings);
+      }
+
+      function updateStatus(info){
+        document.getElementsByClassName("status")[0].innerText = info;
+      }
+
+      async function requestCameraPermission() {
+        const constraints = {video: true, audio: false};
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const tracks = stream.getTracks();
+        for (let i=0;i<tracks.length;i++) {
+          const track = tracks[i];
+          track.stop();  // stop the opened camera
+        }
+      }
+
+      function getUrlParam(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r != null) return unescape(r[2]); return null;
+      }
+    </script>
+  </body>
+</html>
