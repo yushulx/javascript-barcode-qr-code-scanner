@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Structure Diagram — Interactive Guide to EAN-13, Code 128, Code 39, ITF-14 &amp; QR Code</title>
+    <meta name="description"
+        content="Hover any part of a barcode and see what it does. An interactive structure diagram of EAN-13, Code 128, Code 39, ITF-14 and QR Code — quiet zones, start and stop characters, data characters, check digits, finder patterns, timing patterns, format information and error correction — plus a live encoder that turns any value into its module sequence.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/barcode-structure/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Barcode Structure Diagram — Interactive Guide to EAN-13, Code 128, Code 39, ITF-14 &amp; QR Code">
+    <meta property="og:description"
+        content="Hover each region of a barcode to see what it is and what it does. Then type any value and watch it become a module sequence, live.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/barcode-structure/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/barcode-structure/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+
+</head>
+
+<body>
+
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
+                aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product">Free Barcode Structure Diagram</span>
+            <nav class="header-nav" aria-label="Dynamsoft">
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
+                    data-demo-cta="barcode-reader">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/" data-demo-cta="docs">Documentation</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">30-Day Free Trial</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>What is inside a barcode?</h1>
+        <p>
+            Every barcode is a sequence of named parts, and each part has a job. Hover any region of the diagrams
+            below and it will tell you what that region is, how many modules it occupies and what would break if it
+            were missing — for EAN-13, Code 128, Code 39, ITF-14 and QR Code. Then type any value and watch it become
+            a module sequence, live, in your browser.
+        </p>
+    </div>
+
+    <div class="notice-banner" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <div>
+            <strong>Everything here is computed, not illustrated.</strong>
+            The symbols on this page are encoded from the symbology rules by code that ships with the page — no image
+            files, no CDN and no barcode library. So the module counts and the per-character patterns in the panels
+            are read out of the same data that draws the picture, and the two cannot drift apart. Nothing you type
+            leaves the browser.
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>Pick a symbol and a value</h2>
+            </div>
+            <div class="card-body">
+                <div class="symbology-tabs" role="tablist" aria-label="Symbology" id="symbologyTabs"></div>
+
+                <div class="form-row form-row--value">
+                    <div class="form-group">
+                        <label for="valueInput" id="valueLabel">Value</label>
+                        <input type="text" id="valueInput" class="form-control" spellcheck="false" autocomplete="off"
+                            aria-describedby="valueHint">
+                    </div>
+                    <div class="form-group form-group--action">
+                        <button id="sampleBtn" class="btn btn-secondary" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="23 4 23 10 17 10" />
+                                <polyline points="1 20 1 14 7 14" />
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                                <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+                            </svg>
+                            <span class="btn-label">Try another value</span>
+                        </button>
+                    </div>
+                </div>
+
+                <p class="hint" id="valueHint"></p>
+
+                <div class="symbology-facts" id="symbologyFacts"></div>
+
+                <div class="form-error" id="formError" role="alert"></div>
+                <p class="hint" id="renderStatus" role="status" aria-live="polite"></p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 id="diagramHeading">Structure diagram</h2>
+            </div>
+            <div class="card-body">
+                <p class="diagram-instructions" id="diagramInstructions">
+                    Hover, tap or tab through the regions. Selecting a region pins it so the panel below keeps
+                    showing it while you look at the rest of the symbol.
+                </p>
+
+                <div class="diagram-toolbar">
+                    <div class="legend" id="legend" aria-label="Region legend"></div>
+                    <div class="diagram-toggles">
+                        <label class="toggle-row" for="showModuleNumbers">
+                            <input type="checkbox" id="showModuleNumbers" class="range-check">
+                            <span>Module ruler</span>
+                        </label>
+                        <label class="toggle-row" for="showHumanReadable">
+                            <input type="checkbox" id="showHumanReadable" class="range-check" checked>
+                            <span>Human-readable text</span>
+                        </label>
+                        <button id="clearSelection" class="btn btn-secondary btn-sm" type="button" hidden>
+                            <span class="btn-label">Clear selection</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="diagram-stage" id="diagramStage">
+                    <svg id="diagram" class="diagram" role="img" aria-labelledby="diagramHeading"></svg>
+                </div>
+
+                <div class="module-readout" id="moduleReadout" role="status" aria-live="off"></div>
+
+                <div class="detail-panel" id="detailPanel">
+                    <div class="detail-empty" id="detailEmpty">
+                        Nothing selected yet — hover or tab into the diagram and this panel will describe the region
+                        you are on.
+                    </div>
+                    <div class="detail-body" id="detailBody" hidden>
+                        <div class="detail-head">
+                            <span class="detail-swatch" id="detailSwatch" aria-hidden="true"></span>
+                            <div>
+                                <h3 class="detail-title" id="detailTitle"></h3>
+                                <p class="detail-role" id="detailRole"></p>
+                            </div>
+                        </div>
+                        <p class="detail-description" id="detailDescription"></p>
+                        <p class="detail-detail" id="detailDetail"></p>
+                        <dl class="detail-stats" id="detailStats"></dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="breakdownCard">
+            <div class="card-header">
+                <h2 id="breakdownHeading">Region by region</h2>
+            </div>
+            <div class="card-body">
+                <p id="breakdownIntro"></p>
+                <div class="table-scroll">
+                    <table class="spec-table region-table">
+                        <caption id="regionCaption"></caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">Region</th>
+                                <th scope="col">Role</th>
+                                <th scope="col">Modules</th>
+                                <th scope="col">What it does</th>
+                            </tr>
+                        </thead>
+                        <tbody id="regionRows"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="characterCard">
+            <div class="card-header">
+                <h2 id="characterHeading">Character by character</h2>
+            </div>
+            <div class="card-body">
+                <p id="characterIntro"></p>
+                <div class="table-scroll">
+                    <table class="spec-table character-table">
+                        <caption id="characterCaption"></caption>
+                        <thead id="characterHead"></thead>
+                        <tbody id="characterRows"></tbody>
+                    </table>
+                </div>
+                <p class="hint" id="characterNote"></p>
+            </div>
+        </div>
+
+        <div class="card" id="checkCard">
+            <div class="card-header">
+                <h2 id="checkHeading">How the check value is computed</h2>
+            </div>
+            <div class="card-body">
+                <div id="checkBody"></div>
+            </div>
+        </div>
+
+        <div class="card" id="qrCard" hidden>
+            <div class="card-header">
+                <h2>QR Code specifics</h2>
+            </div>
+            <div class="card-body">
+                <div class="qr-controls">
+                    <div class="form-group">
+                        <label for="qrEcLevel">Error-correction level</label>
+                        <select id="qrEcLevel" class="form-control">
+                            <option value="L">L — recovers about 7% of codewords</option>
+                            <option value="M" selected>M — recovers about 15% of codewords</option>
+                            <option value="Q">Q — recovers about 25% of codewords</option>
+                            <option value="H">H — recovers about 30% of codewords</option>
+                        </select>
+                    </div>
+                </div>
+                <dl class="detail-stats qr-stats" id="qrStats"></dl>
+                <div class="table-scroll">
+                    <table class="spec-table">
+                        <caption>Error-correction blocks in this symbol</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">Block</th>
+                                <th scope="col">Kind</th>
+                                <th scope="col">Codewords</th>
+                                <th scope="col">Starts at</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qrBlockRows"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>The five symbologies side by side</h2>
+            </div>
+            <div class="card-body">
+                <div class="table-scroll">
+                    <table class="spec-table compare-table">
+                        <caption>Structure at a glance</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">Symbology</th>
+                                <th scope="col">Kind</th>
+                                <th scope="col">Fixed structure</th>
+                                <th scope="col">Payload</th>
+                                <th scope="col">Error detection</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>EAN-13</td>
+                                <td class="kind">1D</td>
+                                <td>101 start guard + 6 digits + 01010 centre guard + 6 digits + 101 end guard =
+                                    <strong>95 modules</strong>, plus 11 and 7 modules of quiet zone</td>
+                                <td>12 digits; the 13th is computed, and its value is carried by the parity of the left
+                                    half, not by any bar of its own</td>
+                                <td>Modulo-10 check digit (weights 3, 1, 3, 1 …), verified by the decoder</td>
+                            </tr>
+                            <tr>
+                                <td>Code 128</td>
+                                <td class="kind">1D</td>
+                                <td>Start character + data + check symbol + stop character; every symbol character is
+                                    <strong>11 modules</strong>, the stop is 13</td>
+                                <td>Any ASCII text, in one of three code sets; digits packed two to a character in set C
+                                </td>
+                                <td>Modulo-103 check symbol — a full 11-module character, not one digit</td>
+                            </tr>
+                            <tr>
+                                <td>Code 39</td>
+                                <td class="kind">1D</td>
+                                <td><code>*</code> start + characters separated by a narrow gap + <code>*</code> stop;
+                                    each character is <strong>9 elements, 3 of them wide</strong></td>
+                                <td>43 characters: 0-9, A-Z, space and <code>- . $ / + %</code></td>
+                                <td>Optional modulo-43 check character. Most Code 39 symbols carry no check at all</td>
+                            </tr>
+                            <tr>
+                                <td>ITF-14</td>
+                                <td class="kind">1D</td>
+                                <td>1010 start + digit pairs + 11101 stop, printed inside a bearer bar</td>
+                                <td>Digits only, in pairs — one digit in the bars, the next in the spaces between them
+                                </td>
+                                <td>GTIN-14 check digit, and a self-checking element structure</td>
+                            </tr>
+                            <tr>
+                                <td>QR Code</td>
+                                <td class="kind">2D</td>
+                                <td>3 finder patterns + separators + timing patterns + alignment patterns + format
+                                    information, with data and error-correction codewords filling the rest</td>
+                                <td>Any text; numeric, alphanumeric or byte mode, chosen automatically</td>
+                                <td>Reed-Solomon error <em>correction</em> at one of four levels</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>How a scanner actually reads one</h2>
+            </div>
+            <div class="card-body">
+                <p>
+                    A linear barcode is not read as an image. A scanner sweeps one or more lines across the symbol,
+                    turns each line into a sequence of black and white runs, and measures their widths. From that
+                    run-length sequence it works out the module width, then converts each group of elements into a
+                    character using the symbology's table — which is why the tables on this page are worth looking at:
+                    they <em>are</em> the decode step.
+                </p>
+                <ol class="steps">
+                    <li>
+                        <strong>Find the symbol.</strong> The quiet zone is the only thing telling the scanner that a
+                        bar here is the beginning of a symbol rather than part of the packaging artwork.
+                    </li>
+                    <li>
+                        <strong>Measure the module.</strong> The narrowest run in the symbol is one module. Everything
+                        else is judged against it — a wide element is two or three times that width, and the ratio has
+                        to match what the symbology allows.
+                    </li>
+                    <li>
+                        <strong>Convert runs to characters.</strong> A group of elements becomes a character by
+                        looking its width pattern up in the symbology table. Code 39 gives nine elements per character;
+                        Code 128 gives six element widths summing to eleven modules; ITF gives ten interleaved
+                        elements per digit pair.
+                    </li>
+                    <li>
+                        <strong>Verify.</strong> The check digit or check character is recomputed and compared. This is
+                        what turns a plausible-looking misread into a rejected scan.
+                    </li>
+                    <li>
+                        <strong>Read the direction.</strong> Because the start and end patterns are different — the
+                        EAN-13 guards, the Code 128 stop bar, the ITF stop — a decoder can tell a reversed scan from a
+                        correct one, and either reject it or reverse it deliberately.
+                    </li>
+                </ol>
+                <p>
+                    A 2D symbol is read as a grid instead. The finder patterns give the detector three corners, from
+                    which it can work out the symbol's scale, rotation and perspective; the timing patterns count the
+                    modules between them; and the format information tells the decoder which error-correction level
+                    and which of the eight masks was used, so it can unmask the grid before reading a single
+                    codeword.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Scope and notes</h2>
+            </div>
+            <div class="card-body">
+                <p>
+                    This page is an <strong>explainer</strong>, not a certified encoder. It implements the parts of
+                    EAN-13, Code 128, Code 39, ITF-14 and QR Code that make their structure visible and checkable: the
+                    module patterns, the character tables, the check-value arithmetic and the QR placement rules. It
+                    does not implement UPC/EAN extensions and add-ons, the Code 128 FNC1-4 function characters for GS1
+                    application identifiers, Code 39 full-ASCII escapes, or the full ISO/IEC 18004 mode set beyond
+                    numeric, alphanumeric and byte.
+                </p>
+                <p>
+                    <strong>Where a symbol's numbers come from.</strong> Every count on this page is derived from the
+                    encoded module sequence rather than typed in, so if the encoder and the description ever
+                    disagreed, the description would change — not the picture. The character tables themselves are the
+                    published symbology tables, written out in full in <code>barcode-1d.js</code> so they can be
+                    checked against the standard line by line.
+                </p>
+                <p>
+                    <strong>Why the wide-to-narrow ratio is a choice.</strong> Code 39 permits a ratio between 2:1 and
+                    3:1 and GS1 permits 2.25:1 to 3.0:1 for ITF, so two conformant symbols of the same value can have
+                    different widths. This page draws Code 39 and ITF at 3:1 because a module grid can only draw whole
+                    modules. That is why a Code 39 symbol here may be a little wider than one printed by another tool:
+                    both are correct, and the ratio is a print decision.
+                </p>
+                <p>
+                    <strong>What a barcode is not.</strong> A barcode is not a secret and not a signature. Anyone with
+                    a phone can read every value on this page, and the check digit is an error-detection mechanism, not
+                    a security one — it catches misreads, not forgery. Keep test payloads synthetic.
+                </p>
+                <p class="hint">
+                    To read real symbols — from a camera, an image, a PDF or a multi-page TIFF — use the
+                    <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/" data-demo-cta="scanner">online barcode scanner</a>, which decodes
+                    1D and 2D formats and reports the value, the symbology, the bounding box and the decode time.
+                    To produce symbols of your own, use the
+                    <a href="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/" data-demo-cta="generator">barcode and QR code generator</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="demo-footer">
+        <div class="demo-footer-inner">
+            <p class="disclaimer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                Every symbol on this page is encoded in your browser by the page's own JavaScript — nothing is
+                uploaded, no image is fetched and no license key is required.
+            </p>
+            <div class="footer-links">
+                <span>
+                    Compare the structure with a real decode using
+                    <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
+                        Barcode Reader</a>.
+                </span>
+                <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/" data-demo-cta="scanner">Open the barcode scanner</a>
+                <a href="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/" data-demo-cta="generator">Open the barcode generator</a>
+                <a class="btn btn-primary footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Symbology rules: linear (EAN-13, Code 128, Code 39, ITF-14) and QR Code -->
+    <script src="barcode-1d.js"></script>
+    <script src="barcode-qr.js"></script>
+    <!-- Diagram rendering, interaction and the breakdown panels -->
+    <script src="app.js"></script>
+</body>
+
+</html>

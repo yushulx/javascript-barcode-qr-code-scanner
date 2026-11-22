@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Online Barcode &amp; QR Code Generator + Stress Test Dataset</title>
+    <meta name="description"
+        content="Free online barcode and QR code generator. Encode any text as QR Code, Data Matrix, PDF417, Aztec, MaxiCode, DotCode, EAN-13, Code 128, Code 39 and more, or build a stress-test dataset of degraded images with ground-truth annotations for benchmark testing.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Free Online Barcode &amp; QR Code Generator + Stress Test Dataset | Dynamsoft Codepool Demo">
+    <meta property="og:description"
+        content="Free online barcode and QR code generator — encode text as QR Code, Data Matrix, PDF417, EAN-13, Code 128 and more, or generate a stress-test dataset with blur, rotation, perspective, glare and JPEG artifacts plus ground-truth annotations.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Barcode encoder (bwip-js) — the only third-party dependency -->
+    <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js.min.js"></script>
+
+</head>
+
+<body>
+
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
+                aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product">Free Barcode &amp; QR Code Generator</span>
+            <nav class="header-nav" aria-label="Dynamsoft">
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
+                    data-demo-cta="barcode-reader">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/" data-demo-cta="docs">Documentation</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">30-Day Free Trial</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>Free barcode and QR code generator</h1>
+        <p>
+            A free online generator running on dynamsoft.com: encode any text into 13 barcode symbologies and download the symbols as a PNG —
+            or generate a stress-test dataset of degraded barcode images with ground-truth
+            annotations, and benchmark a reader against it. Everything runs in your browser.
+        </p>
+    </div>
+
+    <div class="notice-banner" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <div>
+            <strong>Two modes.</strong>
+            <em>Single image</em> encodes the text you type and exports one clean PNG.
+            <em>Stress test dataset</em> renders many images with blur, glare, rotation,
+            perspective, noise and JPEG artifacts, keeps the expected value of every symbol
+            and exports the set as a ZIP you can drop straight into the
+            <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/" data-demo-cta="scanner">online barcode scanner</a>
+            benchmark. Nothing is uploaded either way.
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="mode-switch" role="tablist" aria-label="Generator mode">
+            <button id="modeTabSingle" class="mode-tab is-active" type="button" role="tab"
+                aria-selected="true" aria-controls="mode_single" data-mode="single">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    aria-hidden="true">
+                    <path d="M3 5v14M6.5 5v14M10 5v10M13.5 5v14M17 5v14M20.5 5v14" />
+                </svg>
+                Single image
+            </button>
+            <button id="modeTabStress" class="mode-tab" type="button" role="tab"
+                aria-selected="false" aria-controls="mode_stress" data-mode="stress">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+                Stress test dataset
+            </button>
+        </div>
+
+        <div class="mode-panel" id="mode_single">
+        <div class="card">
+            <div class="card-header">
+                <h2>Barcode settings</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="text">Text or data</label>
+                        <input type="text" id="text" class="form-control" maxlength="120"
+                            value="123456789012" placeholder="Enter the text to encode" spellcheck="false">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="barcodeType">Barcode type</label>
+                        <select id="barcodeType" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="rows">Rows</label>
+                        <input type="number" id="rows" class="form-control" min="1" max="6" step="1" value="2">
+                    </div>
+                    <div class="form-group">
+                        <label for="cols">Columns</label>
+                        <input type="number" id="cols" class="form-control" min="1" max="6" step="1" value="2">
+                    </div>
+                </div>
+
+                <p class="hint" id="typeHint"></p>
+
+                <div class="button-group">
+                    <button id="generateBtn" class="btn btn-primary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" aria-hidden="true">
+                            <path d="M3 5v14M6.5 5v14M10 5v10M13.5 5v14M17 5v14M20.5 5v14" />
+                        </svg>
+                        <span class="btn-label">Generate barcode</span>
+                    </button>
+                    <button id="randomBtn" class="btn btn-secondary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="23 4 23 10 17 10" />
+                            <polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                            <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+                        </svg>
+                        <span class="btn-label">Randomize values</span>
+                    </button>
+                    <button id="mixedBtn" class="btn btn-secondary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="16 3 21 3 21 8" />
+                            <line x1="4" y1="20" x2="21" y2="3" />
+                            <polyline points="21 16 21 21 16 21" />
+                            <line x1="15" y1="15" x2="21" y2="21" />
+                            <line x1="4" y1="4" x2="9" y2="9" />
+                        </svg>
+                        <span class="btn-label">Random types</span>
+                    </button>
+                </div>
+
+                <p class="hint">
+                    <em>Randomize values</em> encodes a fresh sample value of the selected symbology in every
+                    cell; <em>Random types</em> picks a random symbology per cell. Both leave the text field
+                    untouched. The grid is limited to 6 rows and 6 columns.
+                </p>
+
+                <div class="form-error" id="formError" role="alert"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Generated barcodes</h2>
+            </div>
+            <div class="card-body">
+                <div class="canvas-wrapper">
+                    <canvas id="barcodeCanvas" width="600" height="400"></canvas>
+                </div>
+                <p class="hint" id="renderStatus" role="status" aria-live="polite">Generating…</p>
+                <div class="button-group">
+                    <button id="downloadBtn" class="btn btn-primary" type="button" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span class="btn-label">Download PNG</span>
+                    </button>
+                    <button id="copyBtn" class="btn btn-secondary" type="button" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                        <span class="btn-label">Copy image</span>
+                    </button>
+                </div>
+                <p class="hint">
+                    Upload the downloaded PNG to the
+                    <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/" data-demo-cta="scanner">online barcode scanner</a>
+                    — it reports the decoded text, the symbology, the bounding box and the decoding time.
+                </p>
+            </div>
+        </div>
+        </div><!-- /mode_single -->
+
+        <div class="mode-panel" id="mode_stress" hidden>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Dataset settings</h2>
+                </div>
+                <div class="card-body">
+                    <p>
+                        Build a set of barcode images with known difficulty and known expected results.
+                        The seed drives every random choice — payloads, symbologies, placements and
+                        degradation values — so the same seed rebuilds the same test cases.
+                    </p>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="stressPreset">Difficulty preset</label>
+                            <select id="stressPreset" class="form-control"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="stressSeed">Seed</label>
+                            <input type="text" id="stressSeed" class="form-control" maxlength="32"
+                                value="codepool" spellcheck="false" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="stressSamples">Images</label>
+                            <input type="number" id="stressSamples" class="form-control" min="1" max="60"
+                                step="1" value="8">
+                        </div>
+                        <div class="form-group">
+                            <label for="stressSymbols">Symbols per image</label>
+                            <input type="number" id="stressSymbols" class="form-control" min="1" max="16"
+                                step="1" value="4">
+                        </div>
+                        <div class="form-group">
+                            <label for="stressSymbology">Symbologies</label>
+                            <select id="stressSymbology" class="form-control"></select>
+                        </div>
+                    </div>
+
+                    <p class="hint" id="stressPresetNote"></p>
+
+                    <label class="check-row" for="stressDifficulty">
+                        <input type="checkbox" id="stressDifficulty" class="range-check" checked>
+                        <span>
+                            <strong>Vary the difficulty per image</strong>
+                            <span class="range-hint">Draws one factor for each image and measures every
+                                range from its undamaged end by that fraction, so the set runs from nearly
+                                clean to thoroughly degraded. Switch it off to apply each range
+                                independently, which stacks every degradation on every image.</span>
+                        </span>
+                    </label>
+
+                    <div class="table-scroll">
+                        <table class="spec-table range-table">
+                            <caption>Degradations — one value is drawn per image from its range</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">On</th>
+                                    <th scope="col">Degradation</th>
+                                    <th scope="col">Min</th>
+                                    <th scope="col">Max</th>
+                                    <th scope="col">Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="degradeRows"></tbody>
+                        </table>
+                    </div>
+
+                    <p class="hint">
+                        A row with equal Min and Max applies that exact value to every image; a range
+                        varies it. Editing any value switches the preset to <em>Custom</em>. Hover a
+                        row for what the two numbers mean.
+                    </p>
+
+                    <div class="button-group">
+                        <button id="stressBuildBtn" class="btn btn-primary" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="3" y="3" width="7" height="7" rx="1" />
+                                <rect x="14" y="3" width="7" height="7" rx="1" />
+                                <rect x="3" y="14" width="7" height="7" rx="1" />
+                                <rect x="14" y="14" width="7" height="7" rx="1" />
+                            </svg>
+                            <span class="btn-label">Build dataset</span>
+                        </button>
+                        <button id="stressSeedBtn" class="btn btn-secondary" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="23 4 23 10 17 10" />
+                                <polyline points="1 20 1 14 7 14" />
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                                <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+                            </svg>
+                            <span class="btn-label">New seed</span>
+                        </button>
+                        <button id="stressResetBtn" class="btn btn-secondary" type="button">
+                            <span class="btn-label">Reload preset ranges</span>
+                        </button>
+                    </div>
+
+                    <div class="progress" id="stressProgress" hidden>
+                        <div class="progress-track">
+                            <div class="progress-bar" id="stressProgressBar"></div>
+                        </div>
+                        <span class="progress-text" id="stressProgressText">Rendering…</span>
+                    </div>
+
+                    <p class="hint" id="stressStatus" role="status" aria-live="polite"></p>
+                    <div class="form-error" id="stressError" role="alert"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Preview and expected results</h2>
+                </div>
+                <div class="card-body">
+                    <p>
+                        The preview is one image of the set, exactly as it is exported — no cell borders
+                        and no value captions, because a real capture does not have them. The table is the
+                        ground truth for that image: a reader that returns all of these values decoded
+                        everything.
+                    </p>
+
+                    <div class="canvas-wrapper canvas-wrapper--photo">
+                        <canvas id="stressCanvas" width="600" height="420"></canvas>
+                    </div>
+
+                    <div class="sample-nav">
+                        <button id="stressPrevBtn" class="btn btn-secondary btn-sm" type="button" disabled>
+                            <span class="btn-label">Previous</span>
+                        </button>
+                        <span class="sample-counter" id="stressCounter">—</span>
+                        <button id="stressNextBtn" class="btn btn-secondary btn-sm" type="button" disabled>
+                            <span class="btn-label">Next</span>
+                        </button>
+                    </div>
+
+                    <p class="hint" id="stressSampleStatus"></p>
+
+                    <div class="table-scroll">
+                        <table class="spec-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Symbology</th>
+                                    <th scope="col">Expected value</th>
+                                    <th scope="col">Visible</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stressExpected"></tbody>
+                        </table>
+                    </div>
+
+                    <p class="hint" id="stressApplied"></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Export</h2>
+                </div>
+                <div class="card-body">
+                    <p>
+                        The dataset is one ZIP: the images, plus <code>annotations.json</code> in the
+                        <code>barcode-benchmark/1.0</code> schema — the expected text, the symbology and the
+                        four corner points of every symbol, in the coordinates of the exported image.
+                        Drop the ZIP into the
+                        <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/" data-demo-cta="scanner">online barcode scanner</a>
+                        and its benchmark reports how many of the expected values were decoded.
+                    </p>
+
+                    <div class="button-group">
+                        <button id="stressZipBtn" class="btn btn-primary" type="button" disabled>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            <span class="btn-label">Download dataset ZIP</span>
+                        </button>
+                        <button id="stressJsonBtn" class="btn btn-secondary" type="button" disabled>
+                            <span class="btn-label">Download annotations.json</span>
+                        </button>
+                        <button id="stressPngBtn" class="btn btn-secondary" type="button" disabled>
+                            <span class="btn-label">Download this image</span>
+                        </button>
+                    </div>
+
+                    <p class="hint">
+                        Images are always written as PNG, so the exported file does not add a second round
+                        of compression on top of the JPEG artifacts the preset simulates. The benchmark
+                        also uses the per-image degradation values in the annotations, so a miss can be
+                        read against the conditions that caused it.
+                    </p>
+                    <div class="form-error" id="stressExportError" role="alert"></div>
+                </div>
+            </div>
+        </div><!-- /mode_stress -->
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Symbologies</h2>
+            </div>
+            <div class="card-body">
+                <table class="spec-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Symbology</th>
+                            <th scope="col">Kind</th>
+                            <th scope="col">Input</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>QR Code</td>
+                            <td class="kind">2D</td>
+                            <td>Any text or URL. Error correction is applied automatically, so the symbol still
+                                decodes when part of it is damaged.</td>
+                        </tr>
+                        <tr>
+                            <td>Data Matrix</td>
+                            <td class="kind">2D</td>
+                            <td>Any text. The compact square symbol used on small parts and labels.</td>
+                        </tr>
+                        <tr>
+                            <td>PDF417</td>
+                            <td class="kind">2D</td>
+                            <td>Any text. A stacked linear symbol, the format used on AAMVA driver licenses and
+                                many ID documents.</td>
+                        </tr>
+                        <tr>
+                            <td>Aztec Code</td>
+                            <td class="kind">2D</td>
+                            <td>Any text. Needs no quiet zone around the symbol.</td>
+                        </tr>
+                        <tr>
+                            <td>MaxiCode</td>
+                            <td class="kind">2D</td>
+                            <td>Up to 93 characters. A fixed-size hexagonal grid, originally designed for parcel
+                                sorting.</td>
+                        </tr>
+                        <tr>
+                            <td>DotCode</td>
+                            <td class="kind">2D</td>
+                            <td>Any text. A dot pattern that tolerates high-speed inkjet printing on curved
+                                surfaces.</td>
+                        </tr>
+                        <tr>
+                            <td>EAN-13</td>
+                            <td class="kind">1D</td>
+                            <td>12 digits — the 13th is the check digit and is calculated for you. A 13-digit value
+                                is accepted when its check digit is correct.</td>
+                        </tr>
+                        <tr>
+                            <td>Code 128</td>
+                            <td class="kind">1D</td>
+                            <td>Any ASCII text. The densest common linear symbology.</td>
+                        </tr>
+                        <tr>
+                            <td>Code 39</td>
+                            <td class="kind">1D</td>
+                            <td>Digits, capital letters, spaces and <code>- . $ / + %</code>. Lowercase letters are
+                                rejected.</td>
+                        </tr>
+                        <tr>
+                            <td>ITF</td>
+                            <td class="kind">1D</td>
+                            <td>Digits. An odd count is padded with a leading zero, which is what the standard
+                                prescribes.</td>
+                        </tr>
+                        <tr>
+                            <td>MSI</td>
+                            <td class="kind">1D</td>
+                            <td>Digits. A Mod-10 check digit is appended, which is what readers expect to find;
+                                it comes back as the last character of the decoded text.</td>
+                        </tr>
+                        <tr>
+                            <td>Pharmacode</td>
+                            <td class="kind">1D</td>
+                            <td>A single number from 3 to 131070. Used on pharmaceutical packaging.</td>
+                        </tr>
+                        <tr>
+                            <td>Codabar</td>
+                            <td class="kind">1D</td>
+                            <td>Digits and <code>- $ : / . +</code>, wrapped in the start and stop characters
+                                <code>A</code>, <code>B</code>, <code>C</code> or <code>D</code> — for example
+                                <code>A1234567890B</code>.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Scope and notes</h2>
+            </div>
+            <div class="card-body">
+                <p>
+                    This page is a <strong>raw symbology encoder</strong>: whatever you type is written into the
+                    symbol as-is, with no application-layer structure. It does not build GS1 element strings,
+                    AAMVA payloads, vCards or label layouts — so it is the right tool for producing test symbols
+                    for a reader, and the wrong tool for producing a compliant shipping label. For a generator
+                    that does assemble a structured payload, see the
+                    <a href="https://www.dynamsoft.com/codepool/demos/driver-license-generator/" data-demo-cta="dl-generator">driver license
+                        generator</a>, which writes AAMVA PDF417 barcodes.
+                </p>
+                <p>
+                    All 13 symbologies are produced by <a href="https://github.com/metafloor/bwip-js"
+                        data-demo-cta="bwip-js">bwip-js</a>, the JavaScript port of BWIPP. Barcodes are drawn on an
+                    HTML5 canvas at a module scale wide enough to survive a re-upload or a printout: the exported
+                    PNG is rendered at the natural symbol size, and <code>Download PNG</code> saves that canvas
+                    1:1, so you can drop it straight into a document or a scanner test.
+                </p>
+                <p>
+                    A long payload makes a wide symbol — a 120-character Code 128 is over 1300 px across even at
+                    the smallest module scale. Rather than shrinking the finished image (which would blur the
+                    bars), any oversized symbol is re-rendered at the largest whole-number module scale that
+                    fits, so the exported PNG keeps crisp, evenly spaced bars at any grid size.
+                </p>
+                <p class="hint">
+                    Nothing you type leaves the browser: the page has no upload, no server call and no storage.
+                    Keep test payloads synthetic — a barcode is not a secret, and anyone with a phone can read
+                    what you put in it.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>What the stress test does and does not measure</h2>
+            </div>
+            <div class="card-body">
+                <p>
+                    A stress image is <strong>synthesised, not photographed</strong>. The degradations model
+                    what a capture does to pixels — defocus, motion, JPEG, glare, perspective — but a
+                    synthetic blur is cleaner than a real lens and a synthetic glare has no colour fringing.
+                    Treat the numbers as a comparison between readers on identical inputs, not as a
+                    prediction of a specific camera.
+                </p>
+                <p>
+                    Symbols are re-encoded at an <strong>integer module size</strong> rather than scaled down,
+                    so a hard image has fewer real pixels per module instead of blurred ones. Below roughly
+                    1.5 px per module the symbol is past what a camera would resolve, and the preview says so:
+                    at that point a miss is expected and says nothing about the decoder.
+                </p>
+                <p>
+                    The expected value is what the symbol <em>decodes to</em>, not what was typed in. EAN-13
+                    gains a check digit and MSI gains a Mod-10 digit, so the annotation carries the longer
+                    number a decoder returns; an ITF payload is generated with an even digit count so no
+                    padding is applied; and a Codabar decoder strips the start and stop characters, so only
+                    the inner digits are expected — an expected value the encoder never produced would make a
+                    correct reader look wrong.
+                </p>
+                <p>
+                    <strong>Every expected symbol is whole.</strong> A cut barcode cannot be decoded by any
+                    reader, so counting one as a miss would measure nothing — and unlike a photograph, this
+                    generator chooses where to put the frame. The crop therefore trims the empty border the
+                    scene leaves around its symbols and stops before the edge would cut into one, which is
+                    why a loosely framed image crops a lot and a tightly framed one hardly at all. The value
+                    actually used is recorded as <code>crop</code> in the annotations, with the request beside
+                    it as <code>crop_requested</code>.
+                </p>
+                <p>
+                    The per-image degradation values are recorded in the annotations, so a miss can be read
+                    against the condition that caused it.
+                </p>
+                <p>
+                    <strong>1D symbols are rendered without human-readable text.</strong> The text sits under
+                    the bars, and the expected corner points would then include a region that no reader
+                    reports, which would make the box-overlap figure meaningless. The bars are what the test
+                    measures.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="demo-footer">
+        <div class="demo-footer-inner">
+            <p class="disclaimer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                Generated locally on an HTML5 canvas — nothing is uploaded, and no license key is required.
+                Running this page is free because it activates a Codepool license bound to dynamsoft.com.
+                The source on GitHub is a separate thing — self-hosting it needs your own Dynamsoft license.
+            </p>
+            <div class="footer-links">
+                <span>
+                    Built with plain JavaScript and
+                    <a href="https://github.com/metafloor/bwip-js" data-demo-cta="bwip-js">bwip-js</a>. Read the
+                    symbols back with
+                    <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
+                        Barcode Reader</a>.
+                </span>
+                <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/" data-demo-cta="scanner">Open the barcode scanner</a>
+                <a class="btn btn-primary footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Stress-test engine (scene composition, degradations, ground truth, ZIP) -->
+    <script src="stress.js"></script>
+    <!-- UI, grid rendering and PNG export -->
+    <script src="app.js"></script>
+</body>
+
+</html>

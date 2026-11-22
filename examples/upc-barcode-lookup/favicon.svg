@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="GS1 barcode">
+  <title>GS1 barcode</title>
+  <rect width="32" height="32" rx="6" fill="#323234"/>
+  <g fill="#FE8E14">
+    <rect x="6" y="8" width="2" height="12"/>
+    <rect x="10" y="8" width="3" height="12"/>
+    <rect x="15" y="8" width="1" height="12"/>
+    <rect x="18" y="8" width="3" height="12"/>
+    <rect x="23" y="8" width="2" height="12"/>
+  </g>
+  <rect x="6" y="23" width="20" height="2" fill="#FE8E14"/>
+</svg>
