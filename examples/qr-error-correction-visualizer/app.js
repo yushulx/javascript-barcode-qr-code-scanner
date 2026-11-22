@@ -669,6 +669,10 @@
         for (var k in damaged) {
             if (!Object.prototype.hasOwnProperty.call(damaged, k)) continue;
             var cell = parseKey(k);
+            /* A painted module whose forced value equals the intended one
+               changes nothing — the render matches the pristine symbol there,
+               so it corrupts no codeword and is not damage. */
+            if (damaged[k] === enc.matrix[cell.r][cell.c]) continue;
             damagedCount++;
             var cwIndex = enc.placement[cell.r][cell.c];
             if (cwIndex !== null) corrupted[cwIndex] = true;
@@ -1297,8 +1301,10 @@
         ctx.closePath();
         ctx.stroke();
         ctx.setLineDash([]);
-        /* Modules whose codewords needed repair. */
-        var quads = report.cellQuads || [];
+        /* Modules that differ from the recovered original — exact when the
+           symbol decoded (the corrected stream is a full reference), the
+           coarser repaired-codeword modules when it did not. */
+        var quads = (report.damageQuads && report.damageQuads.length) || report.cellQuads || [];
         if (!quads.length) return;
         ctx.fillStyle = 'rgba(180, 35, 24, 0.4)';
         for (var i = 0; i < quads.length; i++) {
@@ -1354,6 +1360,17 @@
                         ? 'This code is living on its last repairs: another scratch will do it.'
                         : 'The symbol still has real headroom left.');
             }
+            if (r.damageModules !== null && r.damageModules !== undefined && r.size) {
+                /* Same measure as the sweep: damaged modules over the whole
+                   symbol (size × size), the denominator currentDamagePct()
+                   uses on the forward half. */
+                var denom = r.size * r.size;
+                var dmgPct = r.damageModules / denom * 100;
+                verdict += ' · damage ' + (dmgPct >= 10 ? Math.round(dmgPct) : dmgPct.toFixed(1)) + '%';
+                meaning += ' The damage itself is ' + (dmgPct >= 10 ? Math.round(dmgPct) : dmgPct.toFixed(1))
+                    + '% — ' + r.damageModules + ' of ' + denom + ' modules, the sweep\'s own measure,'
+                    + ' so the two numbers read side by side.';
+            }
         } else {
             /* beyond-repair */
             verdict = 'Beyond repair';
@@ -1364,12 +1381,29 @@
                 + (ctxInfo.text
                     ? 'The reader did still return a payload — luck, not headroom.'
                     : 'A reader could not decode it either.');
+            if (r.corruptedLowerBound && r.totalCodewords) {
+                var lbPct = r.corruptedLowerBound / r.totalCodewords * 100;
+                meaning += ' The damage is at least ' + (lbPct >= 10 ? Math.round(lbPct) : lbPct.toFixed(1))
+                    + '% of the encoding region (' + r.corruptedLowerBound + ' of ' + r.totalCodewords
+                    + ' codewords) — an exact number needs a decode to compare against, and this one has none.';
+            }
         }
 
         var html = '<p class="analyzer-verdict ' + tone + '">' + escapeHtml(verdict) + '</p>';
         html += '<p class="analyzer-meaning">' + escapeHtml(meaning) + '</p>';
 
         var facts = [];
+        if (r.damageModules !== null && r.damageModules !== undefined && r.size) {
+            var denom = r.size * r.size;
+            var dmg = r.damageModules / denom * 100;
+            facts.push(['Damage', (dmg >= 10 ? Math.round(dmg) : dmg.toFixed(1)) + '% — '
+                + r.damageModules + ' of ' + denom + ' modules (the sweep\'s measure)']);
+        } else if (r.corruptedLowerBound && r.totalCodewords) {
+            var lb = r.corruptedLowerBound / r.totalCodewords * 100;
+            facts.push(['Damage', 'more than ' + (lb >= 10 ? Math.round(lb) : lb.toFixed(1))
+                + '% of the codewords — at least ' + r.corruptedLowerBound + ' of ' + r.totalCodewords
+                + '; an exact number needs a decode']);
+        }
         if (ctxInfo.text) facts.push(['Decoded payload', ctxInfo.text]);
         else if (r.reason === 'decoded') facts.push(['Decoded payload', 'the reader returned no text']);
         if (r.version) facts.push(['Symbol', 'version ' + r.version + ' — ' + r.size + '×' + r.size + ' modules']);
@@ -1423,7 +1457,10 @@
 
         els.analyzerReport.innerHTML = html;
 
-        if (r.correctedCells && r.correctedCells.length) {
+        if (r.damageQuads && r.damageQuads.length) {
+            els.analyzerLegendCount.textContent = ' — ' + r.damageQuads.length + ' module'
+                + (r.damageQuads.length === 1 ? '' : 's');
+        } else if (r.correctedCells && r.correctedCells.length) {
             els.analyzerLegendCount.textContent = ' — ' + r.correctedCells.length + ' module'
                 + (r.correctedCells.length === 1 ? '' : 's');
         } else {

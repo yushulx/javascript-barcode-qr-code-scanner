@@ -271,8 +271,8 @@
                             <img id="analyzer-img" alt="The QR image being analysed">
                             <canvas id="analyzer-overlay" aria-hidden="true"></canvas>
                         </div>
-                        <p class="analyzer-legend"><span class="swatch swatch-damaged"></span>Modules whose
-                            codewords Reed-Solomon had to repair<span id="analyzer-legend-count"></span></p>
+                        <p class="analyzer-legend"><span class="swatch swatch-damaged"></span>Damaged modules —
+                            where the sampled grid differs from the recovered original<span id="analyzer-legend-count"></span></p>
                     </div>
                     <div class="analyzer-samples">
                         <span class="label-text">Or try a generated sample</span>
@@ -333,6 +333,11 @@
                 samples every module through that grid, and hands the codeword stream to a Reed-Solomon decoder
                 that reports exactly which codewords it had to repair. When it succeeds the count is exact,
                 because the decoder knows; when it fails the page says so rather than guessing a percentage.
+                When the decode succeeds the page goes one step further: the corrected codewords are a complete
+                reference, so it rebuilds the original matrix and diffs it against what was sampled — a damage
+                percentage on the same scale as the sweep above (damaged modules over the whole symbol).
+                When the decode fails there is no reference to diff against, and the page only states a lower
+                bound: a block that would not decode carries more corrupted codewords than its budget.
                 A symbol whose finder patterns, timing patterns or format bits are gone cannot be located or
                 unmasked at all, and for those the page reports that the grid could not be locked — which is the
                 honest answer, and the same reason a scanner in a shop would not read it either.</p>

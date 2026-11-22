@@ -36,9 +36,12 @@ meter tracks the Reed-Solomon repair budget.
 - **Analyze an image you did not generate.** Drop, paste or pick any QR picture
   and the page locates the symbol — the reader's own corner points when it
   decodes, otherwise its finder-pattern locator — reads the format information,
-  and runs Reed-Solomon decoding to report how many codewords it had to repair,
-  whether the repair budget is exhausted, or that the grid could not be locked
-  at all. Nothing is uploaded.
+  and runs Reed-Solomon decoding to report how many codewords it had to repair.
+  When the image still decodes, the corrected codewords rebuild the original
+  matrix and the sampled grid is diffed against it, giving a damage percentage
+  on the same scale as the sweep. When it no longer decodes there is no
+  reference to compare against, so the page states a lower bound instead of
+  inventing a number. Nothing is uploaded.
 
 The example is plain HTML, CSS and JavaScript with no build step.
 
@@ -105,6 +108,10 @@ format information for the level and mask, samples every module through that
 grid, and hands the codeword stream to a Reed-Solomon decoder.
 
 That last step is what makes the answer exact instead of estimated: the decoder
-knows which codewords it had to repair and where they were. If it cannot finish,
-the page reports that the budget is spent; if it cannot lock the grid at all, it
-says so rather than inventing a percentage.
+knows which codewords it had to repair and where they were. When the decode
+succeeds, the corrected codewords are a complete reference — the page rebuilds
+the original matrix and counts the modules that differ, which is the same
+damage percentage the sweep logs. If it cannot finish, the page reports a
+lower bound (a block that would not decode carries more corrupted codewords
+than its budget); if it cannot lock the grid at all, it says so rather than
+inventing a percentage.
