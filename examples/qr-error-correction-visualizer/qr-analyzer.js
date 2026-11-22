@@ -181,6 +181,59 @@
         return { ok: true, corrected: L, positions: errorPos, fixed: fixed };
     }
 
+    /* Erasure decoding: the corrupted positions are KNOWN (from a reference
+       original), so each one costs one parity symbol instead of two. A block
+       with e parity codewords corrects e erasures — double the ⌊e/2⌋ error
+       budget. The unknowns are the e error magnitudes; the syndromes give a
+       Vandermonde system in them, which solveLinear already knows how to
+       crack. If unknown errors lurk outside the erasure list the verification
+       below fails and the caller falls back to failure. */
+    function rsDecodeBlockErasure(bytes, ecCount, erasures) {
+        var n = bytes.length;
+        var e = erasures.length;
+        if (!e || e > ecCount) return { ok: false, corrected: -1, positions: [] };
+
+        var synd = new Uint8Array(ecCount);
+        var i, j, s, a;
+        for (i = 0; i < ecCount; i++) {
+            s = 0;
+            a = GF_EXP[i];
+            for (j = 0; j < n; j++) s = gfMul(s, a) ^ bytes[j];
+            synd[i] = s;
+        }
+        var clean = true;
+        for (i = 0; i < ecCount; i++) if (synd[i] !== 0) { clean = false; break; }
+        if (clean) return { ok: true, corrected: 0, positions: [] };
+
+        var mat = [];
+        var rhs = [];
+        for (i = 0; i < e; i++) {
+            var row = new Array(e);
+            for (var k = 0; k < e; k++) {
+                var x = GF_EXP[(n - 1 - erasures[k]) % 255];
+                row[k] = i === 0 ? 1 : GF_EXP[(GF_LOG[x] * i) % 255];
+            }
+            mat.push(row);
+            rhs.push(synd[i]);
+        }
+        var mags = solveLinear(mat, rhs);
+        if (!mags) return { ok: false, corrected: -1, positions: [] };
+
+        var fixed = bytes.slice();
+        for (var k2 = 0; k2 < e; k2++) fixed[erasures[k2]] ^= mags[k2];
+
+        /* The corrected block must have all-zero syndromes — this is what
+           rejects the case where damage also lurks outside the erasure list. */
+        for (i = 0; i < ecCount; i++) {
+            s = 0;
+            a = GF_EXP[i];
+            for (j = 0; j < n; j++) s = gfMul(s, a) ^ fixed[j];
+            if (s !== 0) return { ok: false, corrected: -1, positions: [] };
+        }
+
+        return { ok: true, corrected: e, positions: erasures.slice(), fixed: fixed, erased: true };
+    }
+
     /* Gaussian elimination over GF(256); returns null when singular. */
     function solveLinear(mat, rhs) {
         var n = rhs.length;
@@ -847,7 +900,7 @@
         return structureCache[key];
     }
 
-    function analyze(input, BarcodeQR) {
+    function analyze(input, BarcodeQR, reference) {
         BarcodeQR = BarcodeQR || (typeof window !== 'undefined' ? window.BarcodeQR : null);
         if (!BarcodeQR) return { reason: 'no-encoder' };
 
@@ -960,8 +1013,25 @@
             }
         }
 
+        /* A trusted reference original — the page still holds the symbol it
+           generated. Where the sampled grid disagrees with it, those cells
+           become erasures: Reed-Solomon then repairs each for ONE parity
+           symbol instead of two, doubling the budget. The reference is only
+           accepted when it plausibly IS this symbol — a different QR would
+           disagree on about half the modules. */
+        var refDiff = null;
+        if (reference && reference.matrix && reference.matrix.length === size) {
+            var refCells = [];
+            for (var rr2 = 0; rr2 < size; rr2++) {
+                for (var cc2 = 0; cc2 < size; cc2++) {
+                    if (matrix[rr2][cc2] !== reference.matrix[rr2][cc2]) refCells.push([rr2, cc2]);
+                }
+            }
+            if (refCells.length <= size * size * 0.25) refDiff = refCells;
+        }
+
         for (var ci = 0; ci < candidates.length; ci++) {
-            var attempt = runDecode(candidates[ci].ecLevel, candidates[ci].mask, matrix, size, BarcodeQR);
+            var attempt = runDecode(candidates[ci].ecLevel, candidates[ci].mask, matrix, size, BarcodeQR, refDiff);
             if (!attempt) continue;
             var verified = attempt.failedBlocks.length === 0;
             /* With known format information the single candidate is the
@@ -983,13 +1053,16 @@
             report.damageModules = attempt.damageModules;
             report.damageTotal = attempt.damageTotal;
             report.corruptedLowerBound = attempt.corruptedLowerBound;
+            report.erasureCount = attempt.erasureCount;
+            report.functionDamage = attempt.functionDamage;
+            report.payload = attempt.payload;
             report.cellQuads = attempt.correctedCells.map(function (cell) {
                 return cellQuad(report.H, cell[0], cell[1]);
             });
             report.damageQuads = attempt.damageCells.map(function (cell) {
                 return cellQuad(report.H, cell[0], cell[1]);
             });
-            report.reason = verified ? 'decoded' : 'beyond-repair';
+            report.reason = verified ? (attempt.erasureCount > 0 ? 'repaired' : 'decoded') : 'beyond-repair';
             return report;
         }
 
@@ -1004,7 +1077,7 @@
         ];
     }
 
-    function runDecode(ecLevel, mask, matrix, size, BarcodeQR) {
+    function runDecode(ecLevel, mask, matrix, size, BarcodeQR, refCells) {
         var version = versionOf(size);
         var enc = structuralMaps(version, ecLevel, BarcodeQR);
         if (enc.size !== size) return null;
@@ -1020,6 +1093,37 @@
         var totalBudget = 0;
         var correctedCells = [];
         var correctedStreamIndexes = [];
+        var erasureCount = 0;
+        var functionDamage = 0;
+
+        /* Reference diffs arrive as cells. Cells carrying a codeword become
+           erasures; cells on function patterns are counted separately —
+           parity cannot repair those. */
+        var erasuresByBlock = null;
+        var refEncodingCells = null;
+        if (refCells && refCells.length) {
+            refEncodingCells = [];
+            erasuresByBlock = [];
+            for (var rb = 0; rb < st.numBlocks; rb++) erasuresByBlock.push([]);
+            var blockOfStream = {};
+            for (rb = 0; rb < st.numBlocks; rb++) {
+                var idxMap = perBlock[rb];
+                for (var k3 = 0; k3 < idxMap.length; k3++) blockOfStream[idxMap[k3]] = { block: rb, pos: k3 };
+            }
+            for (var ri = 0; ri < refCells.length; ri++) {
+                var rcell = refCells[ri];
+                var streamIndex = enc.placement[rcell[0]][rcell[1]];
+                if (streamIndex === null || streamIndex === undefined) { functionDamage++; continue; }
+                refEncodingCells.push(rcell);
+                var where = blockOfStream[streamIndex];
+                /* Two damaged modules can share one codeword — a duplicated
+                   erasure position would make the Vandermonde system
+                   singular, so keep each position once. */
+                if (where && erasuresByBlock[where.block].indexOf(where.pos) < 0) {
+                    erasuresByBlock[where.block].push(where.pos);
+                }
+            }
+        }
 
         /* The corrected stream: what the codewords should have been. With
            every block decoded this is a complete reference, so the sampled
@@ -1035,9 +1139,19 @@
         for (var b = 0; b < st.numBlocks; b++) {
             var idx = perBlock[b];
             var blockBytes = idx.map(function (p) { return stream.bytes[p]; });
-            var res = rsDecodeBlock(blockBytes, st.ecPerBlock);
             var budget = Math.floor(st.ecPerBlock / 2);
             totalBudget += budget;
+            var res = rsDecodeBlock(blockBytes, st.ecPerBlock);
+            var usedErasure = false;
+            if (!res.ok && erasuresByBlock && erasuresByBlock[b].length) {
+                /* Error decoding is out of budget — but with the damaged
+                   positions known, each costs one parity symbol instead of
+                   two. This is the repair that rescues symbols past the
+                   ordinary error budget. */
+                res = rsDecodeBlockErasure(blockBytes, st.ecPerBlock, erasuresByBlock[b]);
+                usedErasure = res.ok && res.corrected > 0;
+                if (usedErasure) erasureCount += res.corrected;
+            }
             if (!res.ok) {
                 failed.push(b);
                 blocks.push({ dataCount: st.dataCounts[b], ecCount: st.ecPerBlock, budget: budget, corrected: null, ok: false });
@@ -1048,7 +1162,7 @@
             }
             totalCorrected += res.corrected;
             corruptedLowerBound += res.corrected;
-            blocks.push({ dataCount: st.dataCounts[b], ecCount: st.ecPerBlock, budget: budget, corrected: res.corrected, ok: true });
+            blocks.push({ dataCount: st.dataCounts[b], ecCount: st.ecPerBlock, budget: budget, corrected: res.corrected, ok: true, erased: usedErasure });
             /* res.fixed is absent when the block was already clean — the
                sampled bytes are then their own reference. */
             if (res.fixed) {
@@ -1063,13 +1177,17 @@
         }
 
         /* Modules whose sampled value differs from the recovered original.
-           Bit m2 of a codeword is its m2-th cell, most significant first —
-           the order readCodewords assembled the byte in. Remainder bits
-           belong to no codeword, so like the forward counter they are not
-           part of the total. */
+           With a reference the diff IS the answer; otherwise it comes from
+           the corrected stream. Bit m2 of a codeword is its m2-th cell, most
+           significant first — the order readCodewords assembled the byte in.
+           Remainder bits belong to no codeword, so like the forward counter
+           they are not part of the total. */
         var damageTotal = 0;
         for (var si2 = 0; si2 < stream.bytes.length; si2++) damageTotal += (stream.cellsOf[si2] || []).length;
-        if (!failed.length) {
+        if (refEncodingCells) {
+            damageCells = refEncodingCells;
+            damageModules = refEncodingCells.length;
+        } else if (!failed.length) {
             damageModules = 0;
             for (var si = 0; si < stream.bytes.length; si++) {
                 var expect = fixedStream[si];
@@ -1100,8 +1218,60 @@
             damageCells: damageCells,
             damageModules: damageModules,
             damageTotal: damageTotal,
-            corruptedLowerBound: corruptedLowerBound
+            corruptedLowerBound: corruptedLowerBound,
+            erasureCount: erasureCount,
+            functionDamage: functionDamage,
+            dataCodewords: st.dataCodewords,
+            payload: failed.length ? null : parseDataPayload(fixedStream, st, version)
         };
+    }
+
+    /* Read the message text out of the data codewords. The bit stream is the
+       data codewords in stream order (block b's k-th codeword sits at stream
+       index k·numBlocks + b), most significant bit first. Byte mode covers
+       URLs and free text; numeric and alphanumeric get quick parsers too. */
+    function parseDataPayload(data, st, version) {
+        var countBits = version < 10 ? { 1: 10, 2: 9, 4: 8, 8: 8 } : version < 27 ? { 1: 12, 2: 11, 4: 16, 8: 10 } : { 1: 14, 2: 13, 4: 16, 8: 12 };
+        var bit = 0;
+        var totalBits = st.dataCodewords * 8;
+        function take(n) {
+            var v = 0;
+            for (var i = 0; i < n; i++) {
+                if (bit >= totalBits) return null;
+                v = (v << 1) | ((data[bit >> 3] >> (7 - (bit & 7))) & 1);
+                bit++;
+            }
+            return v;
+        }
+        var mode = take(4);
+        var ALNUM = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
+        if (mode === 4) {
+            var len = take(countBits[4]);
+            var bytes = [];
+            for (var i = 0; i < len; i++) bytes.push(take(8));
+            try { return decodeURIComponent(escape(String.fromCharCode.apply(null, bytes))); }
+            catch (e) { return String.fromCharCode.apply(null, bytes); }
+        }
+        if (mode === 1) {
+            var digits = take(countBits[1]);
+            var out = '';
+            while (digits >= 3) { out += String(take(10)); digits -= 3; }
+            if (digits === 2) out += String(take(7));
+            else if (digits === 1) out += String(take(4));
+            return out;
+        }
+        if (mode === 2) {
+            var chars = take(countBits[2]);
+            var out2 = '';
+            while (chars >= 2) {
+                var v2 = take(11);
+                out2 += ALNUM[Math.floor(v2 / 45)] + ALNUM[v2 % 45];
+                chars -= 2;
+            }
+            if (chars === 1) out2 += ALNUM[take(6)];
+            return out2;
+        }
+        return null;
     }
 
     function versionOf(size) {
@@ -1113,6 +1283,7 @@
         locateSymbol: locateSymbol,
         /* Exposed for the test suite and for the sample generator. */
         rsDecodeBlock: rsDecodeBlock,
+        rsDecodeBlockErasure: rsDecodeBlockErasure,
         readFormat: readFormat,
         zigzagCells: zigzagCells,
         _internal: {

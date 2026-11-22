@@ -41,7 +41,11 @@ meter tracks the Reed-Solomon repair budget.
   matrix and the sampled grid is diffed against it, giving a damage percentage
   on the same scale as the sweep. When it no longer decodes there is no
   reference to compare against, so the page states a lower bound instead of
-  inventing a number. Nothing is uploaded.
+  inventing a number — unless the page still holds the original that
+  generated it. Then the differing cells become erasures: Reed-Solomon
+  spends one parity symbol per erasure instead of two, so symbols past the
+  ordinary ⌊EC/2⌋ error budget are repaired, up to the full parity count.
+  Nothing is uploaded.
 
 The example is plain HTML, CSS and JavaScript with no build step.
 
@@ -115,3 +119,11 @@ damage percentage the sweep logs. If it cannot finish, the page reports a
 lower bound (a block that would not decode carries more corrupted codewords
 than its budget); if it cannot lock the grid at all, it says so rather than
 inventing a percentage.
+
+One repair goes further: when the page still holds the original that
+generated the image, the differing cells are known by name, and Reed-Solomon
+switches from error decoding to erasure decoding — one parity symbol per
+erasure instead of two. A block of `e` parity codewords corrects `e`
+erasures rather than ⌊e/2⌋ errors, so symbols past the ordinary budget come
+back with their payload recovered. Without a reference that trick is
+impossible: nothing tells the decoder where the damage is.

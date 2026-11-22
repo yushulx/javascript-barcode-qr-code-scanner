@@ -281,8 +281,8 @@
                                 code</button>
                             <button type="button" class="btn btn-secondary btn-sm" data-sample="scars">Damaged,
                                 still repairable</button>
-                            <button type="button" class="btn btn-secondary btn-sm" data-sample="dead">Beyond
-                                repair</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-sample="dead">Past
+                                the budget</button>
                         </div>
                     </div>
                 </div>
@@ -337,7 +337,13 @@
                 reference, so it rebuilds the original matrix and diffs it against what was sampled — a damage
                 percentage on the same scale as the sweep above (damaged modules over the whole symbol).
                 When the decode fails there is no reference to diff against, and the page only states a lower
-                bound: a block that would not decode carries more corrupted codewords than its budget.
+                bound: a block that would not decode carries more corrupted codewords than its budget —
+                <em>unless the page still holds the original you generated</em>. Then the differing cells are
+                known by name, and Reed-Solomon switches from error decoding (each repair costs two parity
+                symbols) to erasure decoding (one each): a block of <code>e</code> parity codewords can correct
+                <code>e</code> erasures instead of ⌊e/2⌋ errors, so symbols past the ordinary budget come back.
+                A stranger's image past its budget cannot be rescued this way — without a reference nothing
+                tells the decoder where the damage is.
                 A symbol whose finder patterns, timing patterns or format bits are gone cannot be located or
                 unmasked at all, and for those the page reports that the grid could not be locked — which is the
                 honest answer, and the same reason a scanner in a shop would not read it either.</p>
