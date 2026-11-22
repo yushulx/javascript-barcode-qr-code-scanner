@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Barcode Scanning with WebGL</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", Verdana, Arial, sans-serif;
+      margin: 0;
+      padding: 16px;
+      color: #222;
+    }
+
+    h1 {
+      font-size: 1.4em;
+      margin: 8px 0 16px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    select,
+    button {
+      font-size: 14px;
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    button {
+      cursor: pointer;
+      background: #ff8e14;
+      color: #fff;
+      border: 1px solid #e07b00;
+    }
+
+    button:disabled {
+      background: #ccc;
+      border-color: #bbb;
+      cursor: not-allowed;
+    }
+
+    button.active {
+      background: #0a7d00;
+      border-color: #086600;
+    }
+
+    /* Responsive media row: video + preview canvas stack on narrow screens */
+    .row {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .panel {
+      flex: 1 1 320px;
+      min-width: 0;
+      display: none;
+    }
+
+    #videoview {
+      position: relative;
+      width: 100%;
+      background: #000;
+      line-height: 0;
+    }
+
+    /* Video keeps its aspect ratio; the overlay canvas is stretched over the
+       same box, so both share identical displayed dimensions. */
+    #videoContainer {
+      position: relative;
+      display: block;
+      width: 100%;
+      height: auto;
+      z-index: 1;
+    }
+
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    #pcCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: #000;
+    }
+
+    #barcode_result {
+      margin-top: 12px;
+      min-height: 24px;
+      font-size: 15px;
+      word-break: break-all;
+      color: #0a7d00;
+    }
+
+    /* Live scanning indicator so the user can tell the loop is alive even
+       while a slow color decode is in flight. */
+    #scan_status {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #888;
+      min-height: 18px;
+    }
+
+    #scan_status.active {
+      color: #ff8e14;
+    }
+
+    #scan_status.active::before {
+      content: "\25CF\ "; /* filled circle */
+      color: #2ecc40;
+    }
+  </style>
+
+</head>
+
+<body>
+  <h1>Web Barcode Scanning with WebGL</h1>
+  <img src="loading.gif" style="margin-top:10px" id="anim-loading">
+  <div class="controls">
+    <div class="select">
+      <label for="videoSource">Video source: </label>
+      <select id="videoSource"></select>
+    </div>
+    <button id="bt-webgl">GPU Optimization</button>
+    <button id="bt-canvas">CPU Only</button>
+  </div>
+  <div class="row">
+    <div class="panel" id="videoPanel">
+      <div id="videoview">
+        <video muted autoplay id="videoContainer" playsinline="true"></video>
+        <canvas id="overlay"></canvas>
+      </div>
+    </div>
+    <div class="panel" id="previewPanel"><canvas id="pcCanvas"></canvas></div>
+  </div>
+  <div id="barcode_result"></div>
+  <div id="scan_status"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.2100/dist/dbr.bundle.js"></script>
+  <script src="webgl-utils.js"></script>
+  <script src="m4.js"></script>
+  <script id="drawImage-vertex-shader" type="x-shader/x-vertex">  attribute vec4 a_position;
+  attribute vec2 a_texcoord;
+  
+  uniform mat4 u_matrix;
+  
+  varying vec2 v_texcoord;
+  
+  void main() {
+     gl_Position = u_matrix * a_position;
+     v_texcoord = a_texcoord;
+  }
+  </script>
+  <!-- https://gist.github.com/Volcanoscar/4a9500d240497d3c0228f663593d167a -->
+  <script id="drawImage-fragment-shader" type="x-shader/x-fragment">
+  precision mediump float;
+  
+  varying vec2 v_texcoord;
+  
+  uniform sampler2D u_texture;
+  uniform float u_colorFactor;
+  
+  void main() {
+    vec4 sample =  texture2D(u_texture, v_texcoord);
+    float grey = 0.21 * sample.r + 0.71 * sample.g + 0.07 * sample.b;
+    gl_FragColor = vec4(sample.r * u_colorFactor + grey * (1.0 - u_colorFactor), sample.g * u_colorFactor + grey * (1.0 - u_colorFactor), sample.b * u_colorFactor + grey * (1.0 - u_colorFactor), 1.0);
+  }
+  </script>
+  <script src="util.js?v=8"></script>
+</body>
+
+</html>

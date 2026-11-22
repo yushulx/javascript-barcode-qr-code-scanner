@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WebGL vs CPU decode bench</title>
+  <style>
+    body { font-family: sans-serif; padding: 16px; }
+    pre { background: #111; color: #9f9; padding: 12px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>GPU vs CPU decode bench (no camera)</h1>
+  <p>Uses grayscale-image/640x480.jpg. Does not open the camera.</p>
+  <pre id="out">loading…</pre>
+  <canvas id="glc" width="640" height="480" style="display:none"></canvas>
+  <canvas id="c2d" width="640" height="480" style="display:none"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.2100/dist/dbr.bundle.js"></script>
+  <script src="webgl-utils.js"></script>
+  <script src="m4.js"></script>
+  <script id="drawImage-vertex-shader" type="x-shader/x-vertex">
+  attribute vec4 a_position;
+  attribute vec2 a_texcoord;
+  uniform mat4 u_matrix;
+  varying vec2 v_texcoord;
+  void main() {
+     gl_Position = u_matrix * a_position;
+     v_texcoord = a_texcoord;
+  }
+  </script>
+  <script id="drawImage-fragment-shader" type="x-shader/x-fragment">
+  precision mediump float;
+  varying vec2 v_texcoord;
+  uniform sampler2D u_texture;
+  uniform float u_colorFactor;
+  void main() {
+    vec4 sample = texture2D(u_texture, v_texcoord);
+    float grey = 0.21 * sample.r + 0.71 * sample.g + 0.07 * sample.b;
+    gl_FragColor = vec4(sample.r * u_colorFactor + grey * (1.0 - u_colorFactor), sample.g * u_colorFactor + grey * (1.0 - u_colorFactor), sample.b * u_colorFactor + grey * (1.0 - u_colorFactor), 1.0);
+  }
+  </script>
+  <script>
+    const out = document.getElementById('out');
+    const log = (s) => { out.textContent += s + '\n'; };
+    out.textContent = '';
+
+    Dynamsoft.License.LicenseManager.initLicense("DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==");
+
+    function avg(arr) { return arr.reduce((a,b)=>a+b,0) / arr.length; }
+
+    async function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+
+    async function main() {
+      log('init SDK…');
+      const router = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+      const settings = await router.getSimplifiedSettings('ReadBarcodes_SpeedFirst');
+      settings.barcodeSettings.deblurLevel = 0;
+      await router.updateSettings('ReadBarcodes_SpeedFirst', settings);
+
+      const canvas2d = document.getElementById('c2d');
+      const ctx2d = canvas2d.getContext('2d', { willReadFrequently: true });
+      const canvasWebGL = document.getElementById('glc');
+      const gl = canvasWebGL.getContext('webgl') || canvasWebGL.getContext('experimental-webgl');
+      if (!gl) {
+        log('NO WEBGL');
+        return;
+      }
+      const program = webglUtils.createProgramFromScripts(gl, ['drawImage-vertex-shader', 'drawImage-fragment-shader']);
+      const positionLocation = gl.getAttribLocation(program, 'a_position');
+      const texcoordLocation = gl.getAttribLocation(program, 'a_texcoord');
+      const matrixLocation = gl.getUniformLocation(program, 'u_matrix');
+      const textureLocation = gl.getUniformLocation(program, 'u_texture');
+      const colorFactorLocation = gl.getUniformLocation(program, 'u_colorFactor');
+      const positionBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 0,1, 1,0, 1,0, 0,1, 1,1]), gl.STATIC_DRAW);
+      const texcoordBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 0,1, 1,0, 1,0, 0,1, 1,1]), gl.STATIC_DRAW);
+      const tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.useProgram(program);
+      gl.uniform1f(colorFactorLocation, 0.0);
+
+      async function benchOne(src) {
+        const img = await loadImage(src);
+        const width = img.width;
+        const height = img.height;
+        canvas2d.width = width;
+        canvas2d.height = height;
+        canvasWebGL.width = width;
+        canvasWebGL.height = height;
+        log('image: ' + src + ' ' + width + 'x' + height);
+
+        function gpuGrab() {
+          const t0 = performance.now();
+          gl.bindTexture(gl.TEXTURE_2D, tex);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+          gl.viewport(0, 0, width, height);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+          gl.useProgram(program);
+          gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+          gl.enableVertexAttribArray(positionLocation);
+          gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+          gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+          gl.enableVertexAttribArray(texcoordLocation);
+          gl.vertexAttribPointer(texcoordLocation, 2, gl.FLOAT, false, 0, 0);
+          let matrix = m4.orthographic(0, gl.canvas.width, gl.canvas.height, 0, -1, 1);
+          matrix = m4.translate(matrix, 0, 0, 0);
+          matrix = m4.scale(matrix, width, height, 1);
+          gl.uniformMatrix4fv(matrixLocation, false, matrix);
+          gl.uniform1i(textureLocation, 0);
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+          const rgba = new Uint8Array(width * height * 4);
+          gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+          const gray = new Uint8Array(width * height);
+          let gi = 0;
+          for (let i = 0; i < rgba.length; i += 4) gray[gi++] = rgba[i];
+          return { ms: performance.now() - t0, gray };
+        }
+
+        function cpuGrab() {
+          const t0 = performance.now();
+          ctx2d.drawImage(img, 0, 0, width, height);
+          const id = ctx2d.getImageData(0, 0, width, height);
+          const bytes = new Uint8Array(id.data);
+          return { ms: performance.now() - t0, bytes };
+        }
+
+        const warmup = 3;
+        const rounds = 15;
+        const gpuBuf = [], gpuDec = [], cpuBuf = [], cpuDec = [];
+        let lastGpuText = '', lastCpuText = '';
+
+        log('warmup…');
+        for (let i = 0; i < warmup; i++) {
+          const g = gpuGrab();
+          await router.capture({ bytes: g.gray, width, height, stride: width, format: Dynamsoft.Core.EnumImagePixelFormat.IPF_GRAYSCALED }, 'ReadBarcodes_SpeedFirst');
+          const c = cpuGrab();
+          await router.capture({ bytes: c.bytes, width, height, stride: width * 4, format: Dynamsoft.Core.EnumImagePixelFormat.IPF_ABGR_8888 }, 'ReadBarcodes_SpeedFirst');
+        }
+
+        log('GPU grayscale rounds…');
+        for (let i = 0; i < rounds; i++) {
+          const g = gpuGrab();
+          gpuBuf.push(g.ms);
+          const t1 = performance.now();
+          const result = await router.capture({ bytes: g.gray, width, height, stride: width, format: Dynamsoft.Core.EnumImagePixelFormat.IPF_GRAYSCALED }, 'ReadBarcodes_SpeedFirst');
+          gpuDec.push(performance.now() - t1);
+          const items = (result.items || []).filter(it => it.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE);
+          lastGpuText = items.map(it => it.text).join(', ') || '(none)';
+        }
+
+        log('CPU color rounds…');
+        for (let i = 0; i < rounds; i++) {
+          const c = cpuGrab();
+          cpuBuf.push(c.ms);
+          const t1 = performance.now();
+          const result = await router.capture({ bytes: c.bytes, width, height, stride: width * 4, format: Dynamsoft.Core.EnumImagePixelFormat.IPF_ABGR_8888 }, 'ReadBarcodes_SpeedFirst');
+          cpuDec.push(performance.now() - t1);
+          const items = (result.items || []).filter(it => it.type === Dynamsoft.Core.EnumCapturedResultItemType.CRIT_BARCODE);
+          lastCpuText = items.map(it => it.text).join(', ') || '(none)';
+        }
+
+        const gpuBufAvg = avg(gpuBuf);
+        const gpuDecAvg = avg(gpuDec);
+        const cpuBufAvg = avg(cpuBuf);
+        const cpuDecAvg = avg(cpuDec);
+        log('');
+        log('=== RESULT (' + rounds + ' rounds, ' + width + 'x' + height + ') ===');
+        log('GPU buffer avg:  ' + gpuBufAvg.toFixed(2) + ' ms');
+        log('GPU decode avg:  ' + gpuDecAvg.toFixed(2) + ' ms');
+        log('GPU total avg:   ' + (gpuBufAvg + gpuDecAvg).toFixed(2) + ' ms  texts=' + lastGpuText);
+        log('CPU buffer avg:  ' + cpuBufAvg.toFixed(2) + ' ms');
+        log('CPU decode avg:  ' + cpuDecAvg.toFixed(2) + ' ms');
+        log('CPU total avg:   ' + (cpuBufAvg + cpuDecAvg).toFixed(2) + ' ms  texts=' + lastCpuText);
+        log('decode speedup (CPU/GPU): ' + (cpuDecAvg / gpuDecAvg).toFixed(2) + 'x');
+        log('total speedup  (CPU/GPU): ' + ((cpuBufAvg + cpuDecAvg) / (gpuBufAvg + gpuDecAvg)).toFixed(2) + 'x');
+        log('');
+      }
+
+      await benchOne('bench-640x480.png');
+      await benchOne('bench-1280x720.png');
+      log('DONE');
+    }
+
+    main().catch((e) => { log('ERROR ' + (e && e.message ? e.message : e)); console.error(e); });
+  </script>
+</body>
+</html>
