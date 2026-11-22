@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online VIN Barcode Generator | Dynamsoft</title>
+    <meta name="description"
+        content="Online VIN barcode generator. Build a valid 17-character VIN — the North American check digit calculated as you type, or a random VIN at the click of a button — and render it as Code 39, Code 128, QR Code or Data Matrix. Download the PNG to test a VIN scanner.">
+
+    <!--
+      ASSET VERSION (?v=): the site serves these files with
+      Cache-Control: max-age=86400, so browsers trust their cached copy for a
+      full day. Bump the ?v= value on EVERY change to styles.css, app.js or
+      vin-model.js, otherwise returning visitors keep the stale copy for up
+      to 24h.
+    -->
+    <link rel="icon" href="favicon.svg?v=20261010b" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css?v=20261010c">
+    <!-- Barcode encoder (bwip-js / BWIPP) — the only third-party dependency -->
+    <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js.min.js"></script>
+    <!-- Shared VIN model: check digit, year codes, regions, random generator -->
+    <script src="vin-model.js?v=20261010a"></script>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/" aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg?v=20261010b" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product">VIN Generator</span>
+            <nav class="header-nav" aria-label="Dynamsoft">
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/">Documentation</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">30-Day
+                    Free Trial</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>VIN barcode generator</h1>
+        <p>
+            Build a valid VIN and render it the way a real label carries it — Code 39 in North America,
+            Code 128 or a 2D symbol elsewhere — with the check digit handled for you.
+        </p>
+    </div>
+
+    <div class="notice-banner" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <div>
+            <strong>Barcodes only — no OCR.</strong>
+            This generator produces the barcode symbol a VIN label carries. Dynamsoft's scanner reads
+            VINs from barcodes (Code 39, Code 128, QR Code, Data Matrix); the stamped or engraved VIN
+            characters themselves cannot be recognized with OCR. Feed the downloaded PNG to the
+            <a href="https://www.dynamsoft.com/codepool/demos/vin-barcode-scanner/">online VIN barcode
+                scanner</a>
+            to test the round trip.
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>VIN</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-row">
+                    <div class="form-group vin-input-group">
+                        <label for="vin-input">Vehicle Identification Number</label>
+                        <input id="vin-input" class="form-control vin-input" type="text" maxlength="18"
+                            autocomplete="off" spellcheck="false" placeholder="e.g. 1HGCM82633A004352" />
+                    </div>
+                    <div class="form-group check-group" id="check-line" hidden>
+                        <span class="field-label">Check digit (position 9)</span>
+                        <div class="check-line">
+                            <span id="check-tag" class="check-tag is-ok">ok</span>
+                            <button type="button" class="btn btn-secondary is-fix" id="fix-check-button" hidden>
+                                Fix → <span id="expected-check"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="hint">
+                    17 characters. The letters I, O and Q never appear in a VIN, and position 9 holds the
+                    North American check digit — it is recalculated as you type. The barcode renders on
+                    every keystroke; there is nothing to submit.
+                </p>
+
+                <div class="button-group">
+                    <button id="random-vin-button" class="btn btn-secondary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="23 4 23 10 17 10" />
+                            <polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                            <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+                        </svg>
+                        <span class="btn-label">Random VIN</span>
+                    </button>
+                    <button id="download-button" class="btn btn-secondary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span class="btn-label">Download PNG</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Standard</h2>
+            </div>
+            <div class="card-body">
+                <div class="chip-row" id="standard-row" role="group" aria-label="VIN standard"></div>
+                <p class="hint" id="standard-hint"></p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Symbology</h2>
+            </div>
+            <div class="card-body">
+                <div class="chip-row" id="symbology-row" role="group" aria-label="Barcode symbology"></div>
+                <p class="hint" id="symbology-hint"></p>
+                <label class="option-line" id="include-text-wrap">
+                    <input type="checkbox" id="include-text" checked>
+                    <span>Human-readable text under the symbol</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Preview</h2>
+            </div>
+            <div class="card-body">
+                <div class="canvas-wrapper">
+                    <canvas id="barcode-canvas" aria-label="The rendered VIN barcode"></canvas>
+                </div>
+                <p class="hint" id="render-status" role="status" aria-live="polite">
+                    Type a VIN — the barcode renders as you type.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>What the VIN says</h2>
+            </div>
+            <div class="card-body">
+                <table class="spec-table">
+                    <tbody id="vin-facts"></tbody>
+                </table>
+                <div id="vin-notes"></div>
+                <p class="hint">
+                    Copy this as JSON for a test fixture:
+                    <button id="copy-gen-button" class="btn btn-secondary btn-copy" type="button">Copy
+                        JSON</button>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="demo-footer">
+        <div class="demo-footer-inner">
+            <p class="disclaimer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                Encoded locally on an HTML5 canvas with
+                <a href="https://github.com/metafloor/bwip-js">bwip-js</a> — nothing is
+                uploaded and no licence key is required. This page runs entirely in your browser.
+            </p>
+            <div class="footer-links">
+                <span>
+                    Pair it with the
+                    <a href="https://www.dynamsoft.com/codepool/demos/vin-barcode-scanner/">online VIN barcode
+                        scanner</a> — it reads barcodes only, never OCR.
+                </span>
+                <a class="btn btn-primary footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">Get
+                    a 30-day free trial license</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- UI: standard presets, symbologies, rendering and the VIN facts table -->
+    <script src="app.js?v=20261010b"></script>
+</body>
+
+</html>
