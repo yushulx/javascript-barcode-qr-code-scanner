@@ -1,9 +1,9 @@
 # Barcode Scanner in JavaScript
-A modern web application that scans **1D/2D barcodes** within a web browser. This implementation features **multi-SDK support**: use **ZXing (free, open-source)** or choose from four commercial SDKs - **Dynamsoft Capture Vision**, **Strich.io**, **Scanbot**, or **Scandit**. The app supports scanning from image files, video files, and live camera with automatic detection - no manual start/stop required.
+A modern web application that scans **1D/2D barcodes** within a web browser. This implementation features **multi-SDK support**: use **ZXing (free, open-source)** or choose from three commercial SDKs - **Dynamsoft Capture Vision**, **Scanbot**, or **Scandit**. The app supports scanning from image files, video files, and live camera with automatic detection - no manual start/stop required.
 
 ## Features
 - 🆓 **Free barcode scanning** with ZXing WASM (no license required)
-- ⚡ **Multiple commercial SDKs** - Dynamsoft, Strich.io, Scanbot, Scandit
+- ⚡ **Multiple commercial SDKs** - Dynamsoft, Scanbot, Scandit
 - 📷 **Real-time barcode scanning** using native browser camera access
 - 🎬 **Video file scanning** - upload MP4/WebM/MOV and scan frame-by-frame automatically
 - 📁 **Image file scanning** - upload JPG/PNG/GIF and scan instantly
@@ -12,7 +12,7 @@ A modern web application that scans **1D/2D barcodes** within a web browser. Thi
 - 🎨 **Modern UI** with gradient theme and smooth animations
 - 📋 **Clipboard paste support** - paste images directly from clipboard
 - 🔄 **Multiple camera support** with device selection
-- 🔀 **SDK switching** - choose between 5 different barcode SDKs
+- 🔀 **SDK switching** - choose between 4 different barcode SDKs
 - ▶️ **Auto-detection** - scanning starts automatically, no button to press
 
 ## SDK Options
@@ -26,11 +26,6 @@ A modern web application that scans **1D/2D barcodes** within a web browser. Thi
 - **High-performance** barcode recognition
 - Advanced algorithms for difficult barcodes
 - Obtain a [30-day free trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform)
-
-### Strich.io
-- Fast JavaScript/WASM barcode scanner optimized for web
-- Clean API with easy integration
-- Obtain a license from [Strich Portal](https://portal.strich.io)
 
 ### Scanbot
 - Reliable barcode scanning with WASM engine
