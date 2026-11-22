@@ -488,6 +488,9 @@ code,
    --------------------------------------------------------------------------- */
 
 .workspace {
+    /* Shared height for the three panes. Tall enough to read a page, short
+       enough that the row still sits inside a laptop viewport. */
+    --pane-h: clamp(460px, 76vh, 800px);
     display: grid;
     grid-template-columns: 232px minmax(0, 1fr) 336px;
     gap: 20px;
@@ -504,26 +507,18 @@ code,
 }
 
 .files-pane,
+.preview-pane,
 .info-pane {
+    /* One height for all three: switching files must not move the toolbar, the
+       list or the details under the pointer. Anything longer scrolls inside its
+       own pane. */
     position: sticky;
     top: 84px;
-    max-height: calc(100vh - 108px);
-    display: flex;
-    flex-direction: column;
-}
-
-.preview-pane {
-    display: flex;
-    flex-direction: column;
-    /* The viewer stays put while the page scrolls under it: the toolbar and the
-       page indicator are useless if they scroll away from the page they describe. */
-    position: sticky;
-    top: 84px;
-    /* Height follows the page instead of the viewport, so a wide screenshot
-       does not leave half a screen of empty stage beneath it. Tall pages are
-       still clamped and scroll inside. */
-    height: auto;
+    height: var(--pane-h);
     max-height: calc(100vh - 104px);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .pane-head {
@@ -750,8 +745,8 @@ code,
 
 .preview-stage {
     position: relative;
-    flex: 0 1 auto;
-    min-height: 160px;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: auto;
     padding: 18px;
     background: #f1f1ef;
@@ -790,6 +785,15 @@ code,
     display: flex;
     align-items: flex-start;
     justify-content: center;
+}
+
+/* Centre a picture that is smaller than the stage, without pushing the top of a
+   bigger one out of reach: auto margins collapse to zero on overflow, whereas
+   align-items:center would clip the overflow in both directions. */
+.stage-center > .stage-rotor,
+.stage-center > canvas.page-canvas {
+    margin-top: auto;
+    margin-bottom: auto;
 }
 
 /* Tables and text go edge to edge: with the stage padding gone, the sticky
@@ -1922,6 +1926,7 @@ code,
     .info-pane {
         grid-column: 1 / -1;
         position: static;
+        height: auto;
         max-height: none;
     }
 
@@ -1941,6 +1946,7 @@ code,
 
     .files-pane {
         position: static;
+        height: auto;
         max-height: none;
     }
 
