@@ -6,7 +6,7 @@ https://github.com/user-attachments/assets/9347568d-8283-4ef4-89f8-82aeec032143
 
 
 ## Online Demo
-https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_converter/
+[https://yushulx.me/javascript-barcode-qr-code-scanner/examples/document_converter/](https://www.dynamsoft.com/codepool/demos/document-converter/)
 
 ## Features
 
