@@ -30,6 +30,13 @@
     var MAX_TEXT_BYTES = 8 * 1024 * 1024;
     var MAX_OFFICE_BYTES = 60 * 1024 * 1024;
     var MAX_HASH_BYTES = 64 * 1024 * 1024;
+
+    /* Cache key for the bundled samples. Keep it in step with the ?v= on
+       app.js in index.html and bump both when the files in samples/ change: a
+       404 that was cached before a deploy must not outlive the fix. (It did
+       once — IIS had no .yuv MIME mapping, and browsers held the 404 even after
+       the mapping was added.) */
+    var ASSET_V = '20261021m';
     var TEXT_LINE_CAP = 8000;
     var CSV_ROWS_PER_PAGE = 50;
     var XLSX_ROWS_PER_PAGE = 40;
@@ -2981,7 +2988,7 @@
         var label = chip.textContent;
         chip.disabled = true;
         chip.textContent = 'Loading…';
-        fetch('samples/' + name).then(function (r) {
+        fetch('samples/' + name + '?v=' + ASSET_V).then(function (r) {
             if (!r.ok) { throw new Error('HTTP ' + r.status); }
             return r.blob();
         }).then(function (blob) {
@@ -2989,8 +2996,10 @@
             addFiles([file]);
             A.action('sample_load', { sample: name });
         }).catch(function (err) {
-            chip.textContent = 'Failed';
-            chip.title = err.message;
+            /* Leave the failed chip clickable: the usual cause is a transient
+               network or server state, and a reload should not be required. */
+            chip.textContent = 'Retry';
+            chip.title = name + ' — ' + ((err && err.message) || 'load failed') + '. Click to try again.';
         }).then(function () {
             chip.disabled = false;
             if (chip.textContent === 'Loading…') { chip.textContent = label; }
