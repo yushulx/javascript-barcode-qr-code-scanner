@@ -4,93 +4,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Online Driver License Generator | Dynamsoft Codepool Demo</title>
+    <title>Free Online Driver License Generator | Dynamsoft Codepool Demo</title>
     <meta name="description"
         content="Free online AAMVA driver license generator. Build a synthetic PDF417 driver's license barcode for 71 US, Canadian and Mexican jurisdictions, preview the card and download a PNG to test a driver license scanner.">
     <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/driver-license-generator/">
     <meta name="robots" content="index, follow">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Online Driver License Generator | Dynamsoft Codepool Demo">
+    <meta property="og:title" content="Free Online Driver License Generator | Dynamsoft Codepool Demo">
     <meta property="og:description"
-        content="Build a synthetic AAMVA PDF417 driver's license barcode for 71 US, Canadian and Mexican jurisdictions and download a PNG for scanner testing.">
+        content="Free online AAMVA driver license generator. Build a synthetic PDF417 driver's license barcode for 71 US, Canadian and Mexican jurisdictions, preview the card and download a PNG to test a driver license scanner.">
     <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/driver-license-generator/">
     <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/driver-license-generator/thumbnail.png">
     <meta name="twitter:card" content="summary_large_image">
 
-    <!-- Google Tag Manager -->
-    <script>(function (w, d, s, l, i) {
-            w[l] = w[l] || []; w[l].push({
-                'gtm.start':
-                    new Date().getTime(), event: 'gtm.js'
-            }); var f = d.getElementsByTagName(s)[0],
-                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
-                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
-        })(window, document, 'script', 'dataLayer', 'GTM-538F83');</script>
-    <!-- End Google Tag Manager -->
 
-    <!--
-      ASSET VERSION (?v=): the site serves these files with
-      Cache-Control: max-age=86400, so browsers trust their cached copy for a
-      full day. Bump the ?v= value on EVERY change to styles.css,
-      aamva-generator.js or app.js, otherwise returning visitors keep the
-      stale copy for up to 24h.
-    -->
-    <link rel="stylesheet" href="styles.css?v=20260910a">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
     <!-- PDF417 encoder (bwip-js) — the only third-party dependency -->
     <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js.min.js"></script>
-    <!-- No shared/analytics.js here: this sample stands alone, and app.js
-         falls back to a no-op analytics object when the script is absent. -->
 
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Online Driver License Generator",
-      "url": "https://www.dynamsoft.com/codepool/demos/driver-license-generator/",
-      "applicationCategory": "DeveloperApplication",
-      "operatingSystem": "Any (web browser)",
-      "description": "Browser-side generator that builds synthetic AAMVA-compliant driver license PDF417 barcodes for 71 US, Canadian and Mexican jurisdictions, renders a full card preview and exports a PNG for testing a driver license scanner.",
-      "featureList": [
-        "AAMVA DL/ID payloads for 71 jurisdictions (US states, DC, US territories, Canadian provinces and territories, two Mexican states)",
-        "AAMVA Card Design Standard version 8, 9 and 10 payloads",
-        "PDF417 barcode rendered on an HTML5 canvas and verified by a live decoder",
-        "Card front and back preview with a SPECIMEN watermark",
-        "Download the rendered card as a PNG to test a driver license scanner",
-        "Runs entirely client side — nothing is uploaded"
-      ],
-      "isAccessibleForFree": true,
-      "publisher": {
-        "@type": "Organization",
-        "name": "Dynamsoft",
-        "url": "https://www.dynamsoft.com/"
-      }
-    }
-    </script>
 </head>
 
 <body>
-    <!-- Google Tag Manager (noscript) -->
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-538F83" height="0" width="0"
-            style="display:none;visibility:hidden"></iframe></noscript>
-    <!-- End Google Tag Manager (noscript) -->
 
-    <div class="app-header">
-        <h1>🪪 Driver License Generator</h1>
-        <p>Build a synthetic AAMVA PDF417 barcode and download a card image to test a driver license scanner</p>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
+                aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product">Free Driver License Generator</span>
+            <nav class="header-nav" aria-label="Dynamsoft">
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
+                    data-demo-cta="barcode-reader">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/" data-demo-cta="docs">Documentation</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">30-Day Free Trial</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>Free driver license generator</h1>
+        <p>
+            Build a synthetic AAMVA PDF417 barcode and download a card image to test a driver license scanner.
+        </p>
     </div>
 
-    <div class="notice-banner">
-        <strong>⚠️ For testing only.</strong>
-        Every value on this page is randomly generated sample data and each card is stamped
-        <em>SPECIMEN</em>. The output is not a real ID, is not machine verifiable against any
-        government registry, and must not be used to impersonate anyone.
-        Use it to test a scanner, not as identification.
+    <div class="notice-banner" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <div>
+            <strong>For testing only.</strong>
+            Every value on this page is randomly generated sample data and each card is stamped
+            <em>SPECIMEN</em>. The output is not a real ID, is not machine verifiable against any
+            government registry, and must not be used to impersonate anyone.
+            Use it to test a scanner, not as identification.
+        </div>
     </div>
 
     <div class="container">
         <div class="card">
             <div class="card-header">
-                <h2>Jurisdiction &amp; Document</h2>
+                <h2>Jurisdiction and document</h2>
             </div>
             <div class="card-body">
                 <div class="form-row">
@@ -134,7 +117,7 @@
 
         <div class="card">
             <div class="card-header">
-                <h2>Cardholder Data</h2>
+                <h2>Cardholder data</h2>
             </div>
             <div class="card-body">
                 <div class="form-row">
@@ -154,8 +137,8 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="licence_number">Licence number (DAQ)</label>
-                        <input type="text" id="licence_number" class="form-control">
+                        <label for="license_number">License number (DAQ)</label>
+                        <input type="text" id="license_number" class="form-control">
                     </div>
                     <div class="form-group">
                         <label for="sex">Sex (DBC)</label>
@@ -188,11 +171,11 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="eye_color">Eye colour (DAY)</label>
+                        <label for="eye_color">Eye color (DAY)</label>
                         <input type="text" id="eye_color" class="form-control" maxlength="3">
                     </div>
                     <div class="form-group">
-                        <label for="hair_color">Hair colour (DAZ)</label>
+                        <label for="hair_color">Hair color (DAZ)</label>
                         <input type="text" id="hair_color" class="form-control" maxlength="3">
                     </div>
                     <div class="form-group">
@@ -228,15 +211,30 @@
                 </div>
 
                 <div class="button-group">
-                    <button id="randomBtn" class="btn btn-secondary" type="button">🎲 Randomise Data</button>
-                    <button id="generateBtn" class="btn btn-primary" type="button">✨ Generate Barcode</button>
+                    <button id="randomBtn" class="btn btn-secondary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="23 4 23 10 17 10" />
+                            <polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+                            <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+                        </svg>
+                        <span class="btn-label">Randomize data</span>
+                    </button>
+                    <button id="generateBtn" class="btn btn-primary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" aria-hidden="true">
+                            <path d="M3 5v14M6.5 5v14M10 5v10M13.5 5v14M17 5v14M20.5 5v14" />
+                        </svg>
+                        <span class="btn-label">Generate barcode</span>
+                    </button>
                 </div>
             </div>
         </div>
 
         <div class="card">
             <div class="card-header">
-                <h2>Card Preview</h2>
+                <h2>Card preview</h2>
             </div>
             <div class="card-body">
                 <div class="canvas-wrapper">
@@ -244,12 +242,27 @@
                 </div>
                 <p class="hint" id="decode_status">Generating…</p>
                 <div class="button-group">
-                    <button id="downloadBtn" class="btn btn-primary" type="button">⬇️ Download Card PNG</button>
-                    <button id="copyBtn" class="btn btn-secondary" type="button">📋 Copy Raw Payload</button>
+                    <button id="downloadBtn" class="btn btn-primary" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        <span class="btn-label">Download card PNG</span>
+                    </button>
+                    <button id="copyBtn" class="btn btn-secondary" type="button" data-label="Copy raw payload">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                        <span class="btn-label">Copy raw payload</span>
+                    </button>
                 </div>
                 <p class="hint">
                     Upload the downloaded PNG to the
-                    <a href="../driver-license/" data-demo-cta="scanner">online driver license scanner</a>
+                    <a href="https://www.dynamsoft.com/codepool/demos/driver-license-scanner/" data-demo-cta="scanner">online driver license scanner</a>
                     — it reads the PDF417 barcode and returns the fields encoded here.
                 </p>
             </div>
@@ -257,7 +270,7 @@
 
         <div class="card">
             <div class="card-header">
-                <h2>Generated Barcode Payload</h2>
+                <h2>Generated barcode payload</h2>
             </div>
             <div class="card-body">
                 <textarea id="output_payload" class="mrz-output" rows="8" readonly
@@ -291,7 +304,7 @@
                 </p>
                 <p>
                     <strong>South Africa is a different case, and it cannot be generated at all.</strong>
-                    The PDF417 on the back of a South African driving licence is not plaintext. Its 720 bytes
+                    The PDF417 on the back of a South African driving license is not plaintext. Its 720 bytes
                     open with a 4-byte version header, then split into six blocks (5 × 128 bytes + 1 × 74 bytes)
                     that are <strong>RSA-encrypted with a private key held by the issuing authority</strong>;
                     a reader reverses it with the published public key. Anyone can decode a genuine card,
@@ -306,7 +319,7 @@
                     Neither replaces a document check.
                 </p>
                 <p class="hint">
-                    Licence-number patterns, addresses and vehicle classes are plausible samples rather
+                    License-number patterns, addresses and vehicle classes are plausible samples rather
                     than an authoritative per-jurisdiction specification. The purpose of this page is to
                     exercise a scanner end to end, not to reproduce any particular issuing authority's output.
                 </p>
@@ -314,26 +327,39 @@
         </div>
     </div>
 
-    <footer class="app-footer">
-        <p>⚠️ Synthetic sample data only — not a real driver license or identification document</p>
-    </footer>
-
     <footer class="demo-footer">
-        <p>
-            Built with plain JavaScript and <a href="https://github.com/metafloor/bwip-js" data-demo-cta="bwip-js">bwip-js</a>
-            — nothing leaves your browser. Verify the barcode with
-            <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft Barcode Reader</a>.
-            <a href="../driver-license/" data-demo-cta="scanner">Open the driver license scanner</a>
-            <a class="demo-footer-cta"
-                href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
-                data-demo-cta="trial">Get a 30-day free trial license</a>
-        </p>
+        <div class="demo-footer-inner">
+            <p class="disclaimer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                Synthetic sample data only — not a real driver license or identification document.
+                Running this page is free because it activates a Codepool license bound to dynamsoft.com.
+                The source on GitHub is a separate thing — self-hosting it needs your own Dynamsoft license.
+            </p>
+            <div class="footer-links">
+                <span>
+                    Built with plain JavaScript and
+                    <a href="https://github.com/metafloor/bwip-js" data-demo-cta="bwip-js">bwip-js</a>
+                    — nothing leaves your browser. Verify the barcode with
+                    <a href="https://www.dynamsoft.com/barcode-reader/overview/"
+                        data-demo-cta="barcode-reader">Dynamsoft Barcode Reader</a>.
+                </span>
+                <a href="https://www.dynamsoft.com/codepool/demos/driver-license-scanner/" data-demo-cta="scanner">Open the driver license scanner</a>
+                <a class="btn btn-primary footer-cta"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                    data-demo-cta="trial">Get a 30-day free trial license</a>
+            </div>
+        </div>
     </footer>
 
     <!-- AAMVA jurisdiction table + payload builder -->
-    <script src="aamva-generator.js?v=20260910a"></script>
+    <script src="aamva-generator.js"></script>
     <!-- UI, canvas rendering and export -->
-    <script src="app.js?v=20260910a"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>
