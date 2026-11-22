@@ -104,8 +104,18 @@
     sdkReady: false,
     resultsOpen: false,
     configuredScope: null,
-    lastResult: null
+    lastResult: null,
+    /* When on, a pass without a valid signature is refused rather than just
+       read: unsigned is the legal default in BCBP, so whether it is acceptable
+       is a policy of the reader, not of the format. */
+    requireSignature: false,
+    lastSignature: null
   };
+
+  /* The public half of the generator's demo key pair (ECDSA P-256). A reader
+     must never hold anything else: verification needs only this, and the
+     private key never leaves the issuer. */
+  var DEMO_PUBLIC_KEY = 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOvuZE5bPRe/wbY0P1l3jXn+mNcRj1FUfXhW2KRdppkpsTCKZ4Q80p/byWaZQEnsTspZER5EE6g0P4LG/NJExDg==';
 
   var cameraView = null;
   var cameraEnhancer = null;
@@ -156,6 +166,7 @@
     els.resultsContent = document.getElementById('results-content');
     els.resultsTitle = document.getElementById('results-title');
     els.scopeSelect = document.getElementById('scope-select');
+    els.requireSignature = document.getElementById('require-signature');
     els.sampleRow = document.getElementById('sample-row');
   }
 
@@ -476,7 +487,7 @@
     }
 
     var decoded = window.Bcbp.decode(payload);
-    state.lastResult = { payload: payload, format: format, decoded: decoded };
+    state.lastResult = { payload: payload, format: format, decoded: decoded, imageSrc: imageSrc };
 
     els.resultsTitle.textContent = decoded.ok
       ? decoded.passengerName + ' \u00b7 ' + decoded.route
@@ -490,6 +501,7 @@
     }
     if (decoded.ok) {
       frag.appendChild(passCard(decoded));
+      frag.appendChild(signatureSection(payload));
       frag.appendChild(section('Structural checks', checkList(decoded)));
       frag.appendChild(section('All fields in the payload', fieldTable(decoded)));
       if (decoded.warnings.length) {
@@ -656,6 +668,63 @@
     return list;
   }
 
+  /* The security section, verified against the demo public key. Verification
+     is asynchronous (WebCrypto returns a promise), so the box renders first and
+     fills in when the verdict arrives — and the verdict is about the bytes as
+     they stand: strip items 25–30 and this is where the pass stops being
+     checkable at all. */
+  function signatureSection(payload) {
+    var box = el('section', 'result-section');
+    box.appendChild(el('h3', null, 'Signature \u2014 security data (items 25\u201330)'));
+
+    var line = notice('Verifying\u2026');
+    box.appendChild(line);
+    state.lastSignature = null;
+
+    window.Bcbp.verifySecurityData(payload, DEMO_PUBLIC_KEY).then(function (result) {
+      var text;
+      var kind;
+
+      if (result.state === 'ok') {
+        kind = 'ok';
+        text = '\u2713 ' + result.message + (state.requireSignature
+          ? ' This reader requires a signature, and this pass carries a valid one.'
+          : '');
+      } else if (result.state === 'none') {
+        if (state.requireSignature) {
+          kind = 'error';
+          text = '\u2717 No security section \u2014 items 25\u201330 are absent, and this reader is '
+            + 'set to require a signature, so the pass is refused.';
+        } else {
+          kind = 'info';
+          text = '\u2014 No security section: items 25\u201330 are absent, so there is nothing to '
+            + 'verify. An unsigned pass is legal and reads normally; switch on "Require signature"'
+            + ' to refuse it instead.';
+        }
+      } else if (result.state === 'bad') {
+        kind = 'error';
+        text = '\u2717 ' + result.message;
+      } else {
+        kind = 'warn';
+        text = '\u26a0 ' + result.message;
+      }
+
+      line.className = 'note ' + kind;
+      line.textContent = text;
+      state.lastSignature = {
+        state: result.state,
+        ok: result.ok,
+        required: state.requireSignature,
+        accepted: result.state === 'ok' || (result.state === 'none' && !state.requireSignature)
+      };
+    }).catch(function (error) {
+      line.className = 'note warn';
+      line.textContent = '\u26a0 Could not verify the signature: ' + error.message;
+    });
+
+    return box;
+  }
+
   function fieldTable(decoded) {
     var wrap = el('div', 'field-table');
     var head = el('div', 'field-row field-head');
@@ -776,6 +845,7 @@
         };
       }),
       security: decoded.security || undefined,
+      signature: state.lastSignature || undefined,
       checks: decoded.checks,
       warnings: decoded.warnings,
       payload: decoded.raw
@@ -816,6 +886,21 @@
           ? 'Looking for boarding pass symbologies: PDF417, Aztec, QR Code and Data Matrix.'
           : 'Looking for a wider set of 2D formats.');
       });
+    });
+
+    /* Refusing unsigned passes is the reader's policy, not the format's, so
+       flipping it re-reads whatever is on screen rather than waiting for the
+       next scan. */
+    els.requireSignature.addEventListener('change', function () {
+      state.requireSignature = els.requireSignature.checked;
+      var last = state.lastResult;
+      if (last && last.decoded && last.decoded.ok) {
+        showResults([{ text: last.payload, formatString: last.format }], last.imageSrc);
+      } else {
+        showTip(state.requireSignature
+          ? 'A signature is now required: passes without one will be refused.'
+          : 'Unsigned passes are accepted again.');
+      }
     });
 
     els.uploadZone.addEventListener('click', function () { els.uploadInput.click(); });

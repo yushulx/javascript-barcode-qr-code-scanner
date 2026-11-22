@@ -21,9 +21,14 @@ https://www.dynamsoft.com/codepool/demos/boarding-pass-scanner/
 - **Structured output.** Passenger and PNR, per-leg route, carrier, flight, date,
   compartment, seat and sequence, plus the conditional items: frequent flyer, baggage
   tags, check-in source, issue date, document type and the security section.
-- **Eight structural checks.** Format code, computed length against actual length, leg
-  count, version, airport codes, Julian dates, seat format, and whether the declared
-  block sizes agree with the data present.
+- **Signature verification.** The security section (items 25–30) is checked against the
+  generator's demo public key and reported as valid (green), tampered (red) or absent
+  (neutral). A *Require signature* switch turns "absent" into a refusal: unsigned is
+  legal in BCBP, so accepting one is the reader's policy, not the format's.
+- **Nine structural checks.** Format code, computed length against actual length, leg
+  count, version, airport codes, Julian dates, seat format, whether the declared
+  block sizes agree with the data present, and whether the security data matches the
+  length declared in item 29.
 - **The scanned image** shown above the parsed fields, with a full-size toggle, so a wrong value
   is attributable to the image rather than to the reader. Camera scans snapshot the viewfinder.
 - **Copy JSON.** A flat object suitable for piping into the rest of an application.
