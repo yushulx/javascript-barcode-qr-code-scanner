@@ -19,8 +19,8 @@ This repository contains **JavaScript** examples demonstrating how to use [Dynam
     tsc --target ES5 dbr-scanner-wrapper.ts
     ```
 
-- [WebGL](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/webgl/)
-- [Driver License PDF417 Scanner](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/9.x/driver_license/)
+- [WebGL](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/webgl/)
+- [Driver License PDF417 Scanner](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/driver_license/foundational/)
 - [Scan 1D Barcode and OCR Text](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_ocr_text)
 - [Detect Barcode, MRZ and Document](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_mrz_document/)
 - [Aadhaar Card](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/aadhaar_card/)
