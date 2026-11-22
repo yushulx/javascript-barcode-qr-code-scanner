@@ -1,6 +1,6 @@
 # Web TWAIN document scanner
 
-Static Codepool demo using Dynamic Web TWAIN 19.4.4. Connect is explicit; SDK and local-service initialization happen only when the visitor clicks it. Uses the same domain-bound Codepool demo license as the other demos on `dynamsoft.com` and its subdomains. Other hosts use the SDK public trial license and report a `license_fallback` analytics event. Self-hosted production integrations need their own Web TWAIN license.
+Static Codepool demo using Dynamic Web TWAIN 19.5.0. Connect is explicit; SDK and local-service initialization happen only when the visitor clicks it. Uses the same domain-bound Codepool demo license as the other demos on `dynamsoft.com` and its subdomains. Other hosts use the SDK public trial license and report a `license_fallback` analytics event. Self-hosted production integrations need their own Web TWAIN license.
 
 The visitor needs a desktop browser, Dynamic Web TWAIN local service and a scanner driver for acquisition. Image import, rotation and export require the local service but do not require scanner hardware. No upload endpoint is configured. SDK licensing and shared demo analytics use network services; documents are not sent to them.
 
