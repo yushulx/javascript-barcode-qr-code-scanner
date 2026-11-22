@@ -103,13 +103,14 @@
                     <line x1="12" y1="3" x2="12" y2="15" data-page-node-id="oFCHFkYNAtAMYfiQvbSl3y"></line>
                 </svg>
                 <span data-page-node-id="aQH2mHhEnc4uE4k12lcKwq">Click to upload or drag & drop files</span>
-                <span class="hint" data-page-node-id="GPgu65LWgWfGEd9FE22egr">Supports: JPG, PNG, GIF (multiple images), MP4, WebM, MOV</span>
+                <span class="hint" data-page-node-id="GPgu65LWgWfGEd9FE22egr">Supports: JPG, PNG, GIF, BMP, WebP, TIFF and PDF (multi-page), MP4, WebM, MOV</span>
             </label>
-            <input type="file" id="pick_file" accept="image/*,video/*" multiple class="file-input" data-page-node-id="VDBEI8wtozxWemY16rrHOF" />
+            <input type="file" id="pick_file" accept="image/*,video/*,.pdf,.tif,.tiff,application/pdf,image/tiff" multiple class="file-input" data-page-node-id="VDBEI8wtozxWemY16rrHOF" />
         </div>
 
         <!-- Image preview -->
         <div class="imageview-container" id="image_preview_container" style="display: none;" data-page-node-id="MjnphLlRni1n0e0F69Xneh">
+            <p id="page_caption" class="page-caption" data-page-node-id="pc7Xq2VmRk4hTd1sLb9Zyw"></p>
             <div class="imageview" data-page-node-id="GcS91CwnipDA1dwP2v4roc">
                 <img id="image_file" src="default.png" alt="Preview" data-page-node-id="sE7WN21z8Eyl6LI4rlQFhB" />
                 <canvas id="overlay_canvas" class="overlay" data-page-node-id="APNUdFdphFq2q9QG0Bc8rK"></canvas>
