@@ -1,5 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('file-input');
+    document.querySelector('label[for="file-input"]').addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            fileInput.click();
+        }
+    });
     const cameraButton = document.getElementById('camera-button');
     const addPageButton = document.getElementById('add-page-button');
     const savePdfButton = document.getElementById('save-pdf-button');
@@ -51,6 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const cropCancel = document.getElementById('crop-cancel');
     let cropOverlayDiv = null;
     let cropData = { x: 0, y: 0, w: 0, h: 0 };
+    const cropInputs = ['crop-x', 'crop-y', 'crop-width', 'crop-height'].map(id => document.getElementById(id));
+    const cropError = document.getElementById('crop-error');
+    let cropObserver = null;
 
     // Filter Controls
     const filterType = document.getElementById('filter-type');
@@ -88,10 +97,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const refreshScannersBtn = document.getElementById('refresh-scanners');
     const scanResolution = document.getElementById('scan-resolution');
     const scanAdf = document.getElementById('scan-adf');
-    const dwtLicense = document.getElementById('dwt-license');
+
     const scannerScanBtn = document.getElementById('scanner-scan');
     const scannerCancelBtn = document.getElementById('scanner-cancel');
-    const host = 'http://127.0.0.1:18622';
+  const CODEPOOL_LICENSE_KEY = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAwLTEwMTY0ODQ5MCIsIm1haW5TZXJ2ZXJVUkwiOiJodHRwczovL21sdHMuZHluYW1zb2Z0LmNvbS8iLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMCIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NsdHMuZHluYW1zb2Z0LmNvbS8iLCJjaGVja0NvZGUiOjE0MDA4MDY1Mjl9';
+  const TRIAL_LICENSE_KEY = 'DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==';
+    const hostname = window.location.hostname.toLowerCase();
+    const isCodepoolHost = hostname === 'dynamsoft.com' || hostname.endsWith('.dynamsoft.com');
+    const scannerLicense = isCodepoolHost ? CODEPOOL_LICENSE_KEY : TRIAL_LICENSE_KEY;
+    const analytics = window.DemoAnalytics || { action() {} };
+    if (!isCodepoolHost) analytics.action('license_fallback', { host: hostname });
+    let scannerObject = null;
+    let scannerConnection = null;
+    let scannerDevices = [];
+    const scannerVersion = '19.4.4';
 
     let pages = []; // Array of { id, width, height, sourceFile, thumbnailDataUrl }
     let currentPageIndex = -1;
@@ -101,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let liveEditorPage = null; // Page object whose editor is currently on screen
 
     // --- IndexedDB Setup ---
-    const dbName = 'DocScannerDB';
+    const dbName = 'CodepoolDocumentConverterDB';
     const storeName = 'images';
     let db;
 
@@ -430,134 +449,119 @@ document.addEventListener('DOMContentLoaded', () => {
 
     refreshScannersBtn.addEventListener('click', fetchScanners);
 
-    async function fetchScanners() {
-        try {
-            scannerSourceSelect.innerHTML = '<option>Loading...</option>';
-            let url = host + '/api/device/scanners';
-            let response = await fetch(url);
-
-            if (response.ok) {
-                let devices = await response.json();
-                scannerSourceSelect.innerHTML = '';
-
-                if (devices.length === 0) {
-                    let option = document.createElement("option");
-                    option.text = "No scanners found";
-                    scannerSourceSelect.add(option);
-                    return;
-                }
-
-                for (let i = 0; i < devices.length; i++) {
-                    let device = devices[i];
-                    let option = document.createElement("option");
-                    option.text = device['name'];
-                    option.value = JSON.stringify(device);
-                    scannerSourceSelect.add(option);
-                };
-            } else {
-                scannerSourceSelect.innerHTML = '<option>Error fetching scanners</option>';
+    const linuxToggleBtn = document.getElementById('linux-toggle');
+    const linuxLinksMenu = document.getElementById('linux-links');
+    if (linuxToggleBtn && linuxLinksMenu) {
+        linuxToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const open = !linuxLinksMenu.hidden;
+            linuxLinksMenu.hidden = open;
+            linuxToggleBtn.setAttribute('aria-expanded', String(!open));
+            linuxToggleBtn.textContent = open ? 'Linux ▼' : 'Linux ▲';
+        });
+        // Close the menu when clicking anywhere else or opening the modal again
+        document.addEventListener('click', (e) => {
+            if (!linuxLinksMenu.hidden && !linuxLinksMenu.contains(e.target)) {
+                linuxLinksMenu.hidden = true;
+                linuxToggleBtn.setAttribute('aria-expanded', 'false');
+                linuxToggleBtn.textContent = 'Linux ▼';
             }
+        });
+    }
 
+    async function connectScanner() {
+        if (scannerObject) return scannerObject;
+        if (scannerConnection) return scannerConnection;
+        scannerConnection = (async () => {
+            if (!window.Dynamsoft?.DWT) {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    const timer = setTimeout(fail, 45000);
+                    function fail() { clearTimeout(timer); script.remove(); reject(new Error('Scanner SDK could not load. Check your connection and retry.')); }
+                    script.src = `https://cdn.jsdelivr.net/npm/dwt@${scannerVersion}/dist/dynamsoft.webtwain.min.js`;
+                    script.onload = () => { clearTimeout(timer); window.Dynamsoft?.DWT ? resolve() : fail(); };
+                    script.onerror = fail;
+                    document.head.appendChild(script);
+                });
+            }
+            const dwt = window.Dynamsoft.DWT;
+            dwt.ResourcesPath = `https://cdn.jsdelivr.net/npm/dwt@${scannerVersion}/dist/`;
+            dwt.ServiceInstallerLocation = `https://unpkg.com/dwt@${scannerVersion}/dist/dist/`;
+            dwt.ProductKey = scannerLicense;
+            dwt.AutoLoad = false;
+            dwt.Containers = [];
+            dwt.UseLocalService = true;
+            return new Promise((resolve, reject) => {
+                let finished = false;
+                const id = 'codepoolDocumentConverter';
+                const timer = setTimeout(() => {
+                    finished = true;
+                    dwt.DeleteDWTObject(id);
+                    reject(new Error('Scanner connection timed out. Install or restart the local service and retry.'));
+                }, 45000);
+                dwt.CreateDWTObjectEx({ WebTwainId: id }, instance => {
+                    if (finished) { dwt.DeleteDWTObject(id); return; }
+                    finished = true; clearTimeout(timer); scannerObject = instance; resolve(instance);
+                }, error => {
+                    if (finished) return;
+                    finished = true; clearTimeout(timer); reject(error);
+                });
+            });
+        })();
+        try { return await scannerConnection; }
+        finally { scannerConnection = null; }
+    }
+
+    async function fetchScanners() {
+        refreshScannersBtn.disabled = true;
+        scannerScanBtn.disabled = true;
+        scannerDevices = [];
+        scannerSourceSelect.innerHTML = '<option value="">Connecting...</option>';
+        try {
+            const instance = await connectScanner();
+            scannerDevices = await instance.GetDevicesAsync(undefined, true);
+            scannerSourceSelect.replaceChildren();
+            scannerDevices.forEach((device, index) => {
+                const option = document.createElement('option');
+                option.value = String(index);
+                option.textContent = device.displayName || device.name || `Scanner ${index + 1}`;
+                scannerSourceSelect.appendChild(option);
+            });
+            if (!scannerDevices.length) scannerSourceSelect.innerHTML = '<option value="">No scanners found</option>';
+            scannerScanBtn.disabled = !scannerDevices.length;
         } catch (error) {
-            console.error(error);
-            scannerSourceSelect.innerHTML = '<option>Service not connected</option>';
-            alert("Could not connect to Dynamsoft Service. Please ensure it is installed and running.");
-        }
+            scannerSourceSelect.innerHTML = '<option value="">Service not connected</option>';
+            alert('Could not connect to your scanner. Check the local service and scanner driver, then refresh. ' + (error.message || error.string || String(error)));
+        } finally { refreshScannersBtn.disabled = false; }
     }
 
     scannerScanBtn.addEventListener('click', async () => {
-        const scanner = scannerSourceSelect.value;
-        if (!scanner || scanner.startsWith('No') || scanner.startsWith('Loading') || scanner.startsWith('Service') || scanner.startsWith('Error')) {
-            alert("Please select a valid scanner.");
-            return;
-        }
-
-        const license = dwtLicense.value.trim();
-        if (!license) {
-            alert("Please enter a valid license.");
-            return;
-        }
-
+        const device = scannerDevices[Number(scannerSourceSelect.value)];
+        if (!scannerObject || scannerSourceSelect.value === '' || !device) return;
         scannerScanBtn.disabled = true;
-        scannerScanBtn.textContent = "Scanning...";
-
-        let parameters = {
-            license: license,
-            device: JSON.parse(scanner)['device'],
-        };
-
-        parameters.config = {
-            PixelType: 2,
-            Resolution: parseInt(scanResolution.value),
-            IfFeederEnabled: scanAdf.checked,
-        };
-
-        // REST endpoint to create a scan job
-        let url = host + '/api/device/scanners/jobs';
-
+        refreshScannersBtn.disabled = true;
+        scannerCancelBtn.disabled = true;
+        scannerScanBtn.textContent = 'Scanning...';
         try {
-            let response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(parameters)
-            });
-
-            if (response.ok) {
-                let job = await response.json();
-                let jobId = job.jobuid;
-
-                // Get document data
-                let nextUrl = host + '/api/device/scanners/jobs/' + jobId + '/next-page';
-                let pageCount = 0;
-
-                while (true) {
-                    try {
-                        let imgResponse = await fetch(nextUrl);
-
-                        if (imgResponse.status == 200) {
-                            const arrayBuffer = await imgResponse.arrayBuffer();
-                            const blob = new Blob([arrayBuffer], { type: imgResponse.headers.get('Content-Type') || 'image/jpeg' });
-                            
-                            // Convert blob to dataURL for addPage
-                            const dataUrl = await blobToDataURL(blob);
-                            
-                            // Get image dimensions (optional, addPage handles it but good to have)
-                            // We can just pass dataUrl and let addPage handle it
-                            await addPage({
-                                dataUrl: dataUrl,
-                                sourceFile: `Scan Job ${jobId} - Page ${pageCount + 1}`
-                            });
-                            
-                            pageCount++;
-                        }
-                        else {
-                            break;
-                        }
-
-                    } catch (error) {
-                        console.error('No more images or error:', error);
-                        break;
-                    }
-                }
-                
-                if (pageCount > 0) {
-                    closeModal();
-                    selectPage(pages.length - 1);
-                } else {
-                    alert("No pages scanned.");
-                }
-            } else {
-                const errText = await response.text();
-                alert("Scan failed: " + errText);
+            await scannerObject.SelectDeviceAsync(device);
+            await scannerObject.AcquireImageAsync({ IfShowUI: false, PixelType: 2, Resolution: Number(scanResolution.value), IfFeederEnabled: scanAdf.checked, IfDisableSourceAfterAcquire: true });
+            for (let index = 0; index < scannerObject.HowManyImagesInBuffer; index++) {
+                const blob = await new Promise((resolve, reject) => scannerObject.ConvertToBlob([index], window.Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG, resolve, (code, message) => reject(new Error(message))));
+                await addPage({ dataUrl: await blobToDataURL(blob), sourceFile: `Scanned page ${index + 1}` });
             }
-
+            if (scannerObject.HowManyImagesInBuffer) {
+                scannerObject.RemoveAllImages();
+                closeModal();
+                selectPage(pages.length - 1);
+                analytics.action('scan', { format: 'document' });
+            }
         } catch (error) {
-            alert("Error during scan: " + error);
+            alert('Scan failed: ' + (error.message || error.string || String(error)));
         } finally {
             scannerScanBtn.disabled = false;
-            scannerScanBtn.textContent = "Scan Now";
+            refreshScannersBtn.disabled = false;
+            scannerCancelBtn.disabled = false;
+            scannerScanBtn.textContent = 'Scan Now';
         }
     });
 
@@ -634,7 +638,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (currentPageIndex === -1 && pages.length > 0) {
             selectPage(0);
         }
-    }    // --- Handlers ---
+    }
+
+    // --- Handlers ---
 
     async function handleTIFF(file) {
         if (typeof UTIF === 'undefined') {
@@ -668,7 +674,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 sourceFile: file.name
             });
         }
-    } async function handleImage(file) {
+    }
+
+    async function handleImage(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -918,14 +926,18 @@ document.addEventListener('DOMContentLoaded', () => {
             selectPage(currentPageIndex); // Refresh view
         }
         return false;
-    } function handleDragEnd() {
+    }
+
+    function handleDragEnd() {
         this.classList.remove('dragging');
         const thumbnails = thumbnailsPanel.querySelectorAll('.thumbnail');
         thumbnails.forEach(t => t.classList.remove('drag-over'));
 
         draggedThumbnailIndex = -1;
         viewerPanel.classList.remove('drop-zone-active');
-    } function selectPage(index) {
+    }
+
+    function selectPage(index) {
         // Still runs against the page being left: currentPageIndex has not
         // moved yet, and its editor is about to be replaced.
         syncLiveEditorContent();
@@ -933,11 +945,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pages.length === 0) {
             deleteAllButton.style.display = 'none';
         } else {
-            deleteAllButton.style.display = 'inline-block';
+            deleteAllButton.style.display = 'inline-flex';
         }
 
         if (index < 0 || index >= pages.length) {
             deletePageButton.style.display = 'none';
+            currentPageIndex = -1;
+            renderLargeView();
+            updateUndoRedoButtons();
             return;
         }
 
@@ -950,7 +965,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         currentPageIndex = index;
-        deletePageButton.style.display = 'inline-block';
+        deletePageButton.style.display = 'inline-flex';
         renderLargeView();
         updateUndoRedoButtons();
     }
@@ -984,15 +999,20 @@ document.addEventListener('DOMContentLoaded', () => {
             currentPageIndex = -1;
             renderAllThumbnails();
             selectPage(-1);
-            largeViewContainer.innerHTML = '';
         }
     });
 
     async function renderLargeView() {
+        if (cropOverlayDiv) closeModal();
         if (currentPageIndex === -1) {
-            largeViewContainer.innerHTML = '';
+            largeViewContainer.innerHTML = '<div class="empty-workspace"><h2>Your document starts here</h2><p>Add PDF, Word, text or images using Add Files, or drag files into this preview.</p></div>';
+            largeViewContainer.style.transform = 'none';
+            largeViewContainer.style.width = '100%';
+            largeViewContainer.style.marginBottom = '0';
+            largeViewContainer.style.marginRight = '0';
             imageToolsGroup.style.display = 'none';
             historyGroup.style.display = 'none';
+            textToolsGroup.style.display = 'none';
             return;
         }
 
@@ -1036,7 +1056,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Reset save button state
             saveTextBtn.disabled = false;
-            saveTextBtn.innerHTML = '<i class="fas fa-save"></i>';
+            saveTextBtn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="icons.svg#save"></use></svg>';
             saveTextBtn.classList.remove('btn-success');
             saveTextBtn.classList.add('btn-primary');
 
@@ -1044,13 +1064,16 @@ document.addEventListener('DOMContentLoaded', () => {
             editorDiv.addEventListener('input', () => {
                 if (saveTextBtn.disabled) {
                     saveTextBtn.disabled = false;
-                    saveTextBtn.innerHTML = '<i class="fas fa-save"></i>';
+                    saveTextBtn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="icons.svg#save"></use></svg>';
                     saveTextBtn.classList.remove('btn-success');
                     saveTextBtn.classList.add('btn-primary');
                 }
             });
 
             largeViewContainer.appendChild(editorDiv);
+            // Fit the fixed-width page (800px + 2x60px padding) into
+            // narrower viewports so the default view has no horizontal scrollbar.
+            currentZoom = Math.min(1, Math.max(0.3, Math.round((scrollWrapper.clientWidth - 48) / 920 * 100) / 100));
             updateZoom();
             return;
         }
@@ -1090,31 +1113,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateZoom() {
         if (largeViewContainer.firstChild) {
-            // For HTML content (div), we scale using transform to ensure layout remains consistent
-            // For Images, we can just set width, but transform is smoother for both
-            largeViewContainer.style.transform = `scale(${currentZoom})`;
-            largeViewContainer.style.transformOrigin = 'top left';
-            
-            // Adjust container size to match scaled content so scrolling works
+            // The HTML editor scales with the `zoom` property, which is
+            // layout-aware: the container keeps shrinking/growing with the
+            // page and auto margins keep it centered at every zoom level.
+            // A transform would only scale visually, so the scroll area and
+            // centering would both need manual margin hacks.
             const firstChild = largeViewContainer.firstChild;
-            if (firstChild.tagName === 'DIV' && firstChild.classList.contains('page-editor')) {
-                 largeViewContainer.style.width = 'fit-content';
-                 largeViewContainer.style.transform = `scale(${currentZoom})`;
-                 // Add margin to allow scrolling to the bottom/right edges when zoomed in
-                 largeViewContainer.style.marginBottom = `${(currentZoom - 1) * 1100}px`; 
-                 largeViewContainer.style.marginRight = `${(currentZoom - 1) * 800}px`;
+            const isEditor = firstChild.tagName === 'DIV' && firstChild.classList.contains('page-editor');
+            largeViewContainer.style.transform = 'none';
+            if (isEditor) {
+                largeViewContainer.style.width = 'fit-content';
+                largeViewContainer.style.zoom = currentZoom;
             } else {
-                 largeViewContainer.style.transform = 'none';
-                 largeViewContainer.style.width = `${currentZoom * 100}%`;
-                 largeViewContainer.style.marginBottom = '0';
-                 largeViewContainer.style.marginRight = '0';
+                largeViewContainer.style.zoom = '';
+                largeViewContainer.style.width = `${currentZoom * 100}%`;
             }
+            largeViewContainer.style.margin = 'auto';
         }
     }
 
     // --- Zoom Controls ---
     zoomInBtn.addEventListener('click', () => {
-        currentZoom += 0.1;
+        currentZoom = Math.min(5, currentZoom + 0.1);
         updateZoom();
     });
 
@@ -1360,6 +1380,8 @@ document.addEventListener('DOMContentLoaded', () => {
         infoModal.style.display = 'none';
         scannerModal.style.display = 'none';
         
+        cropObserver?.disconnect();
+        cropObserver = null;
         // Cleanup crop overlay
         if (cropOverlayDiv) {
             cropOverlayDiv.remove();
@@ -1389,7 +1411,7 @@ document.addEventListener('DOMContentLoaded', () => {
         page.htmlContent = editorDiv.innerHTML;
 
         // Visual feedback - Loading
-        const originalHtml = '<i class="fas fa-save"></i>';
+        const originalHtml = '<svg class="icon" aria-hidden="true"><use href="icons.svg#save"></use></svg>';
         saveTextBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         saveTextBtn.disabled = true;
 
@@ -1413,7 +1435,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Visual feedback - Success
-            saveTextBtn.innerHTML = '<i class="fas fa-check"></i>';
+            saveTextBtn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="icons.svg#check"></use></svg>';
             saveTextBtn.classList.remove('btn-primary');
             saveTextBtn.classList.add('btn-success');
             
@@ -1491,159 +1513,130 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Crop ---
     cropBtn.addEventListener('click', () => {
         const img = document.getElementById('large-image');
-        if (!img) return;
+        if (!img || !img.complete || !img.naturalWidth) return;
         
         openModal(cropModal, false); // Non-blocking
         initCropOverlay(img);
     });
 
-    function initCropOverlay(img) {
-        if (cropOverlayDiv) cropOverlayDiv.remove();
-        
+    // cropData is always an integer rectangle in original-image pixels.
+    // The overlay is only a display projection; it never determines export size.
+    function renderCropSelection(img) {
+        if (!cropOverlayDiv || !img.isConnected) return;
         const rect = img.getBoundingClientRect();
-        const containerRect = largeViewContainer.getBoundingClientRect();
-        
-        // Initial crop box (80% of image)
-        const w = rect.width * 0.8;
-        const h = rect.height * 0.8;
-        const x = (rect.width - w) / 2;
-        const y = (rect.height - h) / 2;
-        
+        const parent = largeViewContainer.getBoundingClientRect();
+        const scaleX = rect.width / img.naturalWidth;
+        const scaleY = rect.height / img.naturalHeight;
+        Object.assign(cropOverlayDiv.style, {
+            left: `${rect.left - parent.left + cropData.x * scaleX}px`,
+            top: `${rect.top - parent.top + cropData.y * scaleY}px`,
+            width: `${cropData.w * scaleX}px`,
+            height: `${cropData.h * scaleY}px`
+        });
+        cropOverlayDiv.querySelector('.crop-dimensions').textContent = `${cropData.w} × ${cropData.h} px`;
+    }
+
+    function syncCropInputs(img) {
+        [cropData.x, cropData.y, cropData.w, cropData.h].forEach((value, index) => { cropInputs[index].value = value; });
+        cropInputs.forEach(input => input.setAttribute('aria-invalid', 'false'));
+        cropError.textContent = '';
+        cropApply.disabled = false;
+        renderCropSelection(img);
+    }
+
+    function readCropInputs(img) {
+        const values = cropInputs.map(input => input.value === '' ? NaN : Number(input.value));
+        const [x, y, w, h] = values;
+        const valid = values.every(Number.isInteger) && x >= 0 && y >= 0 && w > 0 && h > 0 && x + w <= img.naturalWidth && y + h <= img.naturalHeight;
+        cropInputs.forEach(input => input.setAttribute('aria-invalid', String(!valid)));
+        cropError.textContent = valid ? '' : 'Enter whole pixels with positive width / height and keep the selection inside the image.';
+        cropApply.disabled = !valid;
+        if (valid) {
+            cropData = { x, y, w, h };
+            renderCropSelection(img);
+        }
+        return valid;
+    }
+
+    cropInputs.forEach(input => input.addEventListener('input', () => {
+        const img = document.getElementById('large-image');
+        if (img && cropOverlayDiv) readCropInputs(img);
+    }));
+
+    function initCropOverlay(img) {
+        cropOverlayDiv?.remove();
+        cropObserver?.disconnect();
+        cropData = {
+            x: Math.floor(img.naturalWidth * 0.1), y: Math.floor(img.naturalHeight * 0.1),
+            w: Math.max(1, Math.floor(img.naturalWidth * 0.8)), h: Math.max(1, Math.floor(img.naturalHeight * 0.8))
+        };
+        document.getElementById('crop-image-size').textContent = `Original image: ${img.naturalWidth} × ${img.naturalHeight} px`;
+        [img.naturalWidth - 1, img.naturalHeight - 1, img.naturalWidth, img.naturalHeight].forEach((max, index) => { cropInputs[index].max = max; });
         cropOverlayDiv = document.createElement('div');
         cropOverlayDiv.className = 'crop-overlay';
-        cropOverlayDiv.style.width = `${w}px`;
-        cropOverlayDiv.style.height = `${h}px`;
-        cropOverlayDiv.style.left = `${img.offsetLeft + x}px`;
-        cropOverlayDiv.style.top = `${img.offsetTop + y}px`;
-        
-        // Dimensions Label
-        const dimLabel = document.createElement('div');
-        dimLabel.className = 'crop-dimensions';
-        // Calculate initial real dimensions
-        const scaleX = img.naturalWidth / img.width;
-        const scaleY = img.naturalHeight / img.height;
-
-        cropOverlayDiv.appendChild(dimLabel);
-        largeViewContainer.appendChild(cropOverlayDiv);
-        
-        const currentW = cropOverlayDiv.offsetWidth;
-        const currentH = cropOverlayDiv.offsetHeight;
-        dimLabel.innerText = `${Math.round(currentW * scaleX)} x ${Math.round(currentH * scaleY)}`;
-
-        // Handles
+        const label = document.createElement('div');
+        label.className = 'crop-dimensions';
+        cropOverlayDiv.appendChild(label);
         ['tl', 'tr', 'bl', 'br'].forEach(pos => {
             const handle = document.createElement('div');
             handle.className = `crop-handle ${pos}`;
             cropOverlayDiv.appendChild(handle);
         });
-        
+        largeViewContainer.appendChild(cropOverlayDiv);
+        syncCropInputs(img);
+        cropObserver = new ResizeObserver(() => renderCropSelection(img));
+        cropObserver.observe(img);
         makeDraggableAndResizable(cropOverlayDiv, img);
     }
 
     function makeDraggableAndResizable(overlay, img) {
-        let isDragging = false;
-        let isResizing = false;
-        let startX, startY, startLeft, startTop, startW, startH;
-        let resizeHandle = null;
-
-        overlay.addEventListener('mousedown', (e) => {
-            if (e.target.classList.contains('crop-handle')) {
-                isResizing = true;
-                resizeHandle = e.target;
+        let gesture = null;
+        overlay.addEventListener('pointerdown', event => {
+            if (event.button !== 0) return;
+            gesture = { clientX: event.clientX, clientY: event.clientY, ...cropData,
+                handle: ['tl', 'tr', 'bl', 'br'].find(pos => event.target.classList.contains(pos)) };
+            overlay.setPointerCapture(event.pointerId);
+            event.stopPropagation();
+            event.preventDefault();
+        });
+        overlay.addEventListener('pointermove', event => {
+            if (!gesture) return;
+            const rect = img.getBoundingClientRect();
+            const dx = Math.round((event.clientX - gesture.clientX) * img.naturalWidth / rect.width);
+            const dy = Math.round((event.clientY - gesture.clientY) * img.naturalHeight / rect.height);
+            const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+            if (!gesture.handle) {
+                cropData = { x: clamp(gesture.x + dx, 0, img.naturalWidth - gesture.w), y: clamp(gesture.y + dy, 0, img.naturalHeight - gesture.h), w: gesture.w, h: gesture.h };
             } else {
-                isDragging = true;
+                let left = gesture.x, top = gesture.y, right = left + gesture.w, bottom = top + gesture.h;
+                if (gesture.handle.endsWith('l')) left = clamp(left + dx, 0, right - 1);
+                else right = clamp(right + dx, left + 1, img.naturalWidth);
+                if (gesture.handle.startsWith('t')) top = clamp(top + dy, 0, bottom - 1);
+                else bottom = clamp(bottom + dy, top + 1, img.naturalHeight);
+                cropData = { x: left, y: top, w: right - left, h: bottom - top };
             }
-            startX = e.clientX;
-            startY = e.clientY;
-            startLeft = overlay.offsetLeft;
-            startTop = overlay.offsetTop;
-            startW = overlay.offsetWidth;
-            startH = overlay.offsetHeight;
-            e.stopPropagation();
-            e.preventDefault();
+            syncCropInputs(img);
         });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging && !isResizing) return;
-            
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-            
-            if (isDragging) {
-                overlay.style.left = `${startLeft + dx}px`;
-                overlay.style.top = `${startTop + dy}px`;
-            } else if (isResizing) {
-                if (resizeHandle.classList.contains('br')) {
-                    overlay.style.width = `${startW + dx}px`;
-                    overlay.style.height = `${startH + dy}px`;
-                } else if (resizeHandle.classList.contains('bl')) {
-                    overlay.style.left = `${startLeft + dx}px`;
-                    overlay.style.width = `${startW - dx}px`;
-                    overlay.style.height = `${startH + dy}px`;
-                } else if (resizeHandle.classList.contains('tr')) {
-                    overlay.style.top = `${startTop + dy}px`;
-                    overlay.style.width = `${startW + dx}px`;
-                    overlay.style.height = `${startH - dy}px`;
-                } else if (resizeHandle.classList.contains('tl')) {
-                    overlay.style.left = `${startLeft + dx}px`;
-                    overlay.style.top = `${startTop + dy}px`;
-                    overlay.style.width = `${startW - dx}px`;
-                    overlay.style.height = `${startH - dy}px`;
-                }
-
-                // Update dimensions label
-                const dimLabel = overlay.querySelector('.crop-dimensions');
-                if (dimLabel) {
-                    const scaleX = img.naturalWidth / img.width;
-                    const scaleY = img.naturalHeight / img.height;
-                    // Use offsetWidth/Height to include border, matching getBoundingClientRect used in cropApply
-                    const currentW = overlay.offsetWidth;
-                    const currentH = overlay.offsetHeight;
-                    dimLabel.innerText = `${Math.round(currentW * scaleX)} x ${Math.round(currentH * scaleY)}`;
-                }
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-            isResizing = false;
-        });
+        ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => overlay.addEventListener(type, () => { gesture = null; }));
     }
 
     cropApply.addEventListener('click', async () => {
         const img = document.getElementById('large-image');
-        if (!img || !cropOverlayDiv) return;
-        
-        // Calculate crop coordinates relative to natural image size
-        // We need to account for the displayed size vs natural size
-        const displayedW = img.width; // CSS width (100% of container usually, but check computed)
-        const displayedH = img.height;
-        const naturalW = img.naturalWidth;
-        const naturalH = img.naturalHeight;
-        
-        const scaleX = naturalW / displayedW;
-        const scaleY = naturalH / displayedH;
-        
-        // Overlay position relative to image
-        const overlayRect = cropOverlayDiv.getBoundingClientRect();
-        const imgRect = img.getBoundingClientRect();
-        
-        const cropX = (overlayRect.left - imgRect.left) * scaleX;
-        const cropY = (overlayRect.top - imgRect.top) * scaleY;
-        const cropW = overlayRect.width * scaleX;
-        const cropH = overlayRect.height * scaleY;
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = cropW;
-        canvas.height = cropH;
-        const ctx = canvas.getContext('2d');
-        
-        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-        
-        await saveEditedImage(canvas.toDataURL('image/jpeg', 0.9));
-        closeModal();
+        if (!img || !cropOverlayDiv || !readCropInputs(img)) return;
+        cropApply.disabled = true;
+        try {
+            const { x, y, w, h } = cropData;
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(img, x, y, w, h, 0, 0, w, h);
+            await saveEditedImage(canvas.toDataURL('image/png'));
+            closeModal();
+            analytics.action('crop', { format: 'image' });
+        } catch (error) {
+            cropError.textContent = 'Could not crop this image. Please try again.';
+        } finally { cropApply.disabled = false; }
     });
-
     cropCancel.addEventListener('click', closeModal);
 
     // --- Filter ---
@@ -1911,74 +1904,56 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentPageIndex === -1) {
             undoBtn.disabled = true;
             redoBtn.disabled = true;
-            undoBtn.style.opacity = '0.5';
-            redoBtn.style.opacity = '0.5';
             return;
         }
         const page = pages[currentPageIndex];
         // Default to 0/1 if undefined
         const idx = page.historyIndex !== undefined ? page.historyIndex : 0;
         const len = page.historyLength !== undefined ? page.historyLength : 1;
-        
+
         undoBtn.disabled = idx <= 0;
         redoBtn.disabled = idx >= len - 1;
-        
-        undoBtn.style.opacity = undoBtn.disabled ? '0.5' : '1';
-        redoBtn.style.opacity = redoBtn.disabled ? '0.5' : '1';
     }
 
     async function saveEditedImage(dataUrl) {
         const page = pages[currentPageIndex];
         const blob = dataURLtoBlob(dataUrl);
         const thumb = await createThumbnail(dataUrl);
-        
         const img = new Image();
-        img.onload = async () => {
-            page.width = img.width;
-            page.height = img.height;
-            page.thumbnailDataUrl = thumb;
-            
-            // Update history in DB
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = () => reject(new Error('Could not load the edited image.'));
+            img.src = dataUrl;
+        });
+        let savedPage;
+        await new Promise((resolve, reject) => {
             const transaction = db.transaction([storeName], 'readwrite');
             const store = transaction.objectStore(storeName);
             const getReq = store.get(page.id);
-            
+            transaction.oncomplete = resolve;
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error || new Error('Image save was cancelled.'));
             getReq.onsuccess = () => {
                 const dbPage = getReq.result;
-                if (dbPage) {
-                    if (!dbPage.history) dbPage.history = [];
-                    
-                    // Truncate history if we are in the middle
-                    let idx = dbPage.historyIndex;
-                    if (idx === undefined || idx < 0) idx = dbPage.history.length - 1;
-                    
-                    if (idx < dbPage.history.length - 1) {
-                        dbPage.history = dbPage.history.slice(0, idx + 1);
-                    }
-                    
-                    dbPage.history.push(blob);
-                    dbPage.historyIndex = dbPage.history.length - 1;
-                    
-                    // Update other fields
-                    dbPage.width = page.width;
-                    dbPage.height = page.height;
-                    dbPage.thumbnailDataUrl = thumb;
-                    dbPage.blob = blob; 
-                    
-                    const putReq = store.put(dbPage);
-                    putReq.onsuccess = () => {
-                        // Update memory state
-                        page.historyIndex = dbPage.historyIndex;
-                        page.historyLength = dbPage.history.length;
-                        
-                        renderAllThumbnails();
-                        renderLargeView();
-                        updateUndoRedoButtons();
-                    };
+                if (!dbPage) { transaction.abort(); return; }
+                if (!dbPage.history) dbPage.history = [];
+                let idx = dbPage.historyIndex;
+                if (idx === undefined || idx < 0) idx = dbPage.history.length - 1;
+                if (idx < dbPage.history.length - 1) {
+                    dbPage.history = dbPage.history.slice(0, idx + 1);
                 }
+                dbPage.history.push(blob);
+                dbPage.historyIndex = dbPage.history.length - 1;
+                Object.assign(dbPage, { width: img.width, height: img.height, thumbnailDataUrl: thumb, blob });
+                savedPage = dbPage;
+                store.put(dbPage);
             };
-        };
-        img.src = dataUrl;
+        });
+        Object.assign(page, { width: img.width, height: img.height, thumbnailDataUrl: thumb,
+            historyIndex: savedPage.historyIndex, historyLength: savedPage.history.length });
+        renderAllThumbnails();
+        await renderLargeView();
+        updateUndoRedoButtons();
     }
 
     // --- Keyboard Shortcuts ---
