@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Driver License Generator | Dynamsoft Codepool Demo</title>
+    <meta name="description"
+        content="Free online AAMVA driver license generator. Build a synthetic PDF417 driver's license barcode for 71 US, Canadian and Mexican jurisdictions, preview the card and download a PNG to test a driver license scanner.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/driver-license-generator/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Online Driver License Generator | Dynamsoft Codepool Demo">
+    <meta property="og:description"
+        content="Build a synthetic AAMVA PDF417 driver's license barcode for 71 US, Canadian and Mexican jurisdictions and download a PNG for scanner testing.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/driver-license-generator/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/driver-license-generator/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- Google Tag Manager -->
+    <script>(function (w, d, s, l, i) {
+            w[l] = w[l] || []; w[l].push({
+                'gtm.start':
+                    new Date().getTime(), event: 'gtm.js'
+            }); var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-538F83');</script>
+    <!-- End Google Tag Manager -->
+
+    <!--
+      ASSET VERSION (?v=): the site serves these files with
+      Cache-Control: max-age=86400, so browsers trust their cached copy for a
+      full day. Bump the ?v= value on EVERY change to styles.css,
+      aamva-generator.js, app.js or shared/analytics.js, otherwise returning
+      visitors keep the stale copy for up to 24h.
+    -->
+    <link rel="stylesheet" href="styles.css?v=20260910a">
+    <!-- PDF417 encoder (bwip-js) — the only third-party dependency -->
+    <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js.min.js"></script>
+    <script src="../shared/analytics.js?v=20260910a"></script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Online Driver License Generator",
+      "url": "https://www.dynamsoft.com/codepool/demos/driver-license-generator/",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Any (web browser)",
+      "description": "Browser-side generator that builds synthetic AAMVA-compliant driver license PDF417 barcodes for 71 US, Canadian and Mexican jurisdictions, renders a full card preview and exports a PNG for testing a driver license scanner.",
+      "featureList": [
+        "AAMVA DL/ID payloads for 71 jurisdictions (US states, DC, US territories, Canadian provinces and territories, two Mexican states)",
+        "AAMVA Card Design Standard version 8, 9 and 10 payloads",
+        "PDF417 barcode rendered on an HTML5 canvas and verified by a live decoder",
+        "Card front and back preview with a SPECIMEN watermark",
+        "Download the rendered card as a PNG to test a driver license scanner",
+        "Runs entirely client side — nothing is uploaded"
+      ],
+      "isAccessibleForFree": true,
+      "publisher": {
+        "@type": "Organization",
+        "name": "Dynamsoft",
+        "url": "https://www.dynamsoft.com/"
+      }
+    }
+    </script>
+</head>
+
+<body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-538F83" height="0" width="0"
+            style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+
+    <div class="app-header">
+        <h1>🪪 Driver License Generator</h1>
+        <p>Build a synthetic AAMVA PDF417 barcode and download a card image to test a driver license scanner</p>
+    </div>
+
+    <div class="notice-banner">
+        <strong>⚠️ For testing only.</strong>
+        Every value on this page is randomly generated sample data and each card is stamped
+        <em>SPECIMEN</em>. The output is not a real ID, is not machine verifiable against any
+        government registry, and must not be used to impersonate anyone.
+        Use it to test a scanner, not as identification.
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>Jurisdiction &amp; Document</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="jurisdiction">Issuing jurisdiction</label>
+                        <select id="jurisdiction" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="card_type">Document type</label>
+                        <select id="card_type" class="form-control">
+                            <option value="DL">Driver License (DL)</option>
+                            <option value="ID">Identification Card (ID)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="aamva_version">AAMVA version</label>
+                        <select id="aamva_version" class="form-control">
+                            <option value="10">v10 — Card Design Standard 2020</option>
+                            <option value="09">v9 — Card Design Standard 2016</option>
+                            <option value="08">v8 — Card Design Standard 2013</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="iin">Issuer Identification Number (IIN)</label>
+                        <input type="text" id="iin" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="country_of_issue">Country of issue (DCG)</label>
+                        <input type="text" id="country_of_issue" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="jurisdiction_version">Jurisdiction version</label>
+                        <input type="text" id="jurisdiction_version" class="form-control" value="01" maxlength="2">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Cardholder Data</h2>
+            </div>
+            <div class="card-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="last_name">Last name (DCS)</label>
+                        <input type="text" id="last_name" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="first_name">First name (DAC)</label>
+                        <input type="text" id="first_name" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="middle_name">Middle name (DAD)</label>
+                        <input type="text" id="middle_name" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="licence_number">Licence number (DAQ)</label>
+                        <input type="text" id="licence_number" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="sex">Sex (DBC)</label>
+                        <select id="sex" class="form-control">
+                            <option value="1">1 — male</option>
+                            <option value="2">2 — female</option>
+                            <option value="9">9 — not specified</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="height">Height (DAU)</label>
+                        <input type="text" id="height" class="form-control" placeholder="068 in">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="birth_date">Date of birth (DBB)</label>
+                        <input type="date" id="birth_date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="issue_date">Issue date (DBD)</label>
+                        <input type="date" id="issue_date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="expiry_date">Expiry date (DBA)</label>
+                        <input type="date" id="expiry_date" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eye_color">Eye colour (DAY)</label>
+                        <input type="text" id="eye_color" class="form-control" maxlength="3">
+                    </div>
+                    <div class="form-group">
+                        <label for="hair_color">Hair colour (DAZ)</label>
+                        <input type="text" id="hair_color" class="form-control" maxlength="3">
+                    </div>
+                    <div class="form-group">
+                        <label for="weight">Weight, lb (DAW)</label>
+                        <input type="text" id="weight" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label for="street">Street address (DAG)</label>
+                        <input type="text" id="street" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="city">City (DAI)</label>
+                        <input type="text" id="city" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="postal">Postal code (DAK)</label>
+                        <input type="text" id="postal" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle_class">Vehicle class (DCA)</label>
+                        <input type="text" id="vehicle_class" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="restrictions">Restrictions (DCB)</label>
+                        <input type="text" id="restrictions" class="form-control">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="randomBtn" class="btn btn-secondary" type="button">🎲 Randomise Data</button>
+                    <button id="generateBtn" class="btn btn-primary" type="button">✨ Generate Barcode</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Card Preview</h2>
+            </div>
+            <div class="card-body">
+                <div class="canvas-wrapper">
+                    <canvas id="preview" width="1000" height="1340"></canvas>
+                </div>
+                <p class="hint" id="decode_status">Generating…</p>
+                <div class="button-group">
+                    <button id="downloadBtn" class="btn btn-primary" type="button">⬇️ Download Card PNG</button>
+                    <button id="copyBtn" class="btn btn-secondary" type="button">📋 Copy Raw Payload</button>
+                </div>
+                <p class="hint">
+                    Upload the downloaded PNG to the
+                    <a href="../driver-license/" data-demo-cta="scanner">online driver license scanner</a>
+                    — it reads the PDF417 barcode and returns the fields encoded here.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Generated Barcode Payload</h2>
+            </div>
+            <div class="card-body">
+                <textarea id="output_payload" class="mrz-output" rows="8" readonly
+                    placeholder="The AAMVA payload will appear here..."></textarea>
+                <p class="hint">
+                    Control characters are shown as <code>\n</code> (data element separator),
+                    <code>\r</code> (segment terminator) and <code>\x1e</code> (record separator).
+                    The first 21 characters are the AAMVA header; the next 10 are the subfile
+                    designator (<code>type + offset + length</code>).
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Scope</h2>
+            </div>
+            <div class="card-body">
+                <p>
+                    This generator covers <strong>every jurisdiction AAMVA assigns an Issuer
+                    Identification Number to</strong>: 50 US states, the District of Columbia,
+                    5 US territories, 13 Canadian provinces and territories, and 2 Mexican states —
+                    <strong>71 jurisdictions</strong> in total. All of them use the AAMVA PDF417
+                    format, so the scanner parses them with the <code>AAMVA_DL_ID</code> code spec.
+                </p>
+                <p>
+                    Driver licenses from other countries (EU/EEA, UK, Australia, India, Japan, Brazil, …)
+                    are <em>not</em> AAMVA documents. They use national or regional formats that the AAMVA
+                    parser does not map, so a scanner restricted to <code>AAMVA_DL_ID</code> will read the
+                    barcode but not resolve the fields.
+                </p>
+                <p>
+                    <strong>South Africa is a different case, and it cannot be generated at all.</strong>
+                    The PDF417 on the back of a South African driving licence is not plaintext. Its 720 bytes
+                    open with a 4-byte version header, then split into six blocks (5 × 128 bytes + 1 × 74 bytes)
+                    that are <strong>RSA-encrypted with a private key held by the issuing authority</strong>;
+                    a reader reverses it with the published public key. Anyone can decode a genuine card,
+                    nobody can mint one without that private key — the encryption is precisely the anti-forgery
+                    mechanism. Dynamsoft's <code>SOUTH_AFRICA_DL</code> spec implements that decryption step,
+                    which is why it needs a real card as input rather than a crafted one.
+                </p>
+                <p>
+                    That contrast is the useful takeaway for testing: an AAMVA barcode is plaintext, so
+                    a parseable one proves nothing about authenticity — it only proves the payload is
+                    well-formed. The South African format is signed, so a parseable one does prove origin.
+                    Neither replaces a document check.
+                </p>
+                <p class="hint">
+                    Licence-number patterns, addresses and vehicle classes are plausible samples rather
+                    than an authoritative per-jurisdiction specification. The purpose of this page is to
+                    exercise a scanner end to end, not to reproduce any particular issuing authority's output.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="app-footer">
+        <p>⚠️ Synthetic sample data only — not a real driver license or identification document</p>
+    </footer>
+
+    <footer class="demo-footer">
+        <p>
+            Built with plain JavaScript and <a href="https://github.com/metafloor/bwip-js" data-demo-cta="bwip-js">bwip-js</a>
+            — nothing leaves your browser. Verify the barcode with
+            <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft Barcode Reader</a>.
+            <a href="../driver-license/" data-demo-cta="scanner">Open the driver license scanner</a>
+            <a class="demo-footer-cta"
+                href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                data-demo-cta="trial">Get a 30-day free trial license</a>
+        </p>
+    </footer>
+
+    <!-- AAMVA jurisdiction table + payload builder -->
+    <script src="aamva-generator.js?v=20260910a"></script>
+    <!-- UI, canvas rendering and export -->
+    <script src="app.js?v=20260910a"></script>
+</body>
+
+</html>
