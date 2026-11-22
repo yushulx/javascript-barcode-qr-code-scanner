@@ -18,6 +18,8 @@ This repository contains **JavaScript** examples demonstrating how to use [Dynam
 - [Barcode, MRZ and Document Scanner](https://www.dynamsoft.com/codepool/demos/barcode-mrz-document-scanner/)
 - [Multi-Page Document Scanner](https://www.dynamsoft.com/codepool/demos/multi-document-capture/)
 - [Driver License Generator](https://www.dynamsoft.com/codepool/demos/driver-license-generator/)
+- [GS1 Barcode Scanner](https://www.dynamsoft.com/codepool/demos/gs1-barcode-scanner/)
+- [GS1 Barcode Generator](https://www.dynamsoft.com/codepool/demos/gs1-barcode-generator/) — a standalone, tested example: [examples/gs1-generator](examples/gs1-generator)
 - [Scan 1D Barcode and OCR Text](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_ocr_text)
 - [Detect Barcode, MRZ and Document](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_mrz_document/)
 - [Aadhaar Card](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/aadhaar_card/)
