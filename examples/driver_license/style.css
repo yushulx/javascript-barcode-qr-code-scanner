@@ -7,17 +7,24 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  width: 100%;
+  /* Fallback for browsers without dvh support. */
+  height: 100%;
+  /* 100dvh follows the visible viewport, so mobile browser chrome
+     (address bar, toolbar) no longer pushes the layout out of view. */
+  height: 100dvh;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  width: 100vw;
-  height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #333;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #app {
@@ -29,13 +36,18 @@ body {
   height: 100%;
 }
 
-/* License Setup Styles */
+/* ---------------------------------------------------------------------------
+   License Setup
+   --------------------------------------------------------------------------- */
+
 .license-setup {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
+  padding: 16px;
+  overflow-y: auto;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
@@ -43,7 +55,7 @@ body {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 16px;
   padding: 2rem;
-  width: min(90vw, 500px);
+  width: min(100%, 500px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
@@ -161,14 +173,19 @@ body {
   text-decoration: underline;
 }
 
-/* Scanner App Styles */
+/* ---------------------------------------------------------------------------
+   Scanner App
+   --------------------------------------------------------------------------- */
+
 .scanner-app {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   width: 100%;
   height: 100%;
+  /* Respect the notch / home indicator on iOS. */
+  padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
+  gap: 12px;
 }
 
 .scanner-app.hidden {
@@ -177,11 +194,12 @@ body {
 
 /* Typography */
 h1 {
-  font-size: 2rem;
+  font-size: 1.6rem;
   font-weight: 600;
   color: white;
-  margin-bottom: 2rem;
+  text-align: center;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  flex: 0 0 auto;
 }
 
 a {
@@ -195,14 +213,29 @@ a:hover {
   text-decoration: underline;
 }
 
+/* Tip message */
+#tip-message {
+  flex: 0 0 auto;
+  max-width: 100%;
+  font-size: 0.95rem;
+  color: white;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 0.6rem 1.25rem;
+  border-radius: 25px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  z-index: 5;
+}
+
 /* Mode Switch Toggle */
 .mode-switch {
   position: relative;
   display: flex;
+  flex: 0 0 auto;
   background: rgba(255, 255, 255, 0.15);
   border-radius: 50px;
   padding: 4px;
-  margin-bottom: 2rem;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -213,13 +246,16 @@ a:hover {
   display: flex;
   position: relative;
   z-index: 2;
+  width: 100%;
 }
 
 .mode-option {
   display: flex;
+  flex: 1;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.7rem 1.5rem;
   border-radius: 46px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -229,6 +265,7 @@ a:hover {
   -webkit-user-select: none;
   user-select: none;
   position: relative;
+  white-space: nowrap;
 }
 
 .mode-option:hover {
@@ -245,6 +282,7 @@ a:hover {
   stroke: currentColor;
   stroke-width: 2;
   transition: all 0.3s ease;
+  flex: 0 0 auto;
 }
 
 .mode-slider {
@@ -259,7 +297,6 @@ a:hover {
   box-shadow: 0 4px 16px rgba(254, 142, 20, 0.3);
 }
 
-/* Add subtle pulse animation for better UX */
 .mode-option:active {
   transform: scale(0.98);
 }
@@ -282,48 +319,20 @@ a:hover {
   font-weight: 500;
 }
 
-/* Tip message */
-#tip-message {
-  position: absolute;
-  top: 2vh;
-  font-size: 1rem;
-  color: white;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 0.75rem 1.5rem;
-  border-radius: 25px;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  z-index: 5;
-}
-
 /* Main container */
 #main-container {
   display: flex;
-  flex-direction: column;
+  flex: 1 1 auto;
   align-items: center;
   justify-content: center;
-  width: min(90vw, 600px);
-  height: 60vh;
+  width: min(100%, 640px);
+  /* min-height:0 lets the flex item shrink below its content size, which is
+     what keeps the camera view inside the viewport on small screens. */
+  min-height: 0;
   position: relative;
 }
 
-/* Camera start button */
-#camera-start-btn {
-  width: 120px;
-  height: 120px;
-  fill: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-}
-
-#camera-start-btn:hover {
-  fill: white;
-  transform: scale(1.1);
-}
-
-/* Camera view */
+/* Camera view (the SDK mounts its own responsive UI here) */
 #camera-view {
   display: none;
   width: 100%;
@@ -333,15 +342,19 @@ a:hover {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-/* Results container */
+/* ---------------------------------------------------------------------------
+   Results overlay
+   --------------------------------------------------------------------------- */
+
 .results-container {
   display: none;
+  flex-direction: column;
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: min(90vw, 700px);
-  max-height: 80vh;
+  width: min(92vw, 700px);
+  max-height: min(80vh, 80dvh);
   background: white;
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -353,6 +366,7 @@ a:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex: 0 0 auto;
   padding: 1rem 1.25rem;
   background: #333;
   color: white;
@@ -361,8 +375,10 @@ a:hover {
 }
 
 .results-body {
-  max-height: calc(80vh - 60px);
+  flex: 1 1 auto;
+  max-height: calc(min(80vh, 80dvh) - 60px);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 1.5rem;
 }
 
@@ -386,6 +402,7 @@ a:hover {
 .result-item span {
   color: #333;
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 /* Close buttons */
@@ -409,11 +426,15 @@ a:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Responsive design */
+/* ---------------------------------------------------------------------------
+   Responsive design
+   --------------------------------------------------------------------------- */
+
+/* Tablets and small laptops */
 @media only screen and (max-width: 768px) {
   .license-container {
     padding: 1.5rem;
-    width: 95vw;
+    width: 100%;
   }
 
   .license-container h2 {
@@ -422,20 +443,11 @@ a:hover {
 
   .license-actions {
     flex-direction: column;
-  }
-
-  .license-btn {
-    margin-bottom: 0.5rem;
+    gap: 0.5rem;
   }
 
   h1 {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .mode-switch {
-    margin-bottom: 1.5rem;
-    scale: 0.9;
+    font-size: 1.35rem;
   }
 
   .mode-option {
@@ -450,24 +462,16 @@ a:hover {
   }
 
   #tip-message {
-    top: 1vh;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     padding: 0.5rem 1rem;
   }
 
   #main-container {
-    width: 95vw;
-    height: 50vh;
-  }
-
-  #camera-start-btn {
-    width: 100px;
-    height: 100px;
+    width: 100%;
   }
 
   .results-container {
-    width: 95vw;
-    max-height: 85vh;
+    width: 100%;
   }
 
   .results-header {
@@ -477,11 +481,17 @@ a:hover {
 
   .results-body {
     padding: 1rem;
-    max-height: calc(85vh - 50px);
+    max-height: calc(min(80vh, 80dvh) - 50px);
   }
 }
 
+/* Phones */
 @media only screen and (max-width: 480px) {
+  .scanner-app {
+    padding: calc(8px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+
   .license-container {
     padding: 1rem;
     border-radius: 12px;
@@ -501,22 +511,38 @@ a:hover {
   }
 
   h1 {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
   }
 
   .mode-switch {
-    scale: 0.85;
-    margin-bottom: 1rem;
+    width: 100%;
+    max-width: 320px;
   }
 
   .mode-option {
-    padding: 0.5rem 1rem;
+    padding: 0.55rem 0.75rem;
     font-size: 0.8rem;
   }
 
   #tip-message {
     font-size: 0.8rem;
     padding: 0.5rem 0.75rem;
+  }
+
+  /* Turn the results panel into a bottom sheet so the camera stays visible. */
+  .results-container {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-height: 85dvh;
+    border-radius: 16px 16px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .results-body {
+    max-height: calc(85dvh - 50px);
   }
 
   .result-item {
@@ -526,6 +552,27 @@ a:hover {
 
   .result-item label {
     font-size: 0.85rem;
+  }
+}
+
+/* Landscape phones: keep the camera usable when the height is tiny. */
+@media only screen and (max-height: 460px) and (orientation: landscape) {
+  .scanner-app {
+    gap: 6px;
+  }
+
+  h1 {
+    display: none;
+  }
+
+  #tip-message {
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+  }
+
+  .mode-option {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.78rem;
   }
 }
 
