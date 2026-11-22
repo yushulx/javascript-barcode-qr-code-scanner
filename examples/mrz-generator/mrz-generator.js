@@ -147,7 +147,7 @@ class TD2CodeGenerator extends MRZGenerator {
 
         const line1 = docType + country + namesField;
 
-        // Line 2: Document number (9) + check digit (1) + nationality (3) + birth date (6) + check digit (1) + sex (1) + expiry date (6) + check digit (1) + optional data (7) + check digit (1)
+        // Line 2: Document number (9) + check digit (1) + nationality (3) + birth date (6) + check digit (1) + sex (1) + expiry date (6) + check digit (1) + optional data (7) + composite check digit (1)
         const docNum = MRZGenerator.pad(this.documentNumber, 9);
         const docNumCheck = MRZGenerator.calculateCheckDigit(docNum);
 
@@ -160,9 +160,15 @@ class TD2CodeGenerator extends MRZGenerator {
         const expiryCheck = MRZGenerator.calculateCheckDigit(expiry);
 
         const optional = MRZGenerator.pad(this.optionalData, 7);
-        const optionalCheck = MRZGenerator.calculateCheckDigit(optional);
 
-        const line2 = docNum + docNumCheck + nat + birth + birthCheck + sexField + expiry + expiryCheck + optional + optionalCheck;
+        /* TD2 has no optional-data check digit: position 36 is the composite
+           digit, covering character positions 1-10, 14-20 and 22-35 — the
+           document number, birth date, expiry date and optional data, each
+           with its own check digit, and not the nationality or the sex. */
+        const compositeData = docNum + docNumCheck + birth + birthCheck + expiry + expiryCheck + optional;
+        const compositeCheck = MRZGenerator.calculateCheckDigit(compositeData);
+
+        const line2 = docNum + docNumCheck + nat + birth + birthCheck + sexField + expiry + expiryCheck + optional + compositeCheck;
 
         return line1 + '\n' + line2;
     }
