@@ -1,0 +1,23 @@
+{
+  "name": "document-scanner",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "ncp node_modules/dynamsoft-document-viewer/dist public/assets/ddv-resources && vite",
+    "build": "ncp node_modules/dynamsoft-document-viewer/dist public/assets/ddv-resources && vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "dynamsoft-capture-vision-bundle": "^3.6.5000",
+    "dynamsoft-document-viewer": "^5.0.1",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "ncp": "^2.0.0",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.1",
+    "vue-tsc": "^2.1.10"
+  }
+}
