@@ -3,9 +3,11 @@
 A browser-side file inspector and viewer: drop a file and see what it actually
 is — size, real type, dimensions, DPI, EXIF, page count, a locally computed
 SHA-256 — and then read the content, page by page where the format has pages.
+Right-click any page to scan a barcode region in place.
 
-No SDK, no build step, no server. Open `index.html` from a local web server and
-it runs.
+No build step, no server. Open `index.html` from a local web server and it runs.
+Reading files needs no SDK; only the optional barcode scan loads Dynamsoft
+Barcode Reader, and only the first time you use it.
 
 ## Online demo
 
@@ -35,6 +37,47 @@ secure context, which includes `localhost`.
 | Video / audio | MP4, WebM, MOV, M4V, MP3, WAV, OGG | Duration, resolution, aspect ratio, then the browser's own decoder |
 | Raw frames | YUV, NV21, NV12, I420, YV12 | Android camera dumps: pixel format, width, height and row stride are yours to set, and the frame count follows from the file size |
 | Anything else | — | Metadata only. The container is reported from its magic bytes and no fake preview is drawn |
+
+## Barcode scan
+
+Right-click inside the preview (or press the context-menu key) and choose
+**Scan barcodes here**:
+
+1. The page dims and you drag a box around the symbol; the corner handles resize
+   it, dragging inside moves it.
+2. **Read barcode** crops that region at full resolution — not at the zoomed
+   screen size — and decodes it.
+3. A panel slides in with the annotated crop (every barcode boxed and labelled
+   with its format) and one card per result: format, decoded text, pixel size,
+   module size and angle.
+4. **Copy results** puts the JSON on the clipboard; **PNG** saves the annotated
+   crop; **JSON** saves the same payload as a file.
+
+The crop is widened by ~6% on each side before decoding, because a hand-drawn
+box usually cuts the quiet zone. The overlay is drawn on the crop that was
+actually decoded, so the boxes match the pixels you see.
+
+The menu also offers **Copy image** and **Save image** for the current page,
+which work without the reader.
+
+Scanning applies to raster pages only — images, PDF, TIFF and raw YUV. Word,
+Excel and PowerPoint are rendered as HTML, so there is no pixel page to crop and
+the menu does not appear.
+
+### Licensing
+
+Dynamsoft Barcode Reader is fetched from the CDN on the first scan and needs a
+license to activate:
+
+- On `dynamsoft.com` the page uses the domain-bound Codepool license, so there
+  is nothing to enter.
+- Anywhere else it falls back to a temporary trial key and reports
+  `license_fallback` to analytics. That key is a 24-hour trial, and the SDK
+  shows its own notice on first use — dismiss it and decoding continues.
+- `?license=DLS2...` (or `localStorage['dy-demo-license']`) overrides both.
+
+A self-hosted copy should carry its own
+[30-day trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform).
 
 ## Design notes
 
@@ -80,6 +123,10 @@ green and purple, which is exactly the symptom being chased.
   bytes being hashed; it says nothing about where the file came from.
 - **Size caps.** PDF over 150 MB, text over 8 MB and Office over 60 MB are
   refused or truncated, with a note in the preview.
+- **Scanning needs pixels.** The barcode menu only appears on raster pages; an
+  Office document has no pixel page to crop. The first scan also downloads the
+  reader (~2 MB of wasm) and needs network access for the license, so it is
+  noticeably slower than the next one (seconds versus tens of milliseconds).
 
 ## Third-party code
 
@@ -90,6 +137,7 @@ green and purple, which is exactly the symptom being chased.
 | [SheetJS](https://sheetjs.com/) | XLSX cell extraction | Apache-2.0 |
 | [docx-preview](https://github.com/VolodymyrBaydalka/docxjs) | DOCX → paginated HTML | Apache-2.0 |
 | [JSZip](https://stuk.github.io/jszip/) | OOXML containers | MIT |
+| [Dynamsoft Barcode Reader](https://www.dynamsoft.com/barcode-reader/overview/) | Region decoding, loaded on first scan | Commercial (trial available) |
 
 The EXIF reader, the PPTX renderer and the YUV conversion are in `app.js` with
 no dependencies, so every number in the details panel can be traced back to the
@@ -101,4 +149,6 @@ bytes being read.
 `_scripts/build_file_viewer_samples.py` in the Codepool repository: a JPEG with
 a full EXIF block (including GPS), a three-page TIFF, a four-page PDF, a
 three-section DOCX, a two-sheet XLSX, a four-slide PPTX, CSV, JSON, TXT, SVG,
-PNG, a two-frame NV21 dump, a short MP4 and a binary blob.
+PNG, a two-frame NV21 dump, a short MP4 and a binary blob. `sample-barcodes.jpg`
+is a product photo with an EAN-13 label, copied from the Barcode Parameter Tuner
+samples so the right-click scan has something to read.
