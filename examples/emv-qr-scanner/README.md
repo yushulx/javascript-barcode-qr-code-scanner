@@ -11,6 +11,8 @@ A hosted version with no setup is at
 
 ## Inputs
 
+- Camera: live scanning through the SDK's own viewfinder, narrowed to
+  QR Code / Micro QR so an unrelated barcode cannot win the decode race
 - Image: drop, choose or paste (screenshot → paste is the shortest path)
 - Bundled samples: a static code, a dynamic code, and a dynamic code whose
   amount was tampered (12.50 → 99.99) so the checksum visibly fails
@@ -53,6 +55,9 @@ leave your device:
 - `emv-model.js` — TLV encode/parse, CRC-16, tag dictionary, ISO 4217 and
   ISO 18245 lookups. Vendored copy of `../emv-qr-generator/emv-model.js`;
   keep the two in sync (currently byte-identical).
-- `app.js` — decode on the stock `ReadBarcodes_Default` template plus the
-  local parse, field table, wallet simulation, pipeline and industry notes.
+- `app.js` — decode on the stock `ReadBarcodes_Default` template (scan scope
+  narrowed to QR via the simplified-settings API) plus the local parse, field
+  table and wallet simulation. Camera support: CameraView + CameraEnhancer +
+  CaptureVisionRouter; the results panel pauses the stream, closing it
+  resumes. If the camera cannot be opened the page falls back to Upload mode.
 - `sample-images/` — the three bundled sample codes.
