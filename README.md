@@ -37,6 +37,18 @@ This repository contains **JavaScript** examples demonstrating how to use [Dynam
 - [Scan 1D Barcode and OCR Text](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_ocr_text)
 - [Detect Barcode, MRZ and Document](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_mrz_document/)
 - [Aadhaar Card](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/aadhaar_card/)
+- [Animated QR Code Reader](examples/AnimatedQRCodeReader) — a two-screen QR transfer built on requestAnimationFrame
+- [DotCode Scanner](examples/DotCode-Scanner-JS) — DotCode reading with a tailored template
+- [IMEI Scanner](examples/IMEI-scanner) — read the IMEI barcode printed on a phone box
+- [NFC Barcode Scanner](examples/NFC-Barcode-Scanner) — read an NFC tag and the barcode it carries
+- [Next.js Barcode Scanner](examples/NextJS-Barcode-Scanner) — client-side scanning in a Next.js app
+- [Next.js ID Card Scanner](examples/NextJS-ID-Card-Scanner) — camera, MRZ and barcode reading in Next.js
+- [Nuxt.js Barcode Scanner](examples/NuxtJS-Barcode-Scanner) — client-side scanning in a Nuxt app
+- [Scan and Print Documents](examples/scan-and-print-document-javascript) — scan on a phone and print the result
+- [Scan to PDF (React)](examples/Scan-to-PDF-React) — capture pages and export a PDF in React
+- [Scan to PDF (Vue)](examples/Vue-Scan-to-PDF) — capture pages and export a PDF in Vue
+- [Vanilla JS Barcode Reader Demos](examples/Vanilla-JS-Barcode-Reader-Demos) — auto-zoom and EAN/UPC add-on demos
+- [vCard QR Code Scanner](examples/vcard-qr-code-scanner) — generate and read contact QR codes
 
 ## Blog
 - [How to Use WebGL to Accelerate Web Barcode and QR Code Decoding Speed](https://www.dynamsoft.com/codepool/webgl-accelerate-web-barcode-decoding-speed.html)
