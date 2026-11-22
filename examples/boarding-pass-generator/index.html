@@ -236,16 +236,18 @@
         <div class="card">
             <div class="card-header">
                 <h2>Pass preview</h2>
+                <p class="card-subtitle">Auto-generated — the barcode redraws itself as soon as any value changes.</p>
             </div>
             <div class="card-body">
                 <div class="canvas-wrapper">
                     <canvas id="preview" width="1100" height="700"></canvas>
                 </div>
+                <p class="hint">You do not need to press anything: edit a field, add or remove a leg, or hit
+                    <em>Randomise</em> and this pass is rebuilt and re-rendered automatically.</p>
                 <p class="hint" id="preview_caption"></p>
                 <p class="hint" id="decode_status">Generating…</p>
                 <div class="button-group">
-                    <button id="generate" class="btn btn-primary" type="button">✨ Generate barcode</button>
-                    <button id="download" class="btn btn-secondary" type="button">⬇️ Download pass PNG</button>
+                    <button id="download" class="btn btn-primary" type="button">⬇️ Download pass PNG</button>
                     <button id="copy_payload" class="btn btn-secondary" type="button">📋 Copy payload</button>
                 </div>
             </div>
