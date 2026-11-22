@@ -1,0 +1,22 @@
+{
+  "schema": "codepool.gs1-2d-pos-test-lab.fixtures.v1",
+  "description": "Deterministic synthetic fixtures. Prices come from this local fictional catalog, not from the barcode.",
+  "catalog": {
+    "09506000134352": { "name": "Fresh Juice 250 mL", "ean13": "9506000134352", "priceUsd": 2.50 },
+    "09506000134369": { "name": "Whole Milk 500 mL", "ean13": "9506000134369", "priceUsd": 3.20 },
+    "09506000134376": { "name": "Sparkling Water 330 mL", "ean13": "9506000134376", "priceUsd": 1.80 }
+  },
+  "scenarios": [
+    { "id": "traditional", "level": 1, "carriers": ["EAN-13"], "eanGtin": "09506000134352", "qrGtin": "09506000134352", "presentations": 1, "expectedStatus": "added", "expectedQuantity": 1 },
+    { "id": "two-dimensional", "level": 2, "carriers": ["GS1 Digital Link QR"], "eanGtin": "09506000134352", "qrGtin": "09506000134352", "lot": "B17", "expiry": "2027-12-31", "presentations": 1, "expectedStatus": "added", "expectedQuantity": 1 },
+    { "id": "dual-marked", "level": 3, "carriers": ["EAN-13", "GS1 Digital Link QR"], "eanGtin": "09506000134352", "qrGtin": "09506000134352", "presentations": 1, "expectedStatus": "added", "expectedQuantity": 1 },
+    { "id": "two-products", "level": 4, "carriers": ["EAN-13", "GS1 Digital Link QR"], "eanGtin": "09506000134352", "qrGtin": "09506000134352", "presentations": 2, "expectedStatus": "added", "expectedQuantity": 2 },
+    { "id": "mismatch", "level": 5, "carriers": ["EAN-13", "GS1 Digital Link QR"], "eanGtin": "09506000134352", "qrGtin": "09506000134369", "presentations": 1, "expectedStatus": "needs_review", "expectedQuantity": 0 }
+  ],
+  "digitalLinkTemplate": "https://example.com/01/{gtin}/10/{lot}?17={yymmdd}",
+  "limitations": [
+    "Simulation supplies package presentation identity explicitly.",
+    "SDK image decode results are reported separately and never replaced by fixtures.",
+    "This is not GS1 certification, physical scanner qualification or print-quality verification."
+  ]
+}

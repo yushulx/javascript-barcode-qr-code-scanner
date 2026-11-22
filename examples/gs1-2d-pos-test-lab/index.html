@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GS1 2D Retail POS Test Lab | Dynamsoft</title>
+  <meta name="description" content="A canvas checkout game for EAN-13 and GS1 Digital Link QR codes. Scan or drag dual-marked packs, inspect every POS decision and try genuine Dynamsoft image decoding.">
+  <link rel="canonical" href="https://yushulx.me/javascript-barcode-qr-code-scanner/examples/gs1-2d-pos-test-lab/">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="GS1 2D Retail POS Test Lab | Dynamsoft">
+  <meta property="og:description" content="A playable 2D checkout game: two barcodes on one pack, one POS decision. Scan, drag, inspect and decode with Dynamsoft.">
+  <meta property="og:url" content="https://yushulx.me/javascript-barcode-qr-code-scanner/examples/gs1-2d-pos-test-lab/">
+  <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/gs1-2d-pos-test-lab/thumbnail.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.11.4/dist/bwip-js.min.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand" aria-label="Dynamsoft home">
+        <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
+      </a>
+      <span class="brand-divider" aria-hidden="true"></span>
+      <span class="brand-product">Free GS1 2D POS Test Lab</span>
+      <nav class="header-nav header-nav-secondary" aria-label="Dynamsoft">
+        <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Barcode Reader</a>
+        <a class="btn btn-primary" href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform" data-demo-cta="trial">30-Day Free Trial</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-intro">
+      <div>
+        <p class="eyebrow">CANVAS CHECKOUT SIMULATION</p>
+        <h1>Free GS1 2D Retail POS Test Lab</h1>
+        <p>Run dual-marked packs through a tiny supermarket till. One physical item with two barcodes should still be charged once.</p>
+      </div>
+      <div class="intro-badge" aria-hidden="true">
+        <span class="intro-badge-icon">⌁</span>
+        <span><strong>Playable in 60 seconds</strong><small>No camera · no sign-up</small></span>
+      </div>
+    </section>
+
+    <section id="how-it-works" class="game-shell" aria-labelledby="game-heading">
+      <h2 id="game-heading" class="sr-only">Interactive GS1 2D retail checkout game</h2>
+      <canvas id="pos-game" width="1200" height="800" tabindex="0" role="application"
+        aria-label="Interactive 2D checkout game. A package with an EAN-13 and a GS1 QR moves along a conveyor into a scanner. The POS terminal shows reads, cart units and why the decision was made."
+        aria-describedby="lane-help">Your browser needs Canvas support to run this checkout game.</canvas>
+      <p id="lane-help" class="sr-only">Press Space to scan, R to repeat the same presentation, number keys 1 through 5 to choose a level, M to reduce motion, and question mark to reopen the briefing. You can also drag the package into the scanner or click Scan Item.</p>
+      <p id="live-status" class="sr-only" aria-live="polite">Interactive checkout lab ready.</p>
+      <div class="sr-only" role="group" aria-label="Accessible checkout controls">
+        <button id="a11y-start" type="button">Start or resume the checkout briefing</button>
+        <button id="a11y-scan" type="button">Scan current item</button>
+        <button id="a11y-repeat" type="button">Repeat the same presentation</button>
+        <button id="a11y-next" type="button">Go to the next level</button>
+        <button id="a11y-results" type="button">Open final results</button>
+        <button id="a11y-reset" type="button">Reset the current checkout</button>
+        <button id="a11y-guided" type="button">Switch to guided challenges</button>
+        <button id="a11y-sandbox" type="button">Switch to the free sandbox</button>
+        <button id="a11y-sdk" type="button">Switch to real SDK decoding</button>
+        <button id="a11y-motion" type="button">Toggle reduced motion</button>
+        <button id="a11y-help" type="button">Reopen the briefing</button>
+        <select id="a11y-level" aria-label="Guided level">
+          <option value="1">Level 1: Traditional checkout</option>
+          <option value="2">Level 2: 2D checkout</option>
+          <option value="3">Level 3: Dual-marked package</option>
+          <option value="4">Level 4: Two identical products</option>
+          <option value="5">Level 5: GTIN mismatch</option>
+        </select>
+      </div>
+      <div id="game-fallback" class="game-fallback" hidden>
+        <strong>The canvas checkout could not start.</strong>
+        <span>Refresh the page, or read the rules below. The interactive engine prefers a modern browser with Canvas 2D.</span>
+      </div>
+      <input id="upload-image" type="file" accept="image/png,image/jpeg,image/webp,image/bmp,image/gif" hidden>
+    </section>
+
+    <div class="game-caption">
+      <p><span class="caption-dot simulation"></span> Simulation uses deterministic fixtures. <span class="caption-dot sdk"></span> Real SDK results come only from image decoding.</p>
+      <p>Keyboard: <kbd>Space</kbd> scan · <kbd>R</kbd> repeat pass · <kbd>1–5</kbd> levels · <kbd>M</kbd> motion</p>
+    </div>
+
+    <div class="notice-banner" role="note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div><strong>A teaching simulator, not a certification tool.</strong> Synthetic products, prices and events. Real Decode sends the generated or uploaded image to Dynamsoft and reports genuine results, including no-result and errors. It does not prove physical POS readiness or print quality.</div>
+    </div>
+
+    <section class="explainer container">
+      <div class="explainer-heading">
+        <p class="eyebrow">THE RULE BEHIND THE GAME</p>
+        <h2>Deduplicate a package presentation, not a GTIN.</h2>
+        <p>A barcode tells the checkout <em>what product</em> this is. It does not tell it <em>which physical package</em> just crossed the scanner. Matching carrier reads inside one presentation become one cart commit; a second package is a new presentation.</p>
+      </div>
+      <div class="rule-grid">
+        <article><span class="rule-number">01</span><h3>Read the carriers</h3><p>EAN-13 supplies a GTIN. The QR carries a GS1 Digital Link URI with AI (01), lot and expiry. Both symbols in the game are real, rendered images.</p></article>
+        <article><span class="rule-number">02</span><h3>Normalize and compare</h3><p>The linear value becomes a canonical GTIN-14 and its check digit is verified. Two valid but different GTINs are a conflict, not a race for the scanner to win.</p></article>
+        <article><span class="rule-number">03</span><h3>Commit once per pass</h3><p>Same GTIN, same package: one unit. Same GTIN, second physical package: another unit. A permanent GTIN cache would block a legitimate second purchase.</p></article>
+      </div>
+      <div id="implementation" class="code-explainer">
+        <div>
+          <p class="eyebrow">IMPLEMENTATION NOTE</p>
+          <h2>One logical acknowledgement</h2>
+          <p>The pure POS engine groups identities inside one presentation. The canvas only visualizes the result; the SDK adapter cannot override these business rules.</p>
+          <a href="https://ref.gs1.org/guidelines/2d-in-retail/" rel="noopener" target="_blank">Read the GS1 2D at Retail POS guideline <span aria-hidden="true">↗</span></a>
+        </div>
+        <pre aria-label="POS deduplication pseudocode"><code>uniqueGtins = validReads.map(normalize).unique()
+if (uniqueGtins.size &gt; 1) needsReview()
+else if (presentation.wasCommitted) ignore()
+else cart.increment(uniqueGtins[0], 1)</code></pre>
+      </div>
+      <div class="faq-grid">
+        <details open><summary>What is dual marking?</summary><p>A package carries both an established EAN/UPC symbol and a 2D carrier, often to add richer product data during migration. When both represent one item, the POS processes one set of desired data rather than charging twice.</p></details>
+        <details><summary>Does Ambition 2027 make EAN-13 invalid?</summary><p>No. It is an industry POS-readiness goal for defined 2D carriers, not a claim that 1D barcodes stop working in 2027. Existing linear checkout remains part of this lab.</p></details>
+        <details><summary>Why does level 4 need two scans?</summary><p>Each click creates a new physical package presentation. Clicking <em>Repeat Pass</em> explicitly reuses the same presentation and must not add another unit.</p></details>
+        <details><summary>What does SDK mode prove?</summary><p>It shows whether Dynamsoft decoded the generated or uploaded image and exposes the genuine returned text. It does not establish camera grouping, scanner hardware behavior or GS1 certification.</p></details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="demo-footer">
+    <div class="demo-footer-inner">
+      <p class="disclaimer">Synthetic products and prices only. This is an interactive teaching tool, not an official GS1 conformance test or a production POS deduplication algorithm. Real camera grouping needs explicit trigger, spatial, timing and hardware-specific design.</p>
+      <div class="footer-links">
+        <span>Continue with <a href="https://www.dynamsoft.com/codepool/demos/gs1-barcode-generator/" data-demo-cta="generator">GS1 Generator</a> or <a href="https://www.dynamsoft.com/codepool/demos/gs1-barcode-scanner/" data-demo-cta="scanner">GS1 Scanner</a>.</span>
+        <a href="https://github.com/Dynamsoft/barcode-reader-javascript-samples" target="_blank" rel="noopener" data-demo-cta="source">Official SDK samples</a>
+        <a class="btn btn-primary footer-cta" href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform" data-demo-cta="trial">Get a 30-day free trial</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    window.addEventListener('error', function (event) {
+      var fallback = document.getElementById('game-fallback');
+      if (!fallback) return;
+      fallback.hidden = false;
+      fallback.textContent = 'Checkout renderer error: ' + (event.message || 'unknown error') +
+        (event.filename ? ' · ' + event.filename.split('/').pop() + ':' + event.lineno : '');
+    });
+  </script>
+  <script src="fixtures.js"></script>
+  <script src="pos-engine.js"></script>
+  <script src="barcode-renderer.js"></script>
+  <script src="sdk-decoder.js"></script>
+  <script src="canvas-renderer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
