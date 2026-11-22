@@ -12,7 +12,7 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="Free Online QR Error Correction Visualizer | Dynamsoft Codepool">
     <meta property="og:description"
-        content="Generate a QR code at any error correction level, damage it module by module or with noise, blur and low contrast, and watch whether a reader still decodes it — with the Reed-Solomon repair budget measured live. Upload a damaged code and download it rebuilt when the data is still recoverable.">
+        content="See how much damage a QR code can take. Generate a QR at error correction level L, M, Q or H, paint damage on its modules, cover finder or timing patterns, simulate noise, blur or low contrast, and watch a live decoder read it — with the Reed-Solomon repair budget measured as you go. Drop in a damaged code from anywhere and, when it still decodes, download it rebuilt as a clean PNG or SVG.">
     <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/qr-error-correction-visualizer/">
     <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/qr-error-correction-visualizer/thumbnail.png">
     <meta name="twitter:card" content="summary_large_image">
@@ -357,11 +357,13 @@
             <p>The <em>How damaged is a QR image?</em> card runs the same story backwards. There is no
                 original to compare against, so the page first locates the symbol — Dynamsoft Barcode Reader's
                 corner points when it decodes, otherwise a finder-pattern locator that finds the 1:1:3:1:1
-                triplets and fits the grid itself. The reader gets two passes: the default settings first, then
-                the modes built for physical damage (<code>BarcodeComplementModes</code> for missing positioning
-                patterns, <code>DeformationResistingModes</code> for a distorted one). That second pass is what
-                reads a symbol whose finder pattern is torn, which is also why the page no longer calls the
-                result "unreadable" just because the defaults came back empty. It then reads the format information for the level and mask,
+                triplets and fits the grid itself. The reader gets three escalating passes: the default settings,
+                then the modes built for physical damage (<code>BarcodeComplementModes</code> for missing
+                positioning patterns, <code>DeformationResistingModes</code> for a distorted one), then prepared
+                copies of the image — binarized with the pinholes closed, and turned by ±45° — because a label
+                printed with holes in the ink and a code wrapped around a can both defeat the first two. That is
+                also why the page no longer calls a result "unreadable" just because the defaults came back empty;
+                when a prepared copy is what read it, the report says so instead of pretending the page measured it. It then reads the format information for the level and mask,
                 samples every module through that grid, and hands the codeword stream to a Reed-Solomon decoder
                 that reports exactly which codewords it had to repair. When it succeeds the count is exact,
                 because the decoder knows; when it fails the page says so rather than guessing a percentage.

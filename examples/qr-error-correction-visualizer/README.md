@@ -137,11 +137,13 @@ back with their payload recovered. Without a reference that trick is
 impossible: nothing tells the decoder where the damage is.
 
 Reading a damaged code also needs the reader to try harder than its defaults.
-The page runs two passes: the stock settings first, then the modes built for
-physical damage — `BarcodeComplementModes` for missing positioning patterns,
-`DeformationResistingModes` for a distorted symbol. On a printed symbol with one
-corner torn through a finder pattern the defaults return nothing and the second
-pass returns the payload at 98% confidence.
+The page runs three escalating passes: the stock settings, then the modes built
+for physical damage — `BarcodeComplementModes` for missing positioning patterns,
+`DeformationResistingModes` for a distorted symbol — then prepared copies of the
+image (Otsu-binarized with a 3x3 closing pass over the pinholes, and the same
+copy turned by +/-45 degrees). A symbol with one corner torn through a finder
+pattern needs the second pass; a label printed with pinholes in the ink, and a
+code wrapped 45 degrees around a can, need the third.
 
 The recovery itself is a redraw, not a photograph lifted out of the SDK. When
 the page's own sampling verifies at least one block, the codewords are its own

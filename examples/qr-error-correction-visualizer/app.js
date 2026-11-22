@@ -1316,10 +1316,160 @@
         if (!ready) return { item: null, micro: first.micro, pass: 'default' };
         try {
             var second = pickQr(await cvr.capture(frame(), QR_DAMAGED_TEMPLATE));
-            return { item: second.item, micro: second.micro, pass: 'damaged' };
-        } catch (error) {
-            return { item: null, micro: first.micro, pass: 'default' };
+            if (second.item || second.micro) return { item: second.item, micro: second.micro, pass: 'damaged' };
+        } catch (error) { /* fall through to the prepared copies */ }
+
+        /* Third pass: the image as supplied defeats both templates. Two
+           failures look like this — a label printed with pinholes in the ink,
+           and a code turned 45 degrees on a curved surface — and neither is
+           something the reader guesses its way out of. Binarizing, closing the
+           pinholes and squaring the rotation recover them. The coordinates
+           come from the transformed copy, so they are not handed to the
+           analyzer; the payload and the codewords are what matter here. */
+        var variants = prepareVariants(imageData, width, height);
+        for (var v = 0; v < variants.length; v++) {
+            try {
+                var third = pickQr(await cvr.capture(frameFrom(variants[v].canvas), QR_DAMAGED_TEMPLATE));
+                if (third.item) return { item: third.item, micro: third.micro, pass: 'prepared', variant: variants[v].label };
+            } catch (error) { /* try the next one */ }
         }
+        return { item: null, micro: first.micro, pass: 'default' };
+    }
+
+    function frameFrom(canvas) {
+        var image = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, canvas.width, canvas.height);
+        return {
+            bytes: new Uint8Array(image.data.buffer, image.data.byteOffset, image.data.length),
+            width: canvas.width, height: canvas.height, stride: canvas.width * 4, format: 10
+        };
+    }
+
+    /* Three prepared copies, cheapest first: a global threshold with the
+       pinholes closed, then the same at plus and minus 45 degrees — the
+       rotation a code picks up when it is wrapped around a can. */
+    function prepareVariants(imageData, width, height) {
+        var base = document.createElement('canvas');
+        base.width = width;
+        base.height = height;
+        base.getContext('2d').putImageData(imageData, 0, 0);
+        var out = [];
+        out.push({ label: 'binarized, pinholes closed', canvas: binarizeCanvas(base, 0) });
+        out.push({ label: 'turned -45 degrees, binarized', canvas: binarizeCanvas(base, -45) });
+        out.push({ label: 'turned +45 degrees, binarized', canvas: binarizeCanvas(base, 45) });
+        return out;
+    }
+
+    function binarizeCanvas(source, degrees) {
+        var width = source.width;
+        var height = source.height;
+        var canvas = document.createElement('canvas');
+        var ctx;
+        if (degrees) {
+            /* A square canvas about the diagonal keeps every corner of the
+               turned copy inside the bitmap. */
+            var span = Math.ceil(Math.sqrt(width * width + height * height));
+            canvas.width = span;
+            canvas.height = span;
+            ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, span, span);
+            ctx.translate(span / 2, span / 2);
+            ctx.rotate(degrees * Math.PI / 180);
+            ctx.drawImage(source, -width / 2, -height / 2);
+        } else {
+            canvas.width = width;
+            canvas.height = height;
+            ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(source, 0, 0);
+        }
+        var w = canvas.width;
+        var h = canvas.height;
+        var image = ctx.getImageData(0, 0, w, h);
+        var d = image.data;
+        var gray = new Uint8Array(w * h);
+        var i;
+        var p;
+        for (i = 0, p = 0; i < d.length; i += 4, p += 1) {
+            gray[p] = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0;
+        }
+        var threshold = otsuThreshold(gray);
+        var bin = new Uint8Array(w * h);
+        for (i = 0; i < gray.length; i += 1) bin[i] = gray[i] < threshold ? 1 : 0;
+        /* One 3x3 closing pass: dilate then erode, which fills the white
+           pinholes inside a dark module without growing the module itself. */
+        bin = erode(dilate(bin, w, h), w, h);
+        for (i = 0, p = 0; i < d.length; i += 4, p += 1) {
+            var value = bin[p] ? 0 : 255;
+            d[i] = value;
+            d[i + 1] = value;
+            d[i + 2] = value;
+        }
+        ctx.putImageData(image, 0, 0);
+        return canvas;
+    }
+
+    function otsuThreshold(gray) {
+        var hist = new Uint32Array(256);
+        var i;
+        for (i = 0; i < gray.length; i += 1) hist[gray[i]] += 1;
+        var total = gray.length;
+        var sum = 0;
+        for (i = 0; i < 256; i += 1) sum += i * hist[i];
+        var sumBack = 0;
+        var weightBack = 0;
+        var best = 0;
+        var threshold = 128;
+        for (i = 0; i < 256; i += 1) {
+            weightBack += hist[i];
+            if (!weightBack) continue;
+            var weightFore = total - weightBack;
+            if (!weightFore) break;
+            sumBack += i * hist[i];
+            var meanBack = sumBack / weightBack;
+            var meanFore = (sum - sumBack) / weightFore;
+            var between = weightBack * weightFore * (meanBack - meanFore) * (meanBack - meanFore);
+            if (between > best) {
+                best = between;
+                threshold = i;
+            }
+        }
+        return threshold;
+    }
+
+    function dilate(bin, w, h) {
+        var out = new Uint8Array(w * h);
+        for (var y = 0; y < h; y += 1) {
+            for (var x = 0; x < w; x += 1) {
+                var on = 0;
+                for (var dy = -1; dy <= 1 && !on; dy += 1) {
+                    for (var dx = -1; dx <= 1 && !on; dx += 1) {
+                        var yy = y + dy;
+                        var xx = x + dx;
+                        if (yy >= 0 && xx >= 0 && yy < h && xx < w && bin[yy * w + xx]) on = 1;
+                    }
+                }
+                out[y * w + x] = on;
+            }
+        }
+        return out;
+    }
+
+    function erode(bin, w, h) {
+        var out = new Uint8Array(w * h);
+        for (var y = 0; y < h; y += 1) {
+            for (var x = 0; x < w; x += 1) {
+                var off = 0;
+                for (var dy = -1; dy <= 1 && !off; dy += 1) {
+                    for (var dx = -1; dx <= 1 && !off; dx += 1) {
+                        var yy = y + dy;
+                        var xx = x + dx;
+                        if (yy >= 0 && xx >= 0 && yy < h && xx < w && !bin[yy * w + xx]) off = 1;
+                    }
+                }
+                out[y * w + x] = off ? 0 : 1;
+            }
+        }
+        return out;
     }
 
     async function runAnalyzer(source) {
@@ -1360,6 +1510,7 @@
             var text = null;
             var readerNote = '';
             var readerPass = null;
+            var readerVariant = null;
             try {
                 var cvr = await engine();
                 var read = await readQr(cvr, imageData, w, h);
@@ -1368,13 +1519,17 @@
                    Micro QR out. */
                 var qr = read.item;
                 readerPass = read.pass;
+                readerVariant = read.variant || null;
                 if (qr) {
-                    points = qr.location.points.map(function (p) { return [p.x, p.y]; });
+                    /* A prepared copy was turned and re-binarized, so its
+                       corner points describe that copy rather than this image.
+                       The payload and codewords still come from this symbol. */
+                    points = read.pass === 'prepared' ? null : qr.location.points.map(function (p) { return [p.x, p.y]; });
                     text = qr.text;
                 } else {
                     readerNote = read.micro
                         ? 'The reader found a ' + read.micro.formatString + ' — this analysis covers standard QR codes only.'
-                        : 'The reader could not decode a QR code in this image, with either the default settings or the damaged-code settings.';
+                        : 'The reader could not decode a QR code in this image — not at the default settings, not with the damaged-code settings, and not on a binarized or turned copy of it.';
                 }
             } catch (e) {
                 readerNote = 'The reader is unavailable (' + ((e && e.message) || e) + '). Locating the symbol by its finder patterns only.';
@@ -1418,6 +1573,8 @@
                     report.levelSource = 'reader';
                     report.payload = qr.text;
                     report.recoveredByReader = true;
+                    report.recoveredPass = readerPass;
+                    report.recoveredVariant = readerVariant;
                 }
             }
 
@@ -1477,21 +1634,32 @@
         if (r.recoveredByReader) {
             verdict = 'The reader read it, so it is rebuilt below';
             tone = 'ok';
-            meaning = 'This page samples the pixels itself and could not verify a single block — the damage sits on '
-                + 'the data region, where an eroded module looks like any other. Dynamsoft Barcode Reader decoded '
-                + 'the symbol anyway, so the recovered symbol below is drawn from the codewords it recovered, not '
-                + 'from what the sampler could see.';
+            if (r.recoveredPass === 'prepared') {
+                meaning = 'The image as supplied defeated both reader passes, and this page could not lock a grid '
+                    + 'on it either. A pre-processed copy — ' + (r.recoveredVariant || 'binarized') + ' — did read '
+                    + 'it, so the recovered symbol below is drawn from the codewords the reader recovered. The '
+                    + 'damage percentage is left out: the grid was never locked on the original.';
+            } else {
+                meaning = 'This page samples the pixels itself and could not verify a single block — the damage sits '
+                    + 'on the data region, where an eroded module looks like any other. Dynamsoft Barcode Reader '
+                    + 'decoded the symbol anyway, so the recovered symbol below is drawn from the codewords it '
+                    + 'recovered, not from what the sampler could see.';
+            }
         } else if (r.reason === 'no-grid') {
             verdict = 'No QR grid found';
             tone = 'note';
             if (r.version) {
                 meaning = 'A grid locked at version ' + r.version + ', but neither the format field nor any block '
                     + 'could be verified — nothing here proves a readable QR symbol.';
-            } else if (r.locatedBy === 'finder') {
+            } else if (r.locatedBy === 'reader') {
+                meaning = 'The reader returned corners for a code it could not fully decode, and no version fitted '
+                    + 'them. Rectify the symbol first, or try a sharper photo.';
+            } else if (r.finderPatternsFound === false) {
+                meaning = 'The finder-pattern locator could not confirm three corners, and the reader did not '
+                    + 'decode the image either. At this print quality there is nothing here to measure.';
+            } else {
                 meaning = 'Finder patterns were spotted, but no version locked onto them — the symbol is too '
                     + 'damaged, too small or too warped for this analysis.';
-            } else {
-                meaning = 'Nothing in this image looks like a QR symbol: no finder patterns were found at all.';
             }
         } else if (r.reason === 'low-contrast') {
             verdict = 'Black and white will not separate';

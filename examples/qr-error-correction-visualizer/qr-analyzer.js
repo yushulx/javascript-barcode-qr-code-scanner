@@ -926,7 +926,10 @@
         if (!points) {
             points = locateSymbol(rgba, width, height);
             locatedBy = 'finder';
-            if (!points) return { reason: 'no-grid', locatedBy: 'finder' };
+            /* finderPatternsFound distinguishes "found three corners but no
+               version fitted" from "the run-length test found nothing", which
+               are different failures and deserve different words. */
+            if (!points) return { reason: 'no-grid', locatedBy: 'finder', finderPatternsFound: false };
         }
 
         var lock = lockGrid(rgba, width, height, points, BarcodeQR, locatedBy === 'reader');
