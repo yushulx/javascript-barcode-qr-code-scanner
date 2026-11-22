@@ -279,6 +279,116 @@ button,
     flex-direction: column;
 }
 
+/* Clip recorder */
+.record-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 51px;   /* matches .form-select, so the controls line up */
+}
+
+.btn-record {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background-color: var(--container-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+.btn-record:hover:not(:disabled) {
+    background-color: var(--border-color);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-record:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.record-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background-color: #dc2626;
+    flex: 0 0 auto;
+}
+
+.btn-record.is-recording {
+    background-color: #fef2f2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+.btn-record.is-recording .record-dot {
+    animation: record-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes record-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.record-timer {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #b91c1c;
+    font-variant-numeric: tabular-nums;
+}
+
+.record-hint {
+    margin: 6px 0 0;
+}
+
+.recording-result {
+    margin-bottom: 20px;
+    padding: 16px;
+    background-color: var(--container-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.recording-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.recording-head .hint {
+    margin-left: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+}
+
+#recording_preview {
+    display: block;
+    width: 100%;
+    max-height: 420px;
+    background-color: #000;
+    border-radius: 8px;
+}
+
+.recording-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+/* An <a> dressed as a button has to lose the underline and centre its label. */
+.recording-actions a.btn {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
 /* Results */
 .result-section {
     margin-top: 20px;

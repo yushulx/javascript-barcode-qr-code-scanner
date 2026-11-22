@@ -185,10 +185,36 @@
                 <label class="label-text" data-page-node-id="5NqjPHjGwwTmd8B9E7jFeE"><strong data-page-node-id="VuuPa8sST6mrMa3JEsFN3N">Select Camera</strong></label>
                 <select onchange="cameraChanged()" id="camera_source" class="form-select" data-page-node-id="kKWcH4W6qX9DZ8ssXWX3lV"></select>
             </div>
+            <div class="control-group control-group-record" data-page-node-id="rC7wQm2Xb9Ln4Tz1VkPq8e">
+                <label class="label-text" data-page-node-id="rSc9Xb3Wt5Nq7Lm2HdJk4v"><strong data-page-node-id="rTb1Kp8Yc4Zj6Vn3GsQw7m">Clip Recorder</strong></label>
+                <div class="record-row" data-page-node-id="rVd5Mq9Bx2Nc7Ls4JfHg1t">
+                    <button id="record_btn" class="btn btn-record" onclick="toggleRecording()" disabled data-page-node-id="rWh3Ns6Zc8Lp2Kd9BgFt5y">
+                        <span class="record-dot" aria-hidden="true" data-page-node-id="rXj7Pt4Bv6Rd3Mc1HzKw9u"></span>
+                        <span id="record_btn_label" data-page-node-id="rZl9Qv2Dt8Sf5Nb3JcMx4a">Start recording</span>
+                    </button>
+                    <span id="record_timer" class="record-timer" hidden data-page-node-id="rBn1Tw7Gm5Hj9Vd2KsQe6c">0:00</span>
+                </div>
+                <p class="hint record-hint" data-page-node-id="rDp3Yx9Kf4Lm6Nc8RtWa2s">Records the live stream, then replays the clip through the video
+                    decoder — the same path an uploaded MP4/WebM takes.</p>
+            </div>
         </div>
         <div id="videoview" class="video-wrapper" data-page-node-id="6KWEMiH9jyU9YTfdmiBnVt">
             <video id="camera_view" autoplay playsinline muted data-page-node-id="S4b7deBk13ARTnAOicQimH"></video>
             <canvas id="camera_overlay" data-page-node-id="FXzENb46DWiRLQz6RidtnG"></canvas>
+        </div>
+
+        <!-- Recorded clip -->
+        <div id="recording_result" class="recording-result" style="display: none;" data-page-node-id="rFv5Zb1Qn7Kc3Md9HxLp4w">
+            <div class="recording-head" data-page-node-id="rHx7Cd3Vp9Mf1Nb5JqRs6y">
+                <strong data-page-node-id="rJz9Ef5Xr2Qh4Pd7LtVu8a">Recorded clip</strong>
+                <span id="recording_meta" class="hint" data-page-node-id="rLb1Gh7Zt4Sj6Rf9NvXw3c"></span>
+            </div>
+            <video id="recording_preview" controls playsinline data-page-node-id="rNd3Jk9Bv6Ul8Th2PxZy5e"></video>
+            <div class="recording-actions" data-page-node-id="rPf5Lm1Dx8Wn3Vj4RzBa7g">
+                <button class="btn btn-primary" onclick="scanRecording()" data-page-node-id="rRh7No3Fz1Xp5Wk6TcDe9i">Scan this clip</button>
+                <a id="recording_download" class="btn btn-secondary" download="camera-clip.webm" data-page-node-id="rTj9Pq5Hb3Yr7Xm8VeFg1k">Download</a>
+                <button class="btn btn-secondary" onclick="discardRecording()" data-page-node-id="rVl1Rs7Jd5Zt9Yn1XgHi3m">Discard</button>
+            </div>
         </div>
 
         <div class="result-section" data-page-node-id="vRRC9G3f26U8uma9pmLKXW">
