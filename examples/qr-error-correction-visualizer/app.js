@@ -62,6 +62,7 @@
         decodeAuto: $('decode-auto'), decodeStatus: $('decode-status'),
         btnDecode: $('btn-decode'), btnSweep: $('btn-sweep'),
         logTbody: $('log-tbody'), logEmpty: $('log-empty'),
+        anatomyCanvas: $('anatomy-canvas'), anatomyLegend: $('anatomy-legend'),
         toast: $('toast')
     };
 
@@ -765,7 +766,10 @@
             + (isData ? 'Data' : 'Error correction') + ' codeword ' + cw + ' of '
             + (isData ? enc.dataCodewords : enc.ecCodewords) + ' · block ' + (block + 1) + ' of '
             + st.numBlocks + ' · position ' + position + ' of '
-            + (isData ? st.dataCounts[block] : st.ecPerBlock) + '.';
+            + (isData ? st.dataCounts[block] : st.ecPerBlock) + '. '
+            + (isData
+                ? 'Data codewords carry the encoded payload.'
+                : 'Error correction codewords are pure redundancy — a scanner uses them to rebuild damaged codewords.');
     }
 
     /* ------------------------------------------------------------------ *
@@ -984,6 +988,150 @@
     }
 
     /* ------------------------------------------------------------------ *
+     * QR anatomy card: every named region of the symbol, in its own color,
+     * with a plain-language glossary. Hovering a term lights the region up.
+     * ------------------------------------------------------------------ */
+    var ANATOMY_REGIONS = [
+        {
+            kind: 'finder', color: '#9c3d2e', term: 'Finder patterns',
+            match: function (c) { return (c.id || '').indexOf('finder-') === 0; },
+            text: function () { return 'The three large squares. A scanner uses them to locate and orient the symbol before reading anything. They carry no parity — cover one and nothing repairs it (try "Cover finder patterns").'; }
+        },
+        {
+            kind: 'separator', color: '#f2e2b3', term: 'Separators',
+            match: function (c) { return (c.id || '').indexOf('separator-') === 0; },
+            text: function () { return 'The one-module light ring around each finder pattern. It keeps the finder edge from bleeding into the data region.'; }
+        },
+        {
+            kind: 'timing', color: '#3d6fa8', term: 'Timing patterns',
+            match: function (c) { return c.kind === 'timing'; },
+            text: function () { return 'The alternating stripe along row 6 and column 6. It gives the scanner the grid spacing, so every module lands in the right sample.'; }
+        },
+        {
+            kind: 'alignment', color: '#7d5ba6', term: 'Alignment pattern',
+            match: function (c) { return c.kind === 'alignment'; },
+            text: function () { return 'The small square in the lower right — more of them on larger versions. It helps the scanner correct distortion on curved or angled prints.'; }
+        },
+        {
+            kind: 'format', color: '#e08a6d', term: 'Format information',
+            match: function (c) { return c.kind === 'format'; },
+            text: function () { return '15 bits stored twice, recording the error correction level and the mask pattern. Lose both copies and the scanner cannot even choose a decoding recipe.'; }
+        },
+        {
+            kind: 'version', color: '#2e8b74', term: 'Version information',
+            match: function (c) { return c.kind === 'version'; },
+            text: function () {
+                return state.encoded.version >= 7
+                    ? '18 bits stored twice, recording the symbol size. This version-' + state.encoded.version + ' symbol carries them near the top-right finder.'
+                    : '';
+            }
+        },
+        {
+            kind: 'dark', color: '#111111', term: 'Dark module',
+            match: function (c) { return c.kind === 'dark'; },
+            text: function () { return 'The single always-dark module beside the bottom-left finder — a fixed orientation anchor the standard requires.'; }
+        },
+        {
+            kind: 'data', color: '#fafafa', term: 'Data codewords',
+            match: function (c) { return c.kind === 'data'; },
+            text: function () { return 'The payload: 8 modules per codeword, read as one byte. This symbol carries ' + state.encoded.dataCodewords + ' of them, holding ' + state.encoded.summary.dataCapacityBytes + ' bytes.'; }
+        },
+        {
+            kind: 'ec', color: '#f5a25a', term: 'Error correction codewords',
+            match: function (c) { return c.kind === 'ec'; },
+            text: function () { return 'The Reed-Solomon parity: ' + state.encoded.ecCodewords + ' codewords here, letting each block repair up to ⌊' + state.structure.ecPerBlock + '/2⌋ = ' + Math.floor(state.structure.ecPerBlock / 2) + ' corrupted codewords. Damage lands here too and costs the same budget.'; }
+        },
+        {
+            kind: 'remainder', color: '#c9c9c9', term: 'Remainder bits',
+            match: function (c) { return c.id === 'remainder-bits'; },
+            text: function () { return 'A few leftover modules when the bitstream does not divide evenly by 8. They carry no information and get no parity.'; }
+        },
+        {
+            kind: 'quiet', color: '#e8eff2', term: 'Quiet zone',
+            match: null,
+            text: function () { return 'Four white modules on every side, required by the standard so the scanner can see where the symbol starts. It must stay clean — it is not damage insurance.'; }
+        }
+    ];
+
+    /* Map every cell of the (padded) matrix to an anatomy region kind. */
+    function buildAnatomyMap() {
+        var enc = state.encoded;
+        var total = enc.size + QUIET * 2;
+        var map = [];
+        for (var r = 0; r < total; r++) {
+            var row = new Array(total);
+            for (var c = 0; c < total; c++) row[c] = 'quiet';
+            map.push(row);
+        }
+        var kinds = enc.components.map(function (c) { return c.kind; });
+        for (var mr = 0; mr < enc.size; mr++) {
+            for (var mc = 0; mc < enc.size; mc++) {
+                var comp = enc.moduleColors[mr][mc];
+                var region = null;
+                if (comp >= 0) {
+                    var component = enc.components[comp];
+                    for (var i = 0; i < ANATOMY_REGIONS.length; i++) {
+                        var def = ANATOMY_REGIONS[i];
+                        if (def.match && def.match(component)) { region = def.kind; break; }
+                    }
+                    if (region === null && component.kind === 'data') region = 'data';
+                    if (region === null && component.kind === 'ec') region = 'ec';
+                }
+                map[mr + QUIET][mc + QUIET] = region || 'remainder';
+            }
+        }
+        return map;
+    }
+
+    function renderAnatomy(highlight) {
+        var enc = state.encoded;
+        if (!enc) return;
+        var map = buildAnatomyMap();
+        var total = enc.size + QUIET * 2;
+        var M = 8;
+        var W = total * M;
+        if (els.anatomyCanvas.width !== W) {
+            els.anatomyCanvas.width = W;
+            els.anatomyCanvas.height = W;
+        }
+        var ctx = els.anatomyCanvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, W, W);
+        var colors = {};
+        ANATOMY_REGIONS.forEach(function (r) { colors[r.kind] = r.color; });
+        for (var r = 0; r < total; r++) {
+            for (var c = 0; c < total; c++) {
+                var kind = map[r][c];
+                ctx.fillStyle = highlight ? (kind === highlight ? colors[kind] : '#f0f0f0') : colors[kind];
+                ctx.fillRect(c * M, r * M, M, M);
+            }
+        }
+    }
+
+    function buildAnatomyLegend() {
+        var dl = els.anatomyLegend;
+        if (!dl) return;
+        dl.innerHTML = '';
+        ANATOMY_REGIONS.forEach(function (region) {
+            var text = region.text();
+            if (!text) return;   /* version info: absent below version 7 */
+            var term = document.createElement('div');
+            term.className = 'anatomy-term';
+            term.innerHTML = '<span class="swatch" style="background:' + region.color + '"></span>'
+                + '<dt>' + region.term + '</dt><dd>' + escapeHtml(text) + '</dd>';
+            term.addEventListener('mouseenter', function () {
+                renderAnatomy(region.kind);
+                term.classList.add('active');
+            });
+            term.addEventListener('mouseleave', function () {
+                renderAnatomy(null);
+                term.classList.remove('active');
+            });
+            dl.appendChild(term);
+        });
+    }
+
+    /* ------------------------------------------------------------------ *
      * Controls
      * ------------------------------------------------------------------ */
     function renderAfterEncode() {
@@ -992,6 +1140,8 @@
         renderFacts();
         renderEcBars();
         renderMeter();
+        renderAnatomy(null);
+        buildAnatomyLegend();
     }
 
     /* A failed encode must not leave the control and the symbol disagreeing:
@@ -1168,11 +1318,7 @@
         wireEvents();
 
         if (encodeCurrent()) {
-            renderSymbol();
-            renderOverlay();
-            renderFacts();
-            renderEcBars();
-            renderMeter();
+            renderAfterEncode();
         }
         setStatus('The reader loads on the first decode. Decoding uses the clean render plus your damage — never the structure colours.');
     }

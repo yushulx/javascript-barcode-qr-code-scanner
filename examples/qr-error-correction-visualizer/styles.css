@@ -1070,6 +1070,78 @@ code {
 }
 
 /* ---------------------------------------------------------------------------
+   QR anatomy card: per-region colored map + hover glossary
+   --------------------------------------------------------------------------- */
+
+.anatomy-body {
+    display: grid;
+    grid-template-columns: auto minmax(280px, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.anatomy-stage {
+    padding: 10px;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius-sm);
+    line-height: 0;
+}
+
+#anatomy-canvas {
+    display: block;
+    width: min(440px, 100%);
+    height: auto;
+    image-rendering: pixelated;
+}
+
+.anatomy-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+}
+
+.anatomy-term {
+    display: grid;
+    grid-template-columns: 14px 150px 1fr;
+    gap: 0.55rem;
+    align-items: baseline;
+    padding: 0.5rem 0.45rem;
+    border-top: 1px solid var(--dy-gray-100);
+    border-radius: var(--radius-sm);
+    cursor: default;
+    transition: background-color 0.12s ease;
+}
+
+.anatomy-term:first-child {
+    border-top: 0;
+}
+
+.anatomy-term:hover,
+.anatomy-term.active {
+    background: var(--dy-orange-tint);
+}
+
+.anatomy-term .swatch {
+    align-self: center;
+}
+
+.anatomy-term dt {
+    margin: 0;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--dy-gray-900);
+}
+
+.anatomy-term dd {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--dy-gray-700);
+    line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------------------
    Methodology + footer + toast
    --------------------------------------------------------------------------- */
 
@@ -1143,6 +1215,18 @@ footer {
 @media (max-width: 850px) {
     .learning-workflow {
         grid-template-columns: 1fr;
+    }
+
+    .anatomy-body {
+        grid-template-columns: 1fr;
+    }
+
+    .anatomy-stage {
+        justify-self: center;
+    }
+
+    .anatomy-term {
+        grid-template-columns: 14px 130px 1fr;
     }
 
     .header-nav .nav-link {
