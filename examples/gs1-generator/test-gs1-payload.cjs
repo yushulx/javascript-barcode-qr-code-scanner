@@ -34,7 +34,7 @@ check('withCheckDigit completes an SSCC', P.withCheckDigit('34012345000000001'),
     P.AI_LIST.forEach((entry) => {
         const value = entry.sample();
         const issue = P.validateValue(entry, value);
-        if (issue) problems.push(entry.ai + ' -> ' + JSON.stringify(value) + ': ' + issue);
+        if (issue) problems.push(entry.ai + ' -> ' + JSON.stringify(value) + ': ' + issue.message);
     });
     check('every AI sample value validates', problems, []);
 }
@@ -237,6 +237,138 @@ check('withCheckDigit completes an SSCC', P.withCheckDigit('34012345000000001'),
         else if (!encoder.bcid || !encoder.text) problems.push(sym.id + ': empty encoder input');
     });
     check('every symbology produces encoder input', problems, []);
+}
+
+/* -------------------------------------------------- 15. one-click fixes     */
+/* Every message that diagnoses a problem should also be able to resolve it:
+   the GS1 length rules, check digits and AI pairings are specialist knowledge,
+   and a dead end is not much use to the audience for this page. */
+
+/* Apply a fix descriptor the way app.js does, on a copy of the payload. */
+function applyFix(rows, fix) {
+    const copy = rows.map((row) => ({ ai: row.ai, value: row.value }));
+    if (fix.kind === 'set-value') {
+        const hit = copy.find((row) => row.ai === fix.ai);
+        if (hit) hit.value = fix.value;
+    } else if (fix.kind === 'add-element') {
+        const entry = P.AI_BY_CODE[fix.ai];
+        copy.push({ ai: fix.ai, value: entry ? entry.sample() : '' });
+    } else if (fix.kind === 'set-symbology') {
+        copy.symbology = fix.symbology;
+    }
+    return copy;
+}
+
+{
+    const gtin = P.AI_BY_CODE['01'].sample();
+
+    // A wrong check digit is offered the corrected one, and taking it works.
+    const typo = gtin.slice(0, -1) + ((Number(gtin.slice(-1)) + 1) % 10);
+    const bad = P.validate([{ ai: '01', value: typo }]);
+    const digitIssue = bad.find((i) => i.fix && i.fix.label === 'Correct the check digit');
+    ok('a wrong check digit offers a correction', !!digitIssue);
+    if (digitIssue) {
+        check('taking the correction clears the error',
+            P.hasErrors(P.validate(applyFix([{ ai: '01', value: typo }], digitIssue.fix))), false);
+    }
+
+    // A too-short value is offered a sample, and taking it works.
+    const shortIssue = P.validate([{ ai: '01', value: '12345' }])[0];
+    ok('a short value offers a sample replacement', !!(shortIssue.fix && shortIssue.fix.label));
+    check('taking the sample clears the error',
+        P.hasErrors(P.validate(applyFix([{ ai: '01', value: '12345' }], shortIssue.fix))), false);
+
+    // An empty payload offers to add a GTIN.
+    const empty = P.validate([]);
+    ok('an empty payload offers to add AI 01',
+        !!(empty[0].fix && empty[0].fix.kind === 'add-element' && empty[0].fix.ai === '01'));
+    check('taking it clears the error', P.hasErrors(P.validate(applyFix([], empty[0].fix))), false);
+
+    // DataBar + a second element offers a symbology that can carry it.
+    const withBatch = [{ ai: '01', value: gtin }, { ai: '10', value: 'LOT-1' }];
+    const omniIssue = P.validate(withBatch, 'databaromni')
+        .find((i) => i.fix && i.fix.kind === 'set-symbology');
+    ok('a GTIN-only symbology offers a switch', !!omniIssue);
+    if (omniIssue) {
+        ok('the offered symbology can actually carry the payload',
+            !P.SYM_BY_ID[omniIssue.fix.symbology].gtinOnly);
+        check('taking the switch clears the error',
+            P.hasErrors(P.validate(withBatch, omniIssue.fix.symbology)), false);
+    }
+
+    // DataBar Limited + a GTIN starting with 2 offers a switch to Omnidirectional.
+    const limitedIssue = P.validate([{ ai: '01', value: P.withCheckDigit('2950600013435') }],
+        'databarlimited').find((i) => i.fix && i.fix.kind === 'set-symbology');
+    ok('DataBar Limited offers a switch', !!limitedIssue);
+    if (limitedIssue) {
+        check('the offered symbology is DataBar Omnidirectional',
+            limitedIssue.fix.symbology, 'databaromni');
+        check('taking the switch clears the error',
+            P.hasErrors(P.validate([{ ai: '01', value: P.withCheckDigit('2950600013435') }],
+                limitedIssue.fix.symbology)), false);
+    }
+}
+
+/* -------------------------------------------------- 16. AI pairing rules    */
+/* GS1 refuses some combinations outright, and the encoder reports it in its own
+   words ("One of more requisite AIs for AI (21) are missing: 01 OR 03 OR 8006").
+   Catching it locally is what makes a fix button possible. */
+{
+    const gtin = P.AI_BY_CODE['01'].sample();
+
+    const orphanSerial = P.validate([{ ai: '21', value: 'SN0001' }]);
+    const serialIssue = orphanSerial.find((i) => i.ai === '21' && i.fix);
+    ok('a serial without a trade item is an error', !!serialIssue);
+    ok('it offers the partner AI', !!(serialIssue && serialIssue.fix.kind === 'add-element'
+        && serialIssue.fix.ai === '01'));
+    check('adding the partner clears the error',
+        P.hasErrors(P.validate(applyFix([{ ai: '21', value: 'SN0001' }], serialIssue.fix))), false);
+
+    // Serial beside a GTIN is fine.
+    check('a serial with a GTIN is accepted',
+        P.hasErrors(P.validate([{ ai: '01', value: gtin }, { ai: '21', value: 'SN0001' }])), false);
+
+    const barePrice = P.validate([{ ai: '01', value: gtin }, { ai: '3932', value: '978078161' }]);
+    const priceIssue = barePrice.find((i) => i.ai === '3932' && i.fix);
+    ok('a currency price without a quantity is an error', !!priceIssue);
+    ok('it offers AI 30', !!(priceIssue && priceIssue.fix.ai === '30'));
+    check('adding AI 30 clears the error',
+        P.hasErrors(P.validate(applyFix(
+            [{ ai: '01', value: gtin }, { ai: '3932', value: '978078161' }],
+            priceIssue.fix))), false);
+
+    // A 31nn measure satisfies the same rule.
+    check('a net-weight measure satisfies the price rule',
+        P.hasErrors(P.validate([
+            { ai: '01', value: gtin },
+            { ai: '3103', value: '002500' },
+            { ai: '3932', value: '978078161' }
+        ])), false);
+}
+
+/* -------------------------------------------------- 17. fixes are labelled  */
+/* A fix the UI cannot label is a fix the UI cannot render. */
+{
+    const cases = [
+        [],
+        [{ ai: '01', value: '12345' }],
+        [{ ai: '01', value: P.AI_BY_CODE['01'].sample().slice(0, -1) + '9' }],
+        [{ ai: '21', value: 'SN0001' }],
+        [{ ai: '01', value: P.AI_BY_CODE['01'].sample() }, { ai: '10', value: 'LOT-1' }],
+        [{ ai: '01', value: P.withCheckDigit('2950600013435') }]
+    ];
+    const symbologies = [undefined, 'databaromni', 'itf14', 'databarlimited', 'gs1datamatrix'];
+    const unlabelled = [];
+    cases.forEach((rows) => {
+        symbologies.forEach((sym) => {
+            P.validate(rows, sym).forEach((issue) => {
+                if (issue.fix && !issue.fix.label) {
+                    unlabelled.push(issue.message.slice(0, 50));
+                }
+            });
+        });
+    });
+    check('every fix descriptor carries a label', unlabelled, []);
 }
 
 console.log('\n' + passed + ' passed, ' + failed + ' failed\n');

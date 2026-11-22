@@ -369,61 +369,135 @@
      * Validation
      * ------------------------------------------------------------------ */
 
+    /* Returns null when the value is acceptable, or { message, fix }.
+     *
+     * `fix` is a descriptor the UI can apply in one click. A validation message
+     * nobody can act on is a dead end for exactly the audience this page is for:
+     * the length rules, the check digit and the AI pairings are all GS1-specific
+     * knowledge, and "Check digit should be 2" tells a newcomer what is wrong
+     * without telling them what to do. */
     function validateValue(entry, value) {
-        if (!entry) return 'This AI is not in the table.';
-        if (!value) return 'Enter a value, or use Randomize data.';
+        if (!entry) return { message: 'This AI is not in the table.', fix: null };
+
+        function bad(message, fix) {
+            return { message: message, fix: fix || null };
+        }
+
+        function useSample(label) {
+            return {
+                kind: 'set-value',
+                ai: entry.ai,
+                value: entry.sample(),
+                label: label || 'Use a valid sample value'
+            };
+        }
+
+        function fixCheckDigit() {
+            return {
+                kind: 'set-value',
+                ai: entry.ai,
+                value: withCheckDigit(value.slice(0, -1)),
+                label: 'Correct the check digit'
+            };
+        }
+
+        if (!value) return bad('Enter a value, or use Randomize data.', useSample('Fill in a sample value'));
 
         switch (entry.kind) {
             case 'gtin':
-                if (!/^\d+$/.test(value)) return 'GTIN is digits only.';
+                if (!/^\d+$/.test(value)) return bad('GTIN is digits only.', useSample());
                 if (value.length !== entry.fixed) {
-                    return 'GTIN must be ' + entry.fixed + ' digits — got ' + value.length + '.';
+                    return bad('GTIN must be ' + entry.fixed + ' digits — got ' + value.length + '.',
+                        useSample());
                 }
                 if (checkDigit(value.slice(0, -1)) !== value.slice(-1)) {
-                    return 'Check digit should be ' + checkDigit(value.slice(0, -1)) + '.';
+                    return bad('Check digit should be ' + checkDigit(value.slice(0, -1)) + '.',
+                        fixCheckDigit());
                 }
                 return null;
             case 'sscc':
-                if (!/^\d+$/.test(value)) return 'This element is digits only.';
+                if (!/^\d+$/.test(value)) return bad('This element is digits only.', useSample());
                 if (value.length !== entry.fixed) {
-                    return 'Must be ' + entry.fixed + ' digits — got ' + value.length + '.';
+                    return bad('Must be ' + entry.fixed + ' digits — got ' + value.length + '.',
+                        useSample());
                 }
                 if (checkDigit(value.slice(0, -1)) !== value.slice(-1)) {
-                    return 'Check digit should be ' + checkDigit(value.slice(0, -1)) + '.';
+                    return bad('Check digit should be ' + checkDigit(value.slice(0, -1)) + '.',
+                        fixCheckDigit());
                 }
                 return null;
             case 'gln':
-                if (!/^\d+$/.test(value)) return 'A GLN is digits only.';
-                if (value.length !== 13) return 'A GLN is exactly 13 digits — got ' + value.length + '.';
+                if (!/^\d+$/.test(value)) return bad('A GLN is digits only.', useSample());
+                if (value.length !== 13) {
+                    return bad('A GLN is exactly 13 digits — got ' + value.length + '.', useSample());
+                }
                 if (checkDigit(value.slice(0, -1)) !== value.slice(-1)) {
-                    return 'Check digit should be ' + checkDigit(value.slice(0, -1)) + '.';
+                    return bad('Check digit should be ' + checkDigit(value.slice(0, -1)) + '.',
+                        fixCheckDigit());
                 }
                 return null;
             case 'date':
-                if (!/^\d{6}$/.test(value)) return 'A GS1 date is exactly 6 digits (YYMMDD).';
+                if (!/^\d{6}$/.test(value)) {
+                    return bad('A GS1 date is exactly 6 digits (YYMMDD).', useSample());
+                }
                 var month = Number(value.substr(2, 2));
                 var day = Number(value.substr(4, 2));
-                if (month < 1 || month > 12) return 'Month must be 01-12.';
-                if (day > 31) return 'Day must be 00-31 (00 means the last day of the month).';
+                if (month < 1 || month > 12) return bad('Month must be 01-12.', useSample());
+                if (day > 31) {
+                    return bad('Day must be 00-31 (00 means the last day of the month).', useSample());
+                }
                 return null;
             case 'decimal':
-                var expected = entry.fixed;
-                if (!/^\d+$/.test(value)) return 'This element is digits only.';
-                if (value.length !== expected) {
-                    return 'Must be exactly ' + expected + ' digits — got ' + value.length + '.';
+                if (!/^\d+$/.test(value)) return bad('This element is digits only.', useSample());
+                if (value.length !== entry.fixed) {
+                    return bad('Must be exactly ' + entry.fixed + ' digits — got ' + value.length + '.',
+                        useSample());
                 }
                 return null;
             case 'country':
-                if (!/^\d{3}$/.test(value)) return 'An ISO 3166-1 country code is 3 digits.';
+                if (!/^\d{3}$/.test(value)) {
+                    return bad('An ISO 3166-1 country code is 3 digits.', useSample());
+                }
                 return null;
             default:
                 if (value.length > entry.max) {
-                    return 'At most ' + entry.max + ' characters — got ' + value.length + '.';
+                    return bad('At most ' + entry.max + ' characters — got ' + value.length + '.',
+                        useSample());
                 }
-                if (/[\u0000-\u001f]/.test(value)) return 'Control characters are not allowed.';
+                if (/[\u0000-\u001f]/.test(value)) {
+                    return bad('Control characters are not allowed.', useSample());
+                }
                 return null;
         }
     }
+
+    /* GS1 constrains which AIs may travel together, and the encoders refuse the
+     * payload outright when the partner is missing. Catching it here means the
+     * page can offer the one change that resolves it, instead of relaying an
+     * encoder message like "One of more requisite AIs for AI (21) are missing:
+     * 01 OR 03 OR 8006" and leaving the reader to work it out. */
+    var PAIRING_RULES = [
+        {
+            match: function (ai) { return ai === '21'; },
+            satisfiedBy: function (ais) {
+                return ais.indexOf('01') !== -1 || ais.indexOf('03') !== -1 || ais.indexOf('8006') !== -1;
+            },
+            why: 'AI 21 (serial number) identifies a specific unit, so it needs the trade item it belongs '
+                + 'to: AI 01, 03 or 8006.',
+            add: '01'
+        },
+        {
+            match: function (ai) { return /^39[13]/.test(ai); },
+            satisfiedBy: function (ais) {
+                return ais.some(function (other) {
+                    return other === '30' || /^(31|32|35|36)\d\d$/.test(other);
+                });
+            },
+            why: 'A price or amount in a currency states a value per unit, so GS1 requires the quantity it '
+                + 'applies to: AI 30, or a 31nn/32nn/35nn/36nn measure.',
+            add: '30'
+        }
+    ];
 
     /* Per-row problems plus problems with the payload as a whole.
        `symbologyId` is the symbology the user selected. It matters: a GTIN plus
@@ -436,7 +510,11 @@
         var seen = {};
 
         if (!rows.length) {
-            issues.push({ level: 'error', ai: null, message: 'Add at least one data element.' });
+            issues.push({
+                level: 'error', ai: null,
+                message: 'Add at least one data element.',
+                fix: { kind: 'add-element', ai: '01', label: 'Add AI 01 (GTIN)' }
+            });
             return issues;
         }
 
@@ -448,7 +526,9 @@
                 return;
             }
             var problem = validateValue(entry, item.value);
-            if (problem) issues.push({ level: 'error', ai: item.ai, message: problem });
+            if (problem) {
+                issues.push({ level: 'error', ai: item.ai, message: problem.message, fix: problem.fix });
+            }
 
             if (seen[item.ai]) {
                 issues.push({ level: 'warn', ai: item.ai,
@@ -461,8 +541,8 @@
            The encoders do that for us, but it is worth saying out loud because
            it is the single most common reason a scanner returns a mangled value. */
         for (var i = 0; i < rows.length - 1; i++) {
-            var entry = AI_BY_CODE[rows[i].ai];
-            if (entry && !entry.fixed) {
+            var variableEntry = AI_BY_CODE[rows[i].ai];
+            if (variableEntry && !variableEntry.fixed) {
                 issues.push({ level: 'info', ai: rows[i].ai,
                     message: 'AI ' + rows[i].ai + ' has no fixed length, so it is followed by an '
                         + 'FNC1 separator. If a scanner drops that separator the value runs into '
@@ -471,22 +551,60 @@
             }
         }
 
+        /* AI pairings. */
+        var ais = rows.map(function (item) { return item.ai; });
+        PAIRING_RULES.forEach(function (rule) {
+            var offender = ais.filter(rule.match)[0];
+            if (!offender || rule.satisfiedBy(ais)) return;
+            var partner = AI_BY_CODE[rule.add];
+            issues.push({
+                level: 'error',
+                ai: offender,
+                message: rule.why,
+                fix: {
+                    kind: 'add-element',
+                    ai: rule.add,
+                    label: 'Add AI ' + rule.add + (partner ? ' (' + partner.title + ')' : '')
+                }
+            });
+        });
+
         /* Symbology compatibility. */
         var symbology = SYM_BY_ID[symbologyId] || SYM_BY_ID[recommend(rows)];
         if (symbology && symbology.gtinOnly) {
             var extra = rows.filter(function (item) { return item.ai !== '01'; });
             if (extra.length) {
-                issues.push({ level: 'error', ai: null,
+                /* The remedy is always a symbology change, and the recommendation
+                   already knows which one — offering it here is the difference
+                   between "you cannot do that" and one click. */
+                var target = SYM_BY_ID[recommend(rows)];
+                if (!target || target.gtinOnly) target = SYM_BY_ID.gs1datamatrix;
+                issues.push({
+                    level: 'error', ai: null,
                     message: 'A DataBar, ITF-14 or EAN-13 symbol carries the GTIN and nothing else. '
                         + extra.length + ' extra element' + (extra.length > 1 ? 's' : '')
-                        + ' cannot be encoded — switch to GS1 DataMatrix, GS1 QR Code or GS1-128 for those.' });
+                        + ' cannot be encoded.',
+                    fix: {
+                        kind: 'set-symbology',
+                        symbology: target.id,
+                        label: 'Switch to ' + target.label
+                    }
+                });
             }
         }
         if (symbology && symbology.limitedGtin) {
             var gtinRow = rows.filter(function (item) { return item.ai === '01'; })[0];
             if (gtinRow && gtinRow.value && !/^[01]/.test(gtinRow.value)) {
-                issues.push({ level: 'error', ai: '01',
-                    message: 'GS1 DataBar Limited only encodes GTINs that start with 0 or 1.' });
+                issues.push({
+                    level: 'error', ai: '01',
+                    message: 'GS1 DataBar Limited only encodes GTINs that start with 0 or 1 — this one '
+                        + 'starts with ' + gtinRow.value.charAt(0) + '.',
+                    fix: {
+                        kind: 'set-symbology',
+                        symbology: 'databaromni',
+                        label: 'Switch to GS1 DataBar Omnidirectional'
+                    }
+                });
             }
         }
 
@@ -726,6 +844,7 @@
         AI_LIST: AI_LIST,
         AI_BY_CODE: AI_BY_CODE,
         COMMON_AIS: COMMON_AIS,
+        PAIRING_RULES: PAIRING_RULES,
         SCENARIOS: SCENARIOS,
         SYMBOLOGIES: SYMBOLOGIES,
         SYM_BY_ID: SYM_BY_ID,

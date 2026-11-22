@@ -1001,3 +1001,141 @@ a:hover {
         height: 36px;
     }
 }
+
+/* ---------------------------------------------------------------------------
+   "Just changed" marker
+   Random sample values are all digit soup, so a click on Randomize data reads as
+   "nothing happened" unless the fields that changed say so. The marker is a
+   background wash that fades out on its own; it is applied for a moment and then
+   removed by app.js, so it never becomes part of the page.
+   --------------------------------------------------------------------------- */
+
+@keyframes gs1-changed {
+    0% {
+        background-color: #fff3e2;
+        border-color: var(--dy-orange);
+        box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.22);
+    }
+
+    60% {
+        background-color: #fff8ee;
+        border-color: var(--dy-orange-edge);
+        box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.12);
+    }
+
+    100% {
+        background-color: var(--dy-gray-50);
+        border-color: var(--dy-gray-200);
+        box-shadow: none;
+    }
+}
+
+.element-row.just-changed {
+    animation: gs1-changed 1.4s ease-out forwards;
+}
+
+/* The row keeps its error colour: an invalid value that just changed is still
+   invalid, and the wash must not hide that. */
+.element-row.just-changed.has-error {
+    animation-name: gs1-changed-error;
+}
+
+@keyframes gs1-changed-error {
+    0% {
+        background-color: #fbe3e0;
+        border-color: var(--dy-error);
+        box-shadow: 0 0 0 3px rgba(179, 38, 30, 0.2);
+    }
+
+    100% {
+        background-color: var(--dy-error-tint);
+        border-color: var(--dy-error-edge);
+        box-shadow: none;
+    }
+}
+
+/* No motion, but the colour still changes — the information is the point. */
+@media (prefers-reduced-motion: reduce) {
+    .element-row.just-changed {
+        animation: none;
+        background-color: #fff3e2;
+        border-color: var(--dy-orange);
+    }
+
+    .element-row.just-changed.has-error {
+        background-color: #fbe3e0;
+        border-color: var(--dy-error);
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   "Click to fix" buttons inside an issue
+   --------------------------------------------------------------------------- */
+
+.fix-button {
+    display: inline-block;
+    margin: 0.4rem 0 0.1rem;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--dy-gray-900);
+    background: var(--white);
+    border: 1px solid var(--dy-orange-edge);
+    border-radius: 40px;
+    padding: 0.3rem 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.fix-button::before {
+    content: '+';
+    font-weight: 700;
+    color: var(--dy-orange-hover);
+    margin-right: 0.4rem;
+}
+
+.fix-button:hover,
+.fix-button:focus-visible {
+    background: var(--dy-orange-tint);
+    border-color: var(--dy-orange);
+    outline: none;
+}
+
+.note-list.is-error .fix-button {
+    display: block;
+}
+
+/* ---------------------------------------------------------------------------
+   Out-of-date state
+   A payload with errors has no preview, so nothing downstream of generation may
+   keep showing the last successful one as if it were current.
+   --------------------------------------------------------------------------- */
+
+.card.is-stale .card-body {
+    opacity: 0.55;
+}
+
+.stale-badge {
+    display: inline-block;
+    margin-left: 0.7rem;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--dy-error);
+    background: var(--dy-error-tint);
+    border: 1px solid var(--dy-error-edge);
+    border-radius: 3px;
+    padding: 2px 7px;
+    vertical-align: 2px;
+}
+
+.segmented button:disabled {
+    color: var(--dy-gray-500);
+    cursor: not-allowed;
+}
+
+.segmented button:disabled:hover {
+    background: transparent;
+}

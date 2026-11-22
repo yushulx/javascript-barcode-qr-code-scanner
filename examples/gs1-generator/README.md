@@ -16,7 +16,7 @@ No SDK, no licence key, no build step — [bwip-js](https://github.com/metafloor
 | `gs1-payload.js` | The payload model: AI catalogue, validation, check digits, HRI, expected parse, symbology choice, encoder arguments |
 | `app.js` | UI, canvas label rendering and PNG export |
 | `styles.css` | Styling, built on the shared generator sheet |
-| `test-gs1-payload.cjs` | Unit tests for `gs1-payload.js` — 44 assertions, no server needed |
+| `test-gs1-payload.cjs` | Unit tests for `gs1-payload.js` — 65 assertions, no server needed |
 | `verify-roundtrip.js` | End-to-end harness: generate a label, upload it to the GS1 scanner, diff every AI |
 
 ## Why It Is Not Just a Barcode Generator
@@ -39,6 +39,40 @@ Three places where the order matters:
 - **An over-wide symbol is re-encoded, never scaled down.** Scaling a linear
   symbol by a fraction blurs the module edges, and a symbol whose modules are no
   longer resolvable cannot be decoded however good the scanner is.
+
+## Error Handling
+
+Two rules the page follows, both of which came from user feedback:
+
+**Every message that diagnoses a problem also resolves it.** GS1 length rules,
+check digits and AI pairings are specialist knowledge; a message that only says
+what is wrong is a dead end for most readers. Each issue carries a `fix`
+descriptor from `gs1-payload.js`, and the UI renders it as a button — the
+corrected check digit, a valid sample value, the symbology that can carry the
+payload, or the missing partner AI. Nothing is applied silently.
+
+The pairing rules are checked locally rather than left to the encoder, because
+BWIPP's own message ("One of more requisite AIs for AI (21) are missing: 01 OR 03
+OR 8006") arrives too late to be actionable:
+
+| AI | needs | why |
+|---|---|---|
+| `21` serial number | `01`, `03` or `8006` | a serial identifies a unit, so it needs the item it belongs to |
+| `393x` price in a currency | `30`, or a `31nn`/`32nn`/`35nn`/`36nn` measure | a unit price needs the quantity it is a price *of* |
+
+**Nothing downstream of generation shows stale output.** The preview and the
+expected-result table are produced after validation passes, so a payload with
+errors never reaches them — and the previous render must not stay on screen
+looking current. When the payload is invalid the preview shows a dashed
+placeholder, the expected-result card is dimmed and badged `out of date`, the
+preview tabs are **disabled** (they used to look broken: the pressed state moved
+while the redraw was skipped), and Download / Copy are disabled with `lastRun`
+cleared. One click on a fix restores all four.
+
+**Changed values are marked.** Random sample values are all digit soup, so
+*Randomize data* marks the rows whose values changed for 1.4 s and then removes
+the marker. It respects `prefers-reduced-motion` by dropping the animation while
+keeping the colour change, because the colour is the information.
 
 ## Run It
 
