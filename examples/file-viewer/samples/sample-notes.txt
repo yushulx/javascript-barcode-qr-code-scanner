@@ -1,0 +1,28 @@
+File viewer demo — sample notes
+================================
+
+This plain text file is here so the viewer has something with no header at all:
+no magic bytes, no container, no structure beyond line breaks.
+
+What the viewer should report
+-----------------------------
+1. Size and line count, both computed locally.
+2. The encoding it settled on (UTF-8 here, with a BOM-free read).
+3. The text itself, wrapped or unwrapped, with line numbers kept out of the copy
+   buffer so selecting a paragraph gives you the paragraph.
+
+Things that break naive text viewers
+------------------------------------
+Tabs	in	columns	look	fine	until	the	font	changes.
+A line with no spaces at all — https://example.com/a/very/long/path/that/does/not/wrap/anywhere — forces horizontal scrolling instead of wrapping.
+Unicode: café, naïve, 日本語, Ελληνικά, Русский, emoji 🙂.
+A very long line follows so the wrap toggle has something to do:
+The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog.
+
+Why it matters
+--------------
+A file that reads as text in one editor can look like punctuation soup in
+another. Declaring the encoding you used, instead of silently guessing and
+hiding the guess, is the difference between a viewer and a coin flip.
+
+— End of sample —

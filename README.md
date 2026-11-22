@@ -27,6 +27,7 @@ This repository contains **JavaScript** examples demonstrating how to use [Dynam
 - [EMV QR Code Scanner](https://www.dynamsoft.com/codepool/demos/emv-qr-scanner/) — parse a payment QR field by field, verify its checksum, and see the wallet it drives: [examples/emv-qr-scanner](examples/emv-qr-scanner)
 - [VIN Barcode Scanner](https://www.dynamsoft.com/codepool/demos/vin-barcode-scanner/) and [VIN Barcode Generator](https://www.dynamsoft.com/codepool/demos/vin-barcode-generator/) — read or build a 17-character VIN with its check digit: [examples/vin-barcode-scanner](examples/vin-barcode-scanner), [examples/vin-barcode-generator](examples/vin-barcode-generator)
 - [QR Error Correction Visualizer](https://www.dynamsoft.com/codepool/demos/qr-error-correction-visualizer/) — damage a QR code module by module and watch Reed-Solomon parity recover it: [examples/qr-error-correction-visualizer](examples/qr-error-correction-visualizer)
+- [File Viewer](https://www.dynamsoft.com/codepool/demos/file-viewer/) — inspect and read any file locally: metadata and EXIF, multi-page PDF/TIFF/Office, CSV, video, and raw YUV frames from an Android camera. No SDK involved: [examples/file-viewer](examples/file-viewer)
 - [Scan 1D Barcode and OCR Text](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_ocr_text)
 - [Detect Barcode, MRZ and Document](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_mrz_document/)
 - [Aadhaar Card](https://yushulx.me/javascript-barcode-qr-code-scanner/examples/aadhaar_card/)

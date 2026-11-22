@@ -1,0 +1,15 @@
+# Binary assets that git's content heuristic can still read as text — a PDF
+# with no NUL byte in its first 8 KB is the usual offender. Without this, a
+# clone with core.autocrlf=true rewrites their line endings, which shifts a
+# PDF's xref offsets and silently corrupts the file.
+*.pdf   binary
+*.tif   binary
+*.tiff  binary
+*.docx  binary
+*.xlsx  binary
+*.pptx  binary
+*.mp4   binary
+*.mp3   binary
+*.wav   binary
+*.bin   binary
+*.yuv   binary
