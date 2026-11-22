@@ -45,8 +45,9 @@ Right-click inside the preview (or press the context-menu key) and choose
 
 1. The page dims and you drag a box around the symbol; the corner handles resize
    it, dragging inside moves it.
-2. **Read barcode** crops that region at full resolution — not at the zoomed
-   screen size — and decodes it.
+2. **Read barcode** crops that region — at the picture's own resolution when
+   the page is an image, PDF, TIFF, YUV or the current video frame, and from a
+   rendering of the page when it is Word, Excel, PowerPoint or text.
 3. A panel slides in with the annotated crop (every barcode boxed and labelled
    with its format) and one card per result: format, decoded text, pixel size,
    module size and angle.
@@ -60,9 +61,11 @@ actually decoded, so the boxes match the pixels you see.
 The menu also offers **Copy image** and **Save image** for the current page,
 which work without the reader.
 
-Scanning applies to raster pages only — images, PDF, TIFF and raw YUV. Word,
-Excel and PowerPoint are rendered as HTML, so there is no pixel page to crop and
-the menu does not appear.
+Scanning is a screenshot of the selected area, so it works on every format the
+viewer can show — including a paused video frame. Office and text pages are
+rasterised with html2canvas at device pixel ratio (docx-preview's CSS `zoom` is
+swapped for an equivalent transform inside the clone, because html2canvas
+applies `zoom` to positions but not to text metrics).
 
 ### Licensing
 
@@ -123,10 +126,12 @@ green and purple, which is exactly the symptom being chased.
   bytes being hashed; it says nothing about where the file came from.
 - **Size caps.** PDF over 150 MB, text over 8 MB and Office over 60 MB are
   refused or truncated, with a note in the preview.
-- **Scanning needs pixels.** The barcode menu only appears on raster pages; an
-  Office document has no pixel page to crop. The first scan also downloads the
-  reader (~2 MB of wasm) and needs network access for the license, so it is
-  noticeably slower than the next one (seconds versus tens of milliseconds).
+- **Scanning is a screenshot.** For an image, PDF, TIFF, YUV or video frame the
+  crop uses the source resolution; a Word, Excel, PowerPoint or text page is
+  rasterised first, so its crop is screen resolution. The first scan also
+  downloads the reader (~2 MB of wasm) and needs network access for the license,
+  so it is noticeably slower than the next one (seconds versus tens of
+  milliseconds).
 
 ## Third-party code
 
@@ -138,6 +143,7 @@ green and purple, which is exactly the symptom being chased.
 | [docx-preview](https://github.com/VolodymyrBaydalka/docxjs) | DOCX → paginated HTML | Apache-2.0 |
 | [JSZip](https://stuk.github.io/jszip/) | OOXML containers | MIT |
 | [Dynamsoft Barcode Reader](https://www.dynamsoft.com/barcode-reader/overview/) | Region decoding, loaded on first scan | Commercial (trial available) |
+| [html2canvas](https://html2canvas.hertzen.com/) | Rasterising Office and text pages for the scan crop | MIT |
 
 The EXIF reader, the PPTX renderer and the YUV conversion are in `app.js` with
 no dependencies, so every number in the details panel can be traced back to the
