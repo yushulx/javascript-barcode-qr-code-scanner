@@ -1,0 +1,2118 @@
+/* ===========================================================================
+   Barcode Parameter Tuner — Codepool demo styles.
+
+   A *tool* page, so it follows the light surface the brand standard describes
+   (https://dynamsoft.github.io/styleguide/style-guide.html) and copies the
+   `:root` token block from `demos/driver-license-generator/styles.css`:
+
+     brand orange  #FE8E14   CTA and accent only, never body copy or inline links
+     brand gray    #323234   headings and body
+     Blumine       #306877   inline text links
+     grays         #606060 #999999 #CCCCCC #DDDDDD #F5F5F5
+     headings      Oswald        body copy  Open Sans
+     white page    no gradient
+
+   The shell (header, intro, cards, controls, buttons, footer, print) is the
+   house pattern; everything from "Parameter panel" down is specific to this
+   page.
+   =========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Oswald:wght@300;400;500&display=swap');
+
+:root {
+    /* Brand */
+    --dy-orange: #fe8e14;
+    --dy-orange-hover: #e07d0b;
+    --dy-orange-tint: #fff8ee;
+    --dy-orange-edge: #f6c893;
+
+    /* Neutrals */
+    --dy-gray-900: #323234;
+    --dy-gray-700: #606060;
+    --dy-gray-500: #999999;
+    --dy-gray-300: #cccccc;
+    --dy-gray-200: #dddddd;
+    --dy-gray-100: #eeeeee;
+    --dy-gray-50: #f5f5f5;
+
+    /* Inline text links, so orange stays reserved for CTAs */
+    --dy-link: #306877;
+    --dy-link-hover: #27555f;
+
+    --white: #ffffff;
+
+    --font-heading: 'Oswald', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Open Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
+
+    --radius: 6px;
+    --radius-sm: 4px;
+    --shell: 1400px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/*
+ * The `hidden` attribute has to win. The UA sheet's `[hidden] { display: none }` is a
+ * *user-agent* rule, so any author rule that sets `display` beats it — and `.btn` sets
+ * `display: inline-flex`. That is how the camera shutter button ended up rendered on a
+ * page where no camera was open: the attribute was set, the element was still a
+ * 118x39 button, and it was clickable too. Stated once, here, so no element added later
+ * has to remember that its own `display` would cancel the attribute.
+ */
+[hidden] {
+    display: none !important;
+}
+
+body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--dy-gray-900);
+    background: var(--white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+
+h1,
+h2,
+h3 {
+    margin: 0;
+}
+
+p {
+    margin: 0;
+}
+
+ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Site header — logo, product name, nav. On small screens the nav links go
+   before the trial CTA, because the orange button is the branding cue.
+   --------------------------------------------------------------------------- */
+
+.site-header {
+    width: 100%;
+    background: var(--white);
+    border-bottom: 1px solid var(--dy-gray-200);
+}
+
+.site-header-inner {
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 0.85rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    text-decoration: none;
+}
+
+.brand-logo {
+    display: block;
+    height: 26px;
+    width: auto;
+}
+
+.brand-divider {
+    width: 1px;
+    height: 26px;
+    background: var(--dy-gray-200);
+    flex: 0 0 auto;
+}
+
+.brand-product {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    white-space: nowrap;
+}
+
+/* "Free" tag in the header — the demos are free to use, and spelling that out
+   where a reader (and a crawler ranking the visible text) sees it is the point.
+   Orange is the accent, never body copy, and the label repeats adjacent text so
+   it is not announced twice. */
+.brand-tag {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 1px 7px 2px;
+    border: 1px solid rgba(254, 142, 20, 0.55);
+    border-radius: 4px;
+    background: rgba(254, 142, 20, 0.14);
+    color: var(--dy-orange, #fe8e14);
+    font-family: var(--font-heading);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: 0.1em;
+}
+
+.header-nav {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+/* Scoped so it can never override the CTA button's own colours. */
+.header-nav .nav-link {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--dy-gray-700);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.header-nav .nav-link:hover {
+    color: var(--dy-orange);
+}
+
+/* ---------------------------------------------------------------------------
+   Page intro
+   --------------------------------------------------------------------------- */
+
+/* body is a column flex container (to pin the footer down), and a flex item with
+   `margin: auto` on the cross axis loses `align-items: stretch`, so every
+   centred shell below needs an explicit width for max-width to do anything. */
+.page-intro {
+    width: 100%;
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 2.25rem 1.5rem 1.5rem;
+}
+
+.page-intro h1 {
+    font-family: var(--font-heading);
+    font-size: clamp(1.75rem, 3.4vw, 2.35rem);
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--dy-gray-900);
+    margin-bottom: 0.6rem;
+}
+
+.page-intro p {
+    font-size: 1.0625rem;
+    color: var(--dy-gray-700);
+    max-width: 84ch;
+}
+
+.page-intro .page-intro-lead {
+    max-width: 72ch;
+}
+
+.learning-workflow {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding: 0;
+    list-style: none;
+    counter-reset: learning-step;
+}
+
+.learning-workflow li {
+    position: relative;
+    min-width: 0;
+    border-left: 2px solid var(--dy-orange);
+    padding: 0.25rem 0.75rem 0.25rem 2.1rem;
+    counter-increment: learning-step;
+}
+
+.learning-workflow li::before {
+    content: counter(learning-step);
+    position: absolute;
+    left: 0.65rem;
+    top: 0.15rem;
+    color: var(--dy-orange-hover);
+    font-family: var(--font-mono);
+    font-weight: 700;
+}
+
+.learning-workflow strong,
+.learning-workflow span {
+    display: block;
+}
+
+.learning-workflow strong {
+    font-size: 0.86rem;
+}
+
+.learning-workflow span {
+    margin-top: 0.15rem;
+    color: var(--dy-gray-700);
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+.dataset-note {
+    max-width: 84ch;
+    margin-top: 0.85rem;
+    color: var(--dy-gray-700);
+    font-size: 0.82rem;
+}
+
+.dataset-note summary {
+    width: fit-content;
+    color: var(--dy-link);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.dataset-note p {
+    margin-top: 0.45rem;
+    font-size: 0.82rem;
+    line-height: 1.55;
+}
+
+/* ---------------------------------------------------------------------------
+   Shell, cards
+   --------------------------------------------------------------------------- */
+
+.container {
+    width: 100%;
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    flex: 1 0 auto;
+}
+
+.card {
+    background: var(--white);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1rem 1.25rem 0.75rem;
+    background: var(--dy-gray-50);
+    border-bottom: 1px solid var(--dy-gray-200);
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.card-header h2 {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    color: var(--dy-gray-900);
+    padding-bottom: 0.5rem;
+    position: relative;
+}
+
+.card-header h2::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 32px;
+    height: 2px;
+    background: var(--dy-orange);
+}
+
+.card-header .card-note {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--dy-gray-700);
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Controls
+   --------------------------------------------------------------------------- */
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* The toolbar's own field labels ("Image to tune on", "Base template"), which are the direct
+   children of a `.form-group`. Scoped to direct children because the upload control is a `label`
+   carrying `.btn` *inside* the group, and this rule — a class plus an element, so a step more
+   specific than `.btn` — was turning it into a block: its text sat 3px from the top of a 40px box
+   while every real button beside it was centred. */
+.form-group > label,
+.label-text {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    margin-bottom: 0.35rem;
+    display: block;
+}
+
+/* A `label` used as a button is a button. Stated here so the two rules can never disagree again,
+   whatever order they end up in. */
+label.btn {
+    display: inline-flex;
+    margin-bottom: 0;
+    letter-spacing: normal;
+    text-transform: none;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: inherit;
+}
+
+.form-control,
+.form-input,
+.form-select {
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.92rem;
+    font-family: inherit;
+    color: var(--dy-gray-900);
+    background: var(--white);
+    border: 1px solid var(--dy-gray-300);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    min-width: 0;
+}
+
+.form-control:hover,
+.form-input:hover,
+.form-select:hover {
+    border-color: var(--dy-gray-500);
+}
+
+.form-control:focus,
+.form-input:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--dy-orange);
+    box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.18);
+}
+
+.form-input:disabled,
+.form-select:disabled {
+    background: var(--dy-gray-50);
+    color: var(--dy-gray-500);
+    cursor: not-allowed;
+}
+
+select.form-select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23606060' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.55rem center;
+    background-size: 1rem;
+    padding-right: 2rem;
+    appearance: none;
+}
+
+.file-input {
+    display: none;
+}
+
+/*
+ * Controls come in two sizes, and everything sharing a row uses one of them.
+ *
+ * Four heights were in use for controls that sit together — 41px for `.btn`, 38px for a `<select>`,
+ * 33px for a recipe chip, 31px for `.btn-sm` — which is what makes a toolbar read as clutter even
+ * when the colours agree. The two sizes now:
+ *
+ *   default   40px, 0.92rem   toolbars, source actions, selects, primary buttons
+ *   compact   32px, 0.80rem   inside dense panels: the JSON actions, the parameter toolbar
+ *
+ * Height comes from `min-height` plus flex centring, so the label stays centred and a long one can
+ * wrap instead of clipping.
+ */
+.btn {
+    font-family: inherit;
+    font-size: 0.92rem;
+    /* Explicit, not `normal`: a <button> and a <label> carrying the same classes and font size
+       measured 46px and 40px, because the two elements do not build the same line box. Every
+       control states its line-height so the box is decided here and not by the element's defaults. */
+    line-height: 1.2;
+    font-weight: 600;
+    /* A button label is one line. Without this the camera button's label wrapped inside its own
+       box and stood 46px tall in a row of 40px buttons — a flex item shrinks before the row wraps,
+       and a wrapped label is not a layout the reader can read. The row's `flex-wrap` moves the
+       button to the next line instead. */
+    white-space: nowrap;
+    min-height: 40px;
+    padding: 0.25rem 1.15rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.35);
+}
+
+.btn-primary {
+    background: var(--dy-orange);
+    color: var(--white);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--dy-orange-hover);
+}
+
+.btn-secondary {
+    background: var(--white);
+    color: var(--dy-gray-900);
+    border-color: var(--dy-gray-300);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: var(--dy-gray-50);
+    border-color: var(--dy-gray-900);
+}
+
+.btn-sm {
+    font-size: 0.8rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    min-height: 32px;
+    padding: 0.15rem 0.7rem;
+}
+
+.btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.hint {
+    font-size: 0.82rem;
+    color: var(--dy-gray-700);
+    line-height: 1.55;
+}
+
+.hint-ok {
+    color: #1a7f37;
+}
+
+.hint-bad {
+    color: #b42318;
+}
+
+a {
+    color: var(--dy-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+a:hover {
+    color: var(--dy-link-hover);
+}
+
+code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--dy-gray-50);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+
+/* ---------------------------------------------------------------------------
+   Toolbar
+   --------------------------------------------------------------------------- */
+
+.toolbar {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.4fr) minmax(220px, 1fr) auto;
+    gap: 1rem;
+    /* Top alignment keeps the two labels on one line. Bottom alignment used to
+       drag the shorter column down until "Base template" sat below "Image to
+       tune on" and the whole row looked broken. */
+    align-items: start;
+}
+
+.source-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.45rem;
+    flex-wrap: wrap;
+    /* A row of controls centres its controls instead of stretching them. The toolbar is a grid, and
+       a grid stretches its items to the row height set by the tallest column — which made this row
+       46px tall and stretched the camera button to match, so one button in the row stood 6px taller
+       than the other for no reason visible to the reader. `stretch` is the default here; it is wrong
+       for a row of buttons. */
+    align-items: center;
+}
+
+.source-meta {
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+    font-family: var(--font-mono);
+}
+
+/*
+ * The button column has no visible label, so it carries a hidden copy of the
+ * label line instead: that reserves exactly the same height as the labels
+ * beside it, and Run lands level with the two selects without a magic offset.
+ */
+.toolbar-label-spacer {
+    visibility: hidden;
+}
+
+.toolbar-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    /* Deliberately no gap: the spacer below has to reproduce a label's
+       height-plus-margin exactly, and an extra gap would push Run 7px below
+       the selects again. Spacing after the button row is set per element. */
+}
+
+/* The toolbar's selects sit level with the buttons beside them: same 40px band. Scoped to the
+   toolbar so the parameter panel's fields keep their own dense size. */
+.toolbar .form-select,
+.source-actions .form-input {
+    min-height: 40px;
+}
+
+.toolbar-actions-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.auto-run {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.auto-run input {
+    margin: 0;
+    accent-color: var(--dy-orange);
+}
+
+.auto-run-hint {
+    margin-top: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--dy-orange-hover);
+}
+
+.auto-run-hint:empty {
+    display: none;
+}
+
+/* A change is waiting to be measured — say so on the button itself. */
+.btn-attention {
+    animation: btn-attention 1.1s ease-in-out infinite;
+}
+
+@keyframes btn-attention {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.30); }
+    50% { box-shadow: 0 0 0 7px rgba(254, 142, 20, 0.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-attention {
+        animation: none;
+        box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.30);
+    }
+}
+
+.sdk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+
+.badge-active {
+    color: #1a7f37;
+    background: #eaf7ee;
+    border-color: #b7e0c3;
+}
+
+.badge-inactive {
+    color: var(--dy-gray-700);
+    background: var(--dy-gray-100);
+    border-color: var(--dy-gray-300);
+}
+
+/* ---------------------------------------------------------------------------
+   Recipes
+   --------------------------------------------------------------------------- */
+
+.recipe-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.recipe-button {
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    min-height: 32px;
+    padding: 0.15rem 0.85rem;
+    /* Pill shape on purpose — these are suggestions, not actions — but the height band is the
+       compact control size so a chip and a button never disagree about how big a control is. */
+    border-radius: 999px;
+    border: 1px solid var(--dy-orange-edge);
+    background: var(--dy-orange-tint);
+    color: #8a4a00;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.recipe-button:hover {
+    background: #ffeacd;
+    border-color: var(--dy-orange);
+}
+
+.recipe-help {
+    margin-top: 0.6rem;
+    font-size: 0.82rem;
+    color: var(--dy-gray-700);
+    min-height: 1.2em;
+}
+
+.card-rule {
+    border: none;
+    border-top: 1px solid var(--dy-gray-200);
+    margin: 1.1rem 0;
+}
+
+.compare-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+}
+
+.compare-row .hint {
+    flex: 1 1 280px;
+    margin: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Workbench layout — preview on the left, parameters on the right
+   --------------------------------------------------------------------------- */
+
+.workbench {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 460px);
+    gap: 1.5rem;
+    /* Both cells are the same height, so the parameters panel ends where the pipeline
+       panel ends instead of stopping short and leaving a gap under it. */
+    align-items: stretch;
+}
+
+.workbench > .panel {
+    margin-bottom: 1.5rem;
+}
+
+.panel {
+    background: var(--white);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.panel-header {
+    padding: 0.85rem 1rem;
+    background: var(--dy-gray-50);
+    border-bottom: 1px solid var(--dy-gray-200);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.panel-header h2 {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+}
+
+.panel-header .spacer {
+    margin-left: auto;
+}
+
+.panel-body {
+    padding: 1rem;
+}
+
+/* Full-width band: the panels below the workbench are as wide as the comparison and
+   export cards, because the stage strip and the candidate galleries are what those
+   panels are for and they want the room. */
+.panel-wide {
+    width: 100%;
+}
+
+/*
+ * The parameters panel is the one panel that adapts to a height it did not choose: in
+ * the workbench row it is as tall as the pipeline panel beside it, and the list inside
+ * fills that box and scrolls. Driving it from the content instead would either cap the
+ * list at `100vh - something` (a gap appears under the panel on a short window) or let
+ * 108 parameters set the row height and leave the pipeline panel padded out with white.
+ * `flex: 1 1 0` is the part that matters: a zero basis keeps the list from contributing
+ * its own height to the row.
+ */
+.panel-params {
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-body-fill {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Preview
+   --------------------------------------------------------------------------- */
+
+/*
+ * The frame is a fixed box, and the picture fits inside it.
+ *
+ * Every stage hands back an image of a different size — a 1200x1600 frame at the top of
+ * the pipeline, a 272x114 candidate crop in the decode section — and if the box resized
+ * with them the whole page below would move on every stage click. That is what made
+ * "Candidate after scaling" and "Candidate after complement" throw the viewport around
+ * while the full-frame stages sat still, and it is why the two click handlers used to pin
+ * `scrollTo()` to compensate. The aspect ratio is set from the loaded image (see
+ * `setSource`) so the box is stable per image rather than per stage, and `object-fit`
+ * letterboxes whatever the stage produced inside it.
+ */
+.imageview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--dy-gray-900);
+    border: 1px solid var(--dy-gray-200);
+}
+
+.imageview canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.imageview canvas.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Camera viewfinder: the live frame takes the place of the still while the
+   camera is open, and the still comes back the moment a photo is taken. It fits the
+   same fixed frame, so opening the camera does not resize the panel either. */
+.camera-video {
+    display: none;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.imageview.camera-live .camera-video {
+    display: block;
+}
+
+.imageview.camera-live #preview_base,
+.imageview.camera-live #preview_overlay {
+    display: none;
+}
+
+.preview-caption {
+    margin: 0.55rem 0 0;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    font-weight: 600;
+    color: var(--dy-gray-700);
+    overflow-wrap: anywhere;
+    /* Three lines are reserved whether or not the caption needs them. It runs from one to
+       three lines depending on the stage — a candidate stage names the crop as well — and a
+       line appearing or disappearing moves the strip below by ~11px for no reason. Measured
+       with the reserve removed: exactly that. */
+    min-height: calc(3 * 1.35em);
+}
+
+.status-busy::before {
+    content: '';
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    margin-right: 6px;
+    border: 2px solid var(--dy-gray-300);
+    border-top-color: var(--dy-orange);
+    border-radius: 50%;
+    animation: tuner-spin 0.7s linear infinite;
+    vertical-align: -1px;
+}
+
+@keyframes tuner-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .status-busy::before {
+        animation-duration: 2.4s;
+    }
+}
+
+.roi-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--dy-gray-700);
+    cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------------
+   Stage strip — one card per pipeline stage, in pipeline order
+   --------------------------------------------------------------------------- */
+
+.diagnosis-summary {
+    border: 1px solid var(--dy-gray-200);
+    border-left: 4px solid var(--dy-gray-500);
+    border-radius: var(--radius-sm);
+    background: var(--dy-gray-50);
+    padding: 0.75rem 0.85rem;
+    margin-bottom: 0.8rem;
+    color: var(--dy-gray-700);
+}
+
+.diagnosis-summary p {
+    margin: 0.25rem 0 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.diagnosis-title {
+    display: block;
+    color: var(--dy-gray-900);
+    font-size: 0.88rem;
+}
+
+.diagnosis-counts {
+    font-family: var(--font-mono);
+    color: var(--dy-gray-900);
+}
+
+.diagnosis-warn {
+    border-left-color: var(--dy-orange);
+    background: #fff8ed;
+}
+
+.diagnosis-good {
+    border-left-color: #16834b;
+    background: #f1faf5;
+}
+
+.stage-strip {
+    display: flex;
+    gap: 0.55rem;
+    /* The pipeline has twenty-odd stages and the strip is where they are compared, so it
+       wraps into rows instead of scrolling sideways: at this width every stage is on
+       screen at once and nothing has to be dragged into view. Order still reads
+       left-to-right, top-to-bottom, which is pipeline order. */
+    flex-wrap: wrap;
+    padding: 0.25rem 0.25rem 0.75rem;
+    scrollbar-width: thin;
+}
+
+.stage-card {
+    flex: 0 0 auto;
+    width: 132px;
+    padding: 0.45rem;
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stage-card:hover {
+    border-color: var(--dy-gray-500);
+}
+
+.stage-card-active {
+    border-color: var(--dy-orange);
+    box-shadow: 0 0 0 2px rgba(254, 142, 20, 0.22);
+}
+
+.stage-card-final {
+    border-color: var(--dy-gray-900);
+}
+
+.stage-thumb {
+    position: relative;
+    width: 100%;
+    background: var(--dy-gray-100);
+    border-radius: 3px;
+    overflow: hidden;
+    line-height: 0;
+}
+
+/* The pipeline step, in the thumbnail's top-left corner. Numbers run in order down the
+   strip, and a repeated number is one position in the pipeline producing several candidate
+   images — which is the difference between "what happens next" and "what else was tried". */
+.stage-step {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    min-width: 1.05rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px 0 3px 0;
+    background: rgba(50, 50, 52, 0.86);
+    color: var(--white);
+    font-size: 0.66rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+}
+
+.stage-card-active .stage-step {
+    background: var(--dy-orange);
+}
+
+.stage-thumb-canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.stage-title {
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--dy-gray-900);
+}
+
+.stage-count {
+    font-size: 0.72rem;
+    color: var(--dy-gray-700);
+    font-family: var(--font-mono);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.stage-kind {
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--dy-gray-500);
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+/*
+ * The "stages reported nothing" block lives outside the scrolling strip and
+ * spans the panel width. Inside the strip it was squeezed to a ~159px sliver
+ * beside the cards and every line of text wrapped into an unreadable column.
+ */
+.stage-missing-wrap {
+    margin-top: 0.75rem;
+}
+
+.stage-missing-wrap:empty {
+    display: none;
+}
+
+.stage-missing {
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.75rem;
+    background: var(--dy-gray-50);
+}
+
+.stage-missing summary {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--dy-gray-700);
+    cursor: pointer;
+}
+
+.stage-missing-list {
+    margin-top: 0.5rem;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.stage-missing-row {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.15rem 0.75rem;
+    align-items: baseline;
+    font-size: 0.8rem;
+    color: var(--dy-gray-700);
+    line-height: 1.5;
+}
+
+.stage-missing-title {
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--dy-link);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.stage-missing-title-active {
+    color: var(--dy-orange-hover);
+    text-decoration-thickness: 2px;
+}
+
+.stage-detail {
+    border-top: 1px solid var(--dy-gray-200);
+    padding-top: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.candidate-evidence {
+    border-top: 1px solid var(--dy-gray-200);
+    margin-top: 0.8rem;
+    padding-top: 0.75rem;
+}
+
+.candidate-evidence-title {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.candidate-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.65rem;
+}
+
+.candidate-item {
+    min-width: 0;
+    margin: 0;
+    padding: 0.45rem;
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+}
+
+.candidate-canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 2px;
+    background: var(--dy-gray-100);
+}
+
+.candidate-item figcaption {
+    display: grid;
+    gap: 0.15rem;
+    margin-top: 0.35rem;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.candidate-item figcaption span {
+    color: var(--dy-gray-700);
+}
+
+.candidate-confirmed {
+    border-left: 3px solid #16834b;
+}
+
+.candidate-rejected {
+    border-left: 3px solid var(--dy-orange);
+}
+
+.candidate-button {
+    appearance: none;
+    width: 100%;
+    color: var(--dy-gray-900);
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+}
+
+.candidate-button:hover {
+    border-color: var(--dy-gray-500);
+}
+
+.candidate-button:focus-visible {
+    outline: 2px solid var(--dy-orange);
+    outline-offset: 2px;
+}
+
+.candidate-selected {
+    border-color: var(--dy-orange);
+    box-shadow: 0 0 0 2px rgba(254, 142, 20, 0.2);
+}
+
+.candidate-button-label {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.stage-detail-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.detail-list {
+    margin-top: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--dy-gray-700);
+    display: grid;
+    gap: 0.2rem;
+}
+
+.detail-list li {
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
+}
+
+.group-note {
+    font-size: 0.82rem;
+    color: var(--dy-gray-700);
+    line-height: 1.55;
+    margin-top: 0.35rem;
+}
+
+.roi-readout {
+    margin-top: 0.5rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Results
+   --------------------------------------------------------------------------- */
+
+.result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.result-table th,
+.result-table td {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--dy-gray-200);
+    vertical-align: top;
+}
+
+.result-table th {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+    background: var(--dy-gray-50);
+    white-space: nowrap;
+}
+
+/* Plain inline content only inside the details cell: a flex or grid container
+   contributes to the table's intrinsic width in a way that collapses the
+   column, and the values then wrap one character per line. */
+.result-table .text-cell {
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
+}
+
+.result-table .num {
+    font-family: var(--font-mono);
+    white-space: nowrap;
+}
+
+.result-table .brief-cell {
+    color: var(--dy-gray-700);
+    max-width: 22ch;
+}
+
+.empty-result p {
+    margin-bottom: 0.5rem;
+}
+
+.points-box {
+    margin-top: 0.75rem;
+}
+
+.points-box summary {
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.points-box .hint {
+    font-family: var(--font-mono);
+    margin-top: 0.25rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Ground truth (bundled samples only)
+   --------------------------------------------------------------------------- */
+
+/* The annotations are the dataset's own, so a miss reported here is a fact about
+   the run rather than an opinion about it. */
+.truth-block {
+    border: 1px solid var(--dy-gray-200);
+    border-left: 3px solid var(--dy-link);
+    border-radius: var(--radius-sm);
+    background: var(--dy-gray-50);
+    padding: 0.65rem 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.truth-headline {
+    font-weight: 600;
+    margin: 0 0 0.35rem;
+}
+
+.truth-missed {
+    color: #b42318;
+}
+
+.truth-clean {
+    color: #1a7f37;
+}
+
+.truth-list {
+    display: grid;
+    gap: 0.2rem;
+    margin-top: 0.35rem;
+}
+
+.truth-row {
+    display: grid;
+    grid-template-columns: 4.5rem 7.5rem 1fr;
+    gap: 0.6rem;
+    align-items: baseline;
+    font-size: 0.82rem;
+}
+
+.truth-status {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+}
+
+.truth-row-missed .truth-status {
+    color: #b42318;
+}
+
+.truth-row-found .truth-status {
+    color: #1a7f37;
+}
+
+.truth-format {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+}
+
+.truth-text {
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
+}
+
+.truth-found {
+    margin-top: 0.45rem;
+}
+
+.truth-found summary {
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.truth-found .truth-row {
+    margin-top: 0.2rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Run log
+   --------------------------------------------------------------------------- */
+
+.run-log {
+    max-height: 190px;
+    overflow-y: auto;
+    font-size: 0.82rem;
+    display: grid;
+    gap: 0.15rem;
+}
+
+.log-row {
+    display: flex;
+    gap: 0.6rem;
+    line-height: 1.5;
+}
+
+.log-time {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    color: var(--dy-gray-500);
+}
+
+.log-message {
+    overflow-wrap: anywhere;
+}
+
+.log-ok .log-message {
+    color: #1a7f37;
+}
+
+.log-warn .log-message {
+    color: #8a4a00;
+}
+
+.log-bad .log-message {
+    color: #b42318;
+}
+
+/* ---------------------------------------------------------------------------
+   Parameter panel
+   --------------------------------------------------------------------------- */
+
+.param-toolbar {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.param-toolbar .form-input {
+    flex: 1 1 160px;
+}
+
+.param-toolbar label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--dy-gray-700);
+    white-space: nowrap;
+}
+
+.param-count {
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+    font-family: var(--font-mono);
+    margin-bottom: 0.6rem;
+}
+
+.param-groups {
+    flex: 1 1 0;
+    min-height: 14rem;
+    overflow-y: auto;
+    padding-right: 0.35rem;
+}
+
+.param-group {
+    border: 1px solid var(--dy-gray-200);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.6rem;
+    background: var(--white);
+}
+
+.param-group[open] > .param-group-summary {
+    border-bottom: 1px solid var(--dy-gray-200);
+}
+
+.param-group-summary {
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    list-style: none;
+}
+
+.param-group-summary::-webkit-details-marker {
+    display: none;
+}
+
+.param-group-title {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    color: var(--dy-gray-900);
+}
+
+.param-group-count {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--dy-gray-700);
+    background: var(--dy-gray-100);
+    border-radius: 999px;
+    padding: 1px 7px;
+}
+
+.param-group > .group-note {
+    padding: 0 0.75rem 0.6rem;
+    margin-top: 0.5rem;
+}
+
+.owner-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.6rem 0.75rem 0.2rem;
+}
+
+.owner-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--dy-gray-700);
+}
+
+/* --- one field ------------------------------------------------------------ */
+
+.field {
+    padding: 0.5rem 0.75rem 0.6rem;
+    border-top: 1px solid var(--dy-gray-100);
+}
+
+.field-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.3rem;
+}
+
+.field-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--dy-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.field-unit {
+    font-size: 0.72rem;
+    color: var(--dy-gray-700);
+    font-family: var(--font-mono);
+}
+
+.field-changed {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dy-orange-hover);
+    background: var(--dy-orange-tint);
+    border: 1px solid var(--dy-orange-edge);
+    border-radius: 999px;
+    padding: 0 6px;
+}
+
+.field-range {
+    font-size: 0.74rem;
+    color: var(--dy-gray-500);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    align-self: center;
+}
+
+.field-help {
+    font-size: 0.78rem;
+    color: var(--dy-gray-700);
+    line-height: 1.55;
+    margin-top: 0.3rem;
+}
+
+.field-code {
+    font-size: 0.72rem;
+}
+
+.field-tag {
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-500);
+    border: 1px solid var(--dy-gray-200);
+    border-radius: 999px;
+    padding: 0 6px;
+}
+
+.field-nested {
+    border-top: 1px dashed var(--dy-gray-200);
+    padding-left: 0.5rem;
+}
+
+.field-sub {
+    border-top: 1px dashed var(--dy-gray-200);
+    padding: 0.4rem 0 0.5rem;
+}
+
+.field-irrelevant .field-label,
+.field-irrelevant .field-unit {
+    color: var(--dy-gray-500);
+}
+
+.field-gated .field-label {
+    color: var(--dy-gray-500);
+}
+
+.field-gated::after {
+    content: 'not used at this setting';
+    display: block;
+    font-size: 0.72rem;
+    color: var(--dy-gray-500);
+    margin-top: 0.2rem;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.control-row .form-input,
+.control-row .form-select {
+    flex: 1 1 140px;
+}
+
+.switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--dy-gray-700);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.switch-text {
+    font-family: var(--font-mono);
+}
+
+/* --- chips --------------------------------------------------------------- */
+
+.chip-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 0.15rem;
+}
+
+.chip-group-head {
+    flex: 0 0 100%;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dy-gray-500);
+    margin-top: 0.3rem;
+}
+
+.chip {
+    font-family: inherit;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--dy-gray-300);
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--dy-gray-700);
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.chip:hover {
+    border-color: var(--dy-gray-500);
+}
+
+.chip-on {
+    background: var(--dy-orange-tint);
+    border-color: var(--dy-orange);
+    color: #8a4a00;
+    font-weight: 600;
+}
+
+.chip-group.chip-on {
+    background: var(--dy-gray-900);
+    border-color: var(--dy-gray-900);
+    color: var(--white);
+}
+
+.chip-extra {
+    border-style: dashed;
+}
+
+.chip-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+    margin-top: 0.4rem;
+}
+
+/* --- ranges, tuples, nulls ---------------------------------------------- */
+
+.range-row,
+.tuple-row {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.range-input,
+.tuple-input {
+    flex: 1 1 62px;
+    min-width: 62px;
+}
+
+.tuple-wrap {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.unset-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.string-array {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.json-value {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.json-input {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.input-bad {
+    border-color: #b42318;
+}
+
+/* --- mode lists ---------------------------------------------------------- */
+
+.mode-array {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.mode-array-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.mode-count {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--dy-gray-700);
+    font-family: var(--font-mono);
+}
+
+.mode-array-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.mode-entry {
+    border: 1px solid var(--dy-gray-200);
+    border-left: 3px solid var(--dy-orange);
+    border-radius: var(--radius-sm);
+    background: var(--dy-gray-50);
+    padding: 0.45rem 0.6rem 0.6rem;
+}
+
+.mode-entry-top {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.mode-index {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--dy-gray-700);
+    font-family: var(--font-mono);
+}
+
+.mode-select {
+    flex: 1 1 150px;
+    background: var(--white);
+}
+
+.mode-entry-actions {
+    display: flex;
+    gap: 0.2rem;
+    margin-left: auto;
+}
+
+.icon-btn {
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--dy-gray-300);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    color: var(--dy-gray-700);
+    font-size: 0.8rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+}
+
+.icon-btn:hover:not(:disabled) {
+    border-color: var(--dy-gray-900);
+    color: var(--dy-gray-900);
+}
+
+.icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.icon-remove:hover:not(:disabled) {
+    border-color: #b42318;
+    color: #b42318;
+}
+
+.mode-entry .field {
+    background: var(--white);
+    border-radius: var(--radius-sm);
+    margin-top: 0.4rem;
+    padding: 0.4rem 0.5rem;
+}
+
+.mode-entry .field-sub {
+    border-top: 1px solid var(--dy-gray-200);
+}
+
+/* --- JSON panel ---------------------------------------------------------- */
+
+.json-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+}
+
+/* The editor's own two buttons sit below the export row, so "take it away" and
+   "work in the editor" read as the two different things they are. */
+.json-actions-editor {
+    align-items: center;
+    margin-top: 0.35rem;
+}
+
+.json-actions-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--dy-gray-700);
+}
+
+/* Momentary highlight so the toolbar's "Take this template away" lands somewhere
+   visible when the page scrolls to it. */
+.card-highlight {
+    animation: card-highlight 1.6s ease-out 1;
+}
+
+@keyframes card-highlight {
+    0% { box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.55); }
+    100% { box-shadow: 0 0 0 3px rgba(254, 142, 20, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card-highlight { animation: none; outline: 2px solid var(--dy-orange); outline-offset: 2px; }
+}
+
+.json-editor {
+    width: 100%;
+    min-height: 260px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    padding: 0.75rem;
+    border: 1px solid var(--dy-gray-300);
+    border-radius: var(--radius-sm);
+    background: var(--dy-gray-50);
+    color: var(--dy-gray-900);
+    resize: vertical;
+}
+
+.json-editor:focus {
+    outline: none;
+    border-color: var(--dy-orange);
+    box-shadow: 0 0 0 3px rgba(254, 142, 20, 0.18);
+}
+
+/* ---------------------------------------------------------------------------
+   Overlay states
+   --------------------------------------------------------------------------- */
+
+.loading-indicator {
+    position: fixed;
+    inset: 0;
+    background: rgba(50, 50, 52, 0.82);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: var(--white);
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.loading-indicator.hidden {
+    display: none;
+}
+
+.loading-indicator p {
+    margin-top: 0.9rem;
+    font-size: 1rem;
+    max-width: 46ch;
+}
+
+.spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top-color: var(--dy-orange);
+    border-radius: 50%;
+    animation: tuner-spin 1s linear infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   Footer
+   --------------------------------------------------------------------------- */
+
+.demo-footer {
+    flex: 0 0 auto;
+    margin-top: 3rem;
+    background: var(--dy-gray-50);
+    border-top: 1px solid var(--dy-gray-200);
+    padding: 1.75rem 1.5rem;
+}
+
+.demo-footer-inner {
+    max-width: var(--shell);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.demo-footer .disclaimer {
+    font-size: 0.85rem;
+    color: var(--dy-gray-700);
+    max-width: 110ch;
+}
+
+.demo-footer .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+    color: var(--dy-gray-700);
+}
+
+.demo-footer .footer-cta {
+    margin-left: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 1180px) {
+    .workbench {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .param-groups {
+        /* One column, so the panel is no longer sharing a row height with the pipeline
+           panel: the list goes back to sizing itself against its own content. */
+        flex: 0 1 auto;
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+@media (max-width: 900px) {
+    .header-nav .nav-link {
+        display: none;
+    }
+
+    .header-nav {
+        gap: 0.75rem;
+    }
+
+    .toolbar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    /* The "Free" tag goes first so the product name survives. */
+    .brand-tag {
+        display: none;
+    }
+
+    .brand-product,
+    .brand-divider {
+        display: none;
+    }
+
+    .page-intro {
+        padding: 1.5rem 1rem 1rem;
+    }
+
+    .learning-workflow {
+        grid-template-columns: 1fr;
+        gap: 0.45rem;
+    }
+
+    .container {
+        padding: 0 1rem;
+    }
+
+    .card-body,
+    .panel-body {
+        padding: 1rem;
+    }
+
+    .demo-footer .footer-cta {
+        margin-left: 0;
+    }
+
+    .result-table {
+        font-size: 0.78rem;
+    }
+
+    .result-table .brief-cell {
+        max-width: 14ch;
+    }
+
+    .truth-row {
+        grid-template-columns: 1fr;
+        gap: 0.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-intro h1 {
+        font-size: 1.5rem;
+    }
+
+    .btn {
+        padding: 0.5rem 0.9rem;
+        font-size: 0.85rem;
+    }
+
+    .stage-card {
+        width: 116px;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   Print
+   --------------------------------------------------------------------------- */
+
+@media print {
+
+    .site-header,
+    .demo-footer,
+    .toolbar-actions,
+    .param-groups,
+    .json-actions,
+    .recipe-list {
+        display: none;
+    }
+
+    body {
+        background: var(--white);
+    }
+}
