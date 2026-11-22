@@ -21,7 +21,7 @@ https://github.com/user-attachments/assets/46faffc1-b4c2-496a-8a25-b69bb8dc657c
    - Click "💾 Save" to download (appears after rectification)
 
 ## Demo
-https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_mrz_document
+[https://yushulx.me/javascript-barcode-qr-code-scanner/examples/barcode_mrz_document](https://www.dynamsoft.com/codepool/demos/barcode-mrz-document-scanner/)
 
 ## Technical Details
 
