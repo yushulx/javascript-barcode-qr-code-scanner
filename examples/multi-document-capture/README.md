@@ -5,7 +5,7 @@ A browser-based document scanning application powered by the **Dynamsoft Capture
 https://github.com/user-attachments/assets/5a9a9a9d-df9e-4422-886a-eb52105e4b9b
 
 ## Online Demo
-https://yushulx.me/javascript-barcode-qr-code-scanner/examples/multi-document-capture/
+[https://yushulx.me/javascript-barcode-qr-code-scanner/examples/multi-document-capture/](https://www.dynamsoft.com/codepool/demos/multi-document-capture/)
 
 ## Features
 
