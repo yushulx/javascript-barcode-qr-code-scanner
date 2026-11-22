@@ -8,7 +8,7 @@ runs entirely in the browser — no licence, no SDK, no upload.
 The generated payloads follow the AAMVA DL/ID Card Design Standard (v8 2013, v9 2016,
 v10 2020), so they can be read back by any AAMVA-aware parser — including Dynamsoft's
 `AAMVA_DL_ID` code parser used by
-[`/codepool/demos/driver-license/`](https://www.dynamsoft.com/codepool/demos/driver-license/).
+[`/codepool/demos/driver-license-scanner/`](https://www.dynamsoft.com/codepool/demos/driver-license-scanner/).
 
 ## Online Demo
 
@@ -45,7 +45,7 @@ Newfoundland and Labrador, `CO` for Colorado).
 
 1. Open the [generator](https://www.dynamsoft.com/codepool/demos/driver-license-generator/),
    pick a jurisdiction and click **Download Card PNG**.
-2. Open the [driver license scanner](https://www.dynamsoft.com/codepool/demos/driver-license/)
+2. Open the [driver license scanner](https://www.dynamsoft.com/codepool/demos/driver-license-scanner/)
    and switch it to **Upload** mode.
 3. Upload the PNG. The scanner decodes the PDF417 barcode and lists the fields that were
    encoded — compare them with the values in the generator's form.

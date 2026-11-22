@@ -110,7 +110,7 @@ self-signed certificate in front of the static server or use a tunnelling tool.
 
 ## Live Demo
 
-[codepool/demos/driver-license](https://www.dynamsoft.com/codepool/demos/driver-license/)
+[codepool/demos/driver-license-scanner](https://www.dynamsoft.com/codepool/demos/driver-license-scanner/)
 
 ## Blog
 

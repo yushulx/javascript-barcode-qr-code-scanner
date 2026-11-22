@@ -4,7 +4,7 @@
  * Everything here runs in the browser. Payloads follow the AAMVA Card Design
  * Standard (v8 2013 / v9 2016 / v10 2020) so the generated PDF417 can be read
  * back by any AAMVA-aware parser, including Dynamsoft's AAMVA_DL_ID code parser
- * used by /codepool/demos/driver-license/.
+ * used by /codepool/demos/driver-license-scanner/.
  *
  * Header (byte offsets from 0):
  *   @            compliance indicator                      1
