@@ -1,0 +1,13 @@
+#overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#overlay polygon {
+  fill: rgba(85,240,40,0.5);
+  stroke: green;
+  stroke-width: 2px;
+}
