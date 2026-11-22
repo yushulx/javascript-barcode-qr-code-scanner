@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Online QR Error Correction Visualizer | Dynamsoft Codepool</title>
+    <meta name="description"
+        content="See how much damage a QR code can take. Generate a QR at error correction level L, M, Q or H, paint damage on its modules, cover finder or timing patterns, simulate noise, blur or low contrast, and watch a live decoder read it — with the Reed-Solomon repair budget measured as you go.">
+    <link rel="canonical" href="https://www.dynamsoft.com/codepool/demos/qr-error-correction-visualizer/">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Free Online QR Error Correction Visualizer">
+    <meta property="og:description"
+        content="Generate a QR code at any error correction level, damage it module by module or with noise, blur and low contrast, and watch whether a reader still decodes it — with the Reed-Solomon repair budget measured live.">
+    <meta property="og:url" content="https://www.dynamsoft.com/codepool/demos/qr-error-correction-visualizer/">
+    <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/qr-error-correction-visualizer/thumbnail.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <script src="qr-encoder.js" defer></script>
+    <script src="app.js" defer></script>
+</head>
+
+<body>
+
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a class="brand" href="https://www.dynamsoft.com/"
+                aria-label="Dynamsoft — back to dynamsoft.com">
+                <img class="brand-logo" src="dynamsoft-logo.svg" width="159" height="39" alt="Dynamsoft">
+            </a>
+            <span class="brand-divider" aria-hidden="true"></span>
+            <span class="brand-product"><span class="brand-tag">Free</span>QR Error Correction Visualizer</span>
+            <nav class="header-nav" aria-label="Dynamsoft">
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
+                   >Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/docs/">Documentation</a>
+                <a class="btn btn-primary"
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
+                   >30-Day Free Trial</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="page-intro">
+        <h1>How much damage can a QR code take?</h1>
+        <p class="page-intro-lead">
+            A QR Code spends roughly a fifth to a third of its modules on Reed-Solomon parity — the redundancy
+            that lets a scanner repair what a scratch, a glare or a coffee mug destroyed. Build a symbol, damage it
+            on purpose, and watch the repair budget run out. Everything runs in your browser.
+        </p>
+        <ol class="learning-workflow">
+            <li><strong>Build the symbol.</strong><span>Type a payload, pick an error correction level and a
+                version, and see the data and parity codewords it splits into.</span></li>
+            <li><strong>Damage it.</strong><span>Paint on single modules, cover finder or timing patterns, or
+                simulate noise, blur, low contrast and more.</span></li>
+            <li><strong>Read it.</strong><span>Decode the result with Dynamsoft Barcode Reader and watch where
+                each level stops recovering.</span></li>
+        </ol>
+    </div>
+
+    <main class="container">
+        <div class="workspace">
+            <!-- ============================ symbol ============================ -->
+            <section class="card">
+                <div class="card-header">
+                    <h2>The symbol</h2>
+                    <span id="symbol-note" class="card-note"></span>
+                </div>
+                <div class="card-body">
+                    <div class="symbol-toolbar">
+                        <div class="form-group">
+                            <label for="payload">Payload</label>
+                            <textarea id="payload" rows="2" spellcheck="false"
+                                aria-describedby="payload-hint">https://www.dynamsoft.com/codepool/</textarea>
+                            <p id="payload-hint" class="hint">Byte mode. The version grows to fit — up to version
+                                10 here.</p>
+                        </div>
+                        <div class="form-group ec-group">
+                            <span class="label-text" id="ec-label">Error correction level</span>
+                            <div class="ec-segmented" role="radiogroup" aria-labelledby="ec-label">
+                                <button type="button" class="ec-option" data-level="L" role="radio"
+                                    aria-checked="false">L · 7%</button>
+                                <button type="button" class="ec-option" data-level="M" role="radio"
+                                    aria-checked="false">M · 15%</button>
+                                <button type="button" class="ec-option" data-level="Q" role="radio"
+                                    aria-checked="false">Q · 25%</button>
+                                <button type="button" class="ec-option" data-level="H" role="radio"
+                                    aria-checked="false">H · 30%</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="version">Version</label>
+                            <select id="version" class="form-select">
+                                <option value="auto" selected>Auto — smallest that fits</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p id="version-error" class="error-line" role="alert" hidden></p>
+
+                    <div class="symbol-stage-row">
+                        <div id="qr-stage" class="qr-stage">
+                            <canvas id="qr-canvas" width="360" height="360"
+                                aria-label="QR code preview. Drag on it to damage modules."></canvas>
+                            <canvas id="qr-overlay" class="qr-overlay" aria-hidden="true"></canvas>
+                            <p id="stage-hint" class="stage-hint">Drag on the symbol to damage modules</p>
+                        </div>
+                        <div class="symbol-side">
+                            <div class="legend" aria-label="Structure view legend">
+                                <label class="structure-toggle"><input type="checkbox" id="structure-toggle" checked>
+                                    Color modules by role</label>
+                                <ul class="legend-items">
+                                    <li><span class="swatch swatch-data"></span>Data codeword</li>
+                                    <li><span class="swatch swatch-ec"></span>Error correction codeword</li>
+                                    <li><span class="swatch swatch-function"></span>Function pattern</li>
+                                    <li><span class="swatch swatch-damaged"></span>Damaged module</li>
+                                </ul>
+                                <p id="codeword-info" class="codeword-info" role="status">Click any module to see
+                                    which codeword it carries.</p>
+                            </div>
+                            <dl id="facts" class="facts"></dl>
+                            <div class="ec-compare">
+                                <p class="label-text">Correction capacity at this version</p>
+                                <div id="ec-bars" class="ec-bars"></div>
+                                <p class="hint">A block repairs up to half of its parity codewords as errors
+                                    (⌊EC/2⌋ per block).</p>
+                            </div>
+                            <div class="symbol-actions">
+                                <button id="export-btn" class="btn btn-secondary btn-sm" type="button">Download
+                                    PNG</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================ damage + read ============================ -->
+            <div class="side-column">
+                <section class="card">
+                    <div class="card-header">
+                        <h2>Damage it</h2>
+                        <span class="card-note">Module damage and capture defects are independent — combine
+                            them.</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="tool-row">
+                            <span class="label-text">Paint modules</span>
+                            <div class="chip-row" id="brush-sizes" role="radiogroup" aria-label="Brush size in modules">
+                                <button type="button" class="chip" data-size="1" role="radio" aria-checked="true">1</button>
+                                <button type="button" class="chip" data-size="2" role="radio"
+                                    aria-checked="false">2</button>
+                                <button type="button" class="chip" data-size="3" role="radio"
+                                    aria-checked="false">3</button>
+                            </div>
+                            <p class="hint">Drag across the symbol. Painted modules flip to a fixed random value,
+                                like a real scratch.</p>
+                        </div>
+                        <div class="tool-row">
+                            <span class="label-text">Target a pattern</span>
+                            <div class="chip-row">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-finder">Cover finder
+                                    patterns</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-timing">Damage timing
+                                    patterns</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-format">Damage format
+                                    info</button>
+                            </div>
+                            <p class="hint">Function patterns carry no parity — a scanner that cannot find or
+                                orient the symbol never reaches error correction.</p>
+                        </div>
+                        <div class="tool-row">
+                            <label for="random-range" class="label-text">Random module damage</label>
+                            <div class="slider-row">
+                                <input type="range" id="random-range" min="1" max="40" step="1" value="15">
+                                <output id="random-value" for="random-range">15%</output>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-random">Apply</button>
+                            </div>
+                            <p class="hint">Seeded, so the same percentage always damages the same modules.</p>
+                        </div>
+                        <div class="tool-row">
+                            <label for="pixel-preset" class="label-text">Simulate a capture defect</label>
+                            <div class="slider-row">
+                                <select id="pixel-preset" class="form-select">
+                                    <option value="none" selected>None — clean render</option>
+                                    <option value="noise">Sensor noise</option>
+                                    <option value="blur">Out of focus</option>
+                                    <option value="contrast">Low contrast</option>
+                                    <option value="occlusion">Something in the way</option>
+                                    <option value="crop">Partly out of frame</option>
+                                    <option value="shadow">Shadow across the symbol</option>
+                                    <option value="rotate">Tilted capture</option>
+                                </select>
+                                <input type="range" id="pixel-amount" min="5" max="100" step="5" value="40"
+                                    aria-label="Defect strength">
+                                <output id="pixel-amount-value" for="pixel-amount">40%</output>
+                            </div>
+                        </div>
+                        <div class="tool-row">
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-clear">Clear all
+                                damage</button>
+                        </div>
+
+                        <div class="meter">
+                            <div class="meter-head">
+                                <span class="meter-pct"><span id="damage-pct">0.0</span>% modules damaged</span>
+                                <span id="budget-text" class="budget-text">No damage yet</span>
+                            </div>
+                            <div id="budget-bars" class="budget-bars"></div>
+                            <p id="function-warn" class="function-warn" role="status" hidden></p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header">
+                        <h2>Can a reader still read it?</h2>
+                        <label class="auto-decode"><input type="checkbox" id="decode-auto" checked> Decode
+                            automatically</label>
+                    </div>
+                    <div class="card-body">
+                        <p id="decode-status" class="status-line" role="status" aria-live="polite">The reader loads
+                            on the first decode. Decoding uses the clean render plus your damage — never the
+                            structure colours.</p>
+                        <div class="decode-actions">
+                            <button type="button" class="btn btn-primary btn-sm" id="btn-decode">Decode now</button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-sweep">Run damage sweep
+                                0–25%</button>
+                        </div>
+                        <div class="log-wrap">
+                            <table class="log-table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Damage</th>
+                                        <th scope="col">Result</th>
+                                        <th scope="col">Time</th>
+                                        <th scope="col">Source</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="log-tbody"></tbody>
+                            </table>
+                            <p id="log-empty" class="hint">Damage the symbol, or run the sweep, to fill this log.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <details class="card methodology">
+            <summary>How to read these numbers</summary>
+            <p>The symbol is encoded by a QR Code (ISO/IEC 18004) encoder that runs in this page: byte mode, any
+                version up to 10 here, all four error correction levels, and the standard mask search. The
+                <em>module damage</em> you paint or randomize is exact — the demo knows which codeword every
+                module belongs to, so the budget meter counts real corrupted codewords, not an estimate.</p>
+            <p>The budget model follows the standard: a Reed-Solomon block of <code>e</code> parity codewords
+                repairs up to <code>⌊e/2⌋</code> corrupted codewords per block under error decoding (erasure
+                decoding, which a scanner can only use when it knows <em>where</em> the damage is, can do better).
+                Damage to finder, timing, alignment, format or version modules is outside that budget entirely —
+                error correction repairs codewords, not the scaffolding a scanner needs to find the symbol.</p>
+            <p>The <em>capture defect</em> presets (noise, blur, low contrast, occlusion, crop, shadow, rotation)
+                are rendered onto the same canvas a camera would have produced, and their damage percentage is
+                estimated by sampling each module's centre pixel against its intended value. Decode outcomes apply
+                to Dynamsoft Barcode Reader at default settings on the damaged render; another reader, another
+                resolution or a print-and-scan round trip can shift the boundary, and a successful decode never
+                guarantees reliable scanning on every device.</p>
+            <p>The SDK downloads its engine and contacts Dynamsoft for license activation; the hosted demo uses
+                the CodePool domain license, and local or self-hosted previews use the SDK trial license. The
+                payload you type and the damaged image never leave the page.</p>
+        </details>
+    </main>
+
+    <footer>
+        <a href="https://www.dynamsoft.com/codepool/demos/">All online demos</a> · Powered by
+        <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft Barcode Reader</a>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+
+</html>
