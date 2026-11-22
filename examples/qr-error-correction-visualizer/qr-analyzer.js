@@ -767,9 +767,18 @@
         return { pos: centerY, unit: unit };
     }
 
-    function lockGrid(rgba, width, height, points, BarcodeQR) {
+    function lockGrid(rgba, width, height, points, BarcodeQR, trustPoints) {
         var quads = rotations(points);
         var overall = null;
+        /* A decode is its own proof that a symbol is there: when the reader
+           supplied the corners it also supplied the payload. The pattern
+           scores then only have to confirm the grid is not wildly off — a torn
+           or eroded finder pattern costs a few points, and vetoing a symbol
+           the reader has already read helps nobody. Without that proof (the
+           finder locator's own guess) the gates stay strict, so texture cannot
+           pretend to be a grid. */
+        var minFinder = trustPoints ? 0.6 : 0.82;
+        var minScore = trustPoints ? 0.6 : 0.78;
         for (var q = 0; q < quads.length; q++) {
             var quad = quads[q];
             var edge = edgeLength(quad);
@@ -784,13 +793,13 @@
                 if (rough.contrast < 40) continue;
                 var matrix = sampleWithTransform(rgba, width, height, H, size, rough.threshold);
                 var fs = finderScoreOf(matrix, size, BarcodeQR);
-                if (fs < 0.82) continue;
+                if (fs < minFinder) continue;
                 var ts = timingScoreOf(matrix, size);
                 var score = fs * 0.7 + ts * 0.3;
                 /* Real symbols score well on both patterns; random image
                    structures that happen to fit the run lengths must not
                    count as a lock. */
-                if (score < 0.78) continue;
+                if (score < minScore) continue;
                 if (!overall || score > overall.score) {
                     overall = { version: version, size: size, quad: quad, H: H, score: score, fs: fs, ts: ts };
                 }
@@ -920,7 +929,7 @@
             if (!points) return { reason: 'no-grid', locatedBy: 'finder' };
         }
 
-        var lock = lockGrid(rgba, width, height, points, BarcodeQR);
+        var lock = lockGrid(rgba, width, height, points, BarcodeQR, locatedBy === 'reader');
         if (!lock && locatedBy === 'reader') {
             var alt = locateSymbol(rgba, width, height);
             if (alt) {
@@ -1056,6 +1065,7 @@
             report.erasureCount = attempt.erasureCount;
             report.functionDamage = attempt.functionDamage;
             report.payload = attempt.payload;
+            report.repairedMatrix = attempt.repairedMatrix;
             report.cellQuads = attempt.correctedCells.map(function (cell) {
                 return cellQuad(report.H, cell[0], cell[1]);
             });
@@ -1075,6 +1085,99 @@
         return [
             H(c, r), H(c + 1, r), H(c + 1, r + 1), H(c, r + 1)
         ];
+    }
+
+    /* Format information is the one piece of scaffolding that can be rewritten
+       from what the decode already knows: the level and mask it verified.
+       Needed when the format field itself was unreadable and the level/mask
+       came from brute force — without this the recovered symbol would carry
+       the same damaged format field it was rescued from. Layout mirrors the
+       encoder's writeFormatBits (ISO/IEC 18004 §7.9); the encoder keeps that
+       one private, so the 15 cells are restated here. */
+    function writeFormatCells(matrix, ecLevel, mask, BarcodeQR) {
+        if (!BarcodeQR || typeof BarcodeQR.formatBits !== 'function') return;
+        var bits = BarcodeQR.formatBits(ecLevel, mask);
+        var size = matrix.length;
+        var i;
+        for (i = 0; i <= 5; i++) matrix[i][8] = (bits >>> i) & 1;
+        matrix[7][8] = (bits >>> 6) & 1;
+        matrix[8][8] = (bits >>> 7) & 1;
+        matrix[8][7] = (bits >>> 8) & 1;
+        for (i = 9; i < 15; i++) matrix[8][14 - i] = (bits >>> i) & 1;
+        for (i = 0; i < 8; i++) matrix[8][size - 1 - i] = (bits >>> i) & 1;
+        for (i = 8; i < 15; i++) matrix[size - 15 + i][8] = (bits >>> i) & 1;
+    }
+
+    /* Scaffolding is not sampled data — every one of these modules is fixed by
+       the version alone, so the recovered symbol draws them from the standard
+       instead of copying whatever the blur made of them. A rotated or blurred
+       capture misreads timing and alignment modules first (they are one module
+       wide and sit far from the finders), and carrying those errors into the
+       rebuilt image would hand back a symbol the reader still refuses.
+       Version information (7 and up) and the dark module are equally fixed. */
+    function writeFunctionPatterns(matrix, version, BarcodeQR) {
+        var size = matrix.length;
+        var i;
+        var j;
+
+        /* Finder patterns and their separators, three corners. The 7x7 block is
+           symmetric under a corner flip, so one pattern serves all three; the
+           eighth row/column of each block is the light separator. */
+        for (i = 0; i < 8; i++) {
+            for (j = 0; j < 8; j++) {
+                var v = 0;
+                if (i < 7 && j < 7) {
+                    v = (i === 0 || i === 6 || j === 0 || j === 6
+                        || (i >= 2 && i <= 4 && j >= 2 && j <= 4)) ? 1 : 0;
+                }
+                matrix[i][j] = v;
+                matrix[i][size - 1 - j] = v;
+                matrix[size - 1 - i][j] = v;
+            }
+        }
+
+        /* Timing patterns: alternating, dark on even coordinates. */
+        for (i = 8; i < size - 8; i++) {
+            var dark = i % 2 === 0 ? 1 : 0;
+            matrix[6][i] = dark;
+            matrix[i][6] = dark;
+        }
+
+        /* Alignment patterns: 5x5, dark border and centre, skipping the three
+           positions that would land on a finder pattern. */
+        var positions = BarcodeQR && typeof BarcodeQR.alignmentPositions === 'function'
+            ? BarcodeQR.alignmentPositions(version) : [];
+        var last = positions.length - 1;
+        for (var a = 0; a < positions.length; a++) {
+            for (var b = 0; b < positions.length; b++) {
+                var overFinder = (a === 0 && b === 0) || (a === 0 && b === last) || (a === last && b === 0);
+                if (overFinder) continue;
+                var cr = positions[a];
+                var cc = positions[b];
+                for (i = -2; i <= 2; i++) {
+                    for (j = -2; j <= 2; j++) {
+                        var ring = Math.abs(i) === 2 || Math.abs(j) === 2;
+                        var centre = i === 0 && j === 0;
+                        matrix[cr + i][cc + j] = (ring || centre) ? 1 : 0;
+                    }
+                }
+            }
+        }
+
+        /* Dark module, immediately above the bottom-left format strip. */
+        matrix[4 * version + 9][8] = 1;
+
+        /* Version information: BCH(18,6) in two 3x6 blocks, 7 and up. */
+        if (version >= 7 && BarcodeQR && typeof BarcodeQR.versionBits === 'function') {
+            var bits = BarcodeQR.versionBits(version);
+            for (i = 0; i < 18; i++) {
+                var row = size - 11 + (i % 3);
+                var col = Math.floor(i / 3);
+                var bit = (bits >>> i) & 1;
+                matrix[col][row] = bit;
+                matrix[row][col] = bit;
+            }
+        }
     }
 
     function runDecode(ecLevel, mask, matrix, size, BarcodeQR, refCells) {
@@ -1176,6 +1279,28 @@
             }
         }
 
+        /* The recovered symbol: every codeword bit written back through the
+           mask it was read with. This is the original's module matrix — the
+           version, level and mask are the ones the image carried, so it is a
+           repair of this symbol rather than a re-encoding of its payload.
+           A failed block has no corrected stream to write back, so the matrix
+           is only complete when every block decoded. */
+        var repairedMatrix = null;
+        if (!failed.length) {
+            repairedMatrix = matrix.map(function (row) { return row.slice(); });
+            for (var psi = 0; psi < stream.bytes.length; psi++) {
+                var pcells = stream.cellsOf[psi] || [];
+                for (var pbi = 0; pbi < pcells.length; pbi++) {
+                    var pr = pcells[pbi][0];
+                    var pc = pcells[pbi][1];
+                    repairedMatrix[pr][pc] = ((fixedStream[psi] >> (7 - pbi)) & 1)
+                        ^ (masked(mask, pr, pc) ? 1 : 0);
+                }
+            }
+            writeFormatCells(repairedMatrix, ecLevel, mask, BarcodeQR);
+            writeFunctionPatterns(repairedMatrix, version, BarcodeQR);
+        }
+
         /* Modules whose sampled value differs from the recovered original.
            With a reference the diff IS the answer; otherwise it comes from
            the corrected stream. Bit m2 of a codeword is its m2-th cell, most
@@ -1222,7 +1347,8 @@
             erasureCount: erasureCount,
             functionDamage: functionDamage,
             dataCodewords: st.dataCodewords,
-            payload: failed.length ? null : parseDataPayload(fixedStream, st, version)
+            payload: failed.length ? null : parseDataPayload(dataOrderCodewords(fixedStream, st, perBlock), st, version),
+            repairedMatrix: repairedMatrix
         };
     }
 
@@ -1230,6 +1356,20 @@
        data codewords in stream order (block b's k-th codeword sits at stream
        index k·numBlocks + b), most significant bit first. Byte mode covers
        URLs and free text; numeric and alphanumeric get quick parsers too. */
+    /* The data stream the symbol was built from, before block interleaving.
+       Reed-Solomon works on interleaved blocks, but the mode header and the
+       payload are written in data order: block 0's data codewords first, then
+       block 1's, and so on. Parsing the interleaved stream as if it were data
+       order happens to work for a single-block symbol and garbles every other
+       one. */
+    function dataOrderCodewords(stream, st, perBlock) {
+        var out = [];
+        for (var b = 0; b < st.numBlocks; b++) {
+            for (var k = 0; k < st.dataCounts[b]; k++) out.push(stream[perBlock[b][k]]);
+        }
+        return out;
+    }
+
     function parseDataPayload(data, st, version) {
         var countBits = version < 10 ? { 1: 10, 2: 9, 4: 8, 8: 8 } : version < 27 ? { 1: 12, 2: 11, 4: 16, 8: 10 } : { 1: 14, 2: 13, 4: 16, 8: 12 };
         var bit = 0;
@@ -1278,9 +1418,49 @@
         return (size - 17) / 4;
     }
 
+    /* The reader's own corrected codewords, drawn back into a symbol.
+       Sampling the pixels fails when the damage sits on the data region — the
+       page has no way to know what a torn module used to be. A decode means
+       the reader already recovered the whole codeword stream, so the symbol
+       can be drawn from that instead of from the image. Level and mask come
+       from the reader's report, which is why the caller passes the level as a
+       letter (EC_LETTERS order) and the version as a number. */
+    function rebuildFromCodewords(codewords, version, ecLevel, mask, BarcodeQR) {
+        if (!codewords || !codewords.length) return null;
+        if (!(version >= 1 && version <= 40)) return null;
+        if (EC_LETTERS.indexOf(ecLevel) < 0) return null;
+        if (!(mask >= 0 && mask <= 7)) return null;
+        var size = 17 + 4 * version;
+        var enc = structuralMaps(version, ecLevel, BarcodeQR);
+        if (!enc || enc.size !== size) return null;
+        var st = BarcodeQR.blockStructure(version, ecLevel);
+        if (codewords.length !== st.totalCodewords) return null;
+
+        /* Geometry only: readCodewords fills cellsOf from the placement walk,
+           so a blank matrix is enough to learn which cell carries which bit. */
+        var blank = [];
+        for (var r0 = 0; r0 < size; r0++) blank.push(new Uint8Array(size));
+        var stream = readCodewords(blank, size, mask, enc.functionMask);
+        if (stream.bytes.length !== st.totalCodewords) return null;
+
+        var matrix = [];
+        for (var r = 0; r < size; r++) matrix.push(new Uint8Array(size));
+        for (var i = 0; i < codewords.length; i++) {
+            var cells = stream.cellsOf[i] || [];
+            for (var k = 0; k < cells.length; k++) {
+                matrix[cells[k][0]][cells[k][1]] = ((codewords[i] >> (7 - k)) & 1)
+                    ^ (masked(mask, cells[k][0], cells[k][1]) ? 1 : 0);
+            }
+        }
+        writeFormatCells(matrix, ecLevel, mask, BarcodeQR);
+        writeFunctionPatterns(matrix, version, BarcodeQR);
+        return matrix;
+    }
+
     return {
         analyze: analyze,
         locateSymbol: locateSymbol,
+        rebuildFromCodewords: rebuildFromCodewords,
         /* Exposed for the test suite and for the sample generator. */
         rsDecodeBlock: rsDecodeBlock,
         rsDecodeBlockErasure: rsDecodeBlockErasure,
