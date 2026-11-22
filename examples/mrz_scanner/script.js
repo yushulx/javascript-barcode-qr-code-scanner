@@ -2,7 +2,7 @@
  * MRZ & Passport Scanner
  *
  * Extracts MRZ fields, document borders, and portrait photos from passports and
- * ID cards in the browser with Dynamsoft Capture Vision 3.6.3200.
+ * ID cards in the browser with Dynamsoft Capture Vision 3.6.5000.
  */
 
 /* Analytics shim: keeps the demo running even if the shared tracker fails

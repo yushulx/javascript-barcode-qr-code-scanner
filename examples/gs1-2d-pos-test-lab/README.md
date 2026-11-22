@@ -50,7 +50,7 @@ python -m http.server 8000
 ```
 
 Open `http://localhost:8000/`. Simulation needs no SDK license. Real Decode
-lazy-loads `dynamsoft-capture-vision-bundle@3.6.3200`; outside `dynamsoft.com`
+lazy-loads `dynamsoft-capture-vision-bundle@3.6.5000`; outside `dynamsoft.com`
 it falls back to the public trial key, and a trial failure is reported in the
 interface instead of being converted to a successful scan.
 

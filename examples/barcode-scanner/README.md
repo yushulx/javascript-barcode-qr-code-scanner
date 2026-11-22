@@ -2,12 +2,12 @@
 
 A modern web application that scans **1D/2D barcodes** in the browser, powered by the
 [Dynamsoft Barcode Reader](https://www.dynamsoft.com/barcode-reader/overview/) JavaScript SDK
-(`dynamsoft-barcode-reader-bundle@11.6.3200`). Scan from image files, multi-page PDF and TIFF
+(`dynamsoft-barcode-reader-bundle@11.6.5000`). Scan from image files, multi-page PDF and TIFF
 documents, video files, or a live camera stream — detection starts automatically, no button to press.
 
 ## Features
 
-- 🔍 **Dynamsoft Barcode Reader SDK** — high-performance 1D/2D barcode recognition (version `11.6.3200`)
+- 🔍 **Dynamsoft Barcode Reader SDK** — high-performance 1D/2D barcode recognition (version `11.6.5000`)
 - 📷 **Real-time camera scanning** using native browser camera access
 - 🎬 **Video file scanning** — upload MP4/WebM/MOV and every frame is scanned automatically
 - 🎥 **Clip recorder** — record the live stream with RecordRTC, then replay the clip through the

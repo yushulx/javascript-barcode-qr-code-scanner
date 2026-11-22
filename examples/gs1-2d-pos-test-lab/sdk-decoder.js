@@ -27,7 +27,7 @@
         return;
       }
       var script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.6.3200/dist/dcv.bundle.min.js';
+      script.src = 'https://cdn.jsdelivr.net/npm/dynamsoft-capture-vision-bundle@3.6.5000/dist/dcv.bundle.min.js';
       script.async = true;
       script.dataset.posDcvBundle = 'true';
       script.onload = resolve;

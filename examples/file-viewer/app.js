@@ -2891,7 +2891,7 @@
        user scans something, which is why every other format keeps working
        with the network switched off. Version pinned to the bundle the other
        Codepool demos load. */
-    var DBR_BUNDLE = 'https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js';
+    var DBR_BUNDLE = 'https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.5000/dist/dbr.bundle.js';
 
     /* Same two keys as the other hosted Codepool demos: the domain-bound one
        for dynamsoft.com, the trial one everywhere else. Verified by

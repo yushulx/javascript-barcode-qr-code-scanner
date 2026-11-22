@@ -37,7 +37,7 @@ python -m http.server 4180
 Open **http://localhost:4180/** in a modern browser. Serve the entire directory so
 that the included samples and Parameter Tuner remain available.
 
-Barcode decoding uses **Dynamsoft Barcode Reader 11.6.3200**, loaded from a CDN.
+Barcode decoding uses **Dynamsoft Barcode Reader 11.6.5000**, loaded from a CDN.
 The online demo uses its hosted demo license; local previews use the SDK's public
 trial key. For your own application, obtain a
 [trial license](https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&package=cross-platform)
