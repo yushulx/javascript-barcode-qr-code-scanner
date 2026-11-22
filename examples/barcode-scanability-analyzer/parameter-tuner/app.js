@@ -86,24 +86,8 @@
         };
     }
 
-    /* -------------------------------------------------------------- analytics */
-
-    var analytics = window.DemoAnalytics || {
-        slug: 'barcode-parameter-tuner',
-        track: function () {}, ready: function () {}, error: function () {},
-        start: function () {}, success: function () {}, fail: function () {},
-        action: function () {}, trialClick: function () {}
-    };
-
-    /*
-     * The "capture in progress" pill is a shared helper (demos/shared/). When this
-     * directory is served as its own web root — or the page is opened from disk —
-     * that script is not on the page at all, and a bare
-     * `window.ScannerFeedback.run(...)` inside a click handler throws before the
-     * handler does any work: the button looks dead and the only clue is a
-     * TypeError in the console. Same fallback shape as the demos that use it.
-     */
-    var feedback = window.ScannerFeedback || {
+    // Local capture feedback works without additional scripts.
+    var feedback = {
         begin: function () {},
         end: function () {},
         isBusy: function () { return false; },
@@ -358,17 +342,7 @@
         });
     }
 
-    /*
-     * Two licences, the way every other Codepool demo does it: the Codepool key on
-     * the bound domain, the SDK's public trial key everywhere else. The trial key is
-     * byte-identical to the one in `barcode-scanner/main.js` and friends.
-     *
-     * Loopback used to get its own branch here, which made the picker look like it
-     * chose between three keys while two of them were the same string. It also
-     * skipped the `license_fallback` event that the migration checklist asks for on
-     * *any* non-bound host, so those runs were invisible in the analytics. One
-     * fallback branch now, and it records whether the origin can use the key at all.
-     */
+    // Use the hosted demo key on dynamsoft.com and the SDK trial key elsewhere.
     /*
      * A licence supplied by the page. The two built-in keys cover the bound domain and
      * the self-hoster's trial; this covers the rest — a key of your own, or a key that
@@ -409,10 +383,8 @@
         console.info('[demo] Using the SDK trial license: the Codepool license is bound to '
             + CODEPOOL_HOSTS.join(', ') + ' and cannot activate on "' + host + '".');
         // The trial key is an *online* key: the SDK exchanges it with the licence
-        // server through `crypto.subtle`, which browsers only expose in a secure
-        // context. Recording that here separates "self-hoster" from "opened over the
-        // LAN on http", which are the same key but a different problem.
-        analytics.action('license_fallback', { host: host, secure: window.isSecureContext });
+        // server through `crypto.subtle`, which requires HTTPS or localhost.
+
         return { key: LOCAL_LICENSE_KEY, profile: 'trial' };
     }
 
@@ -516,7 +488,7 @@
 
                 state.ready = true;
                 setBadge('badge-active', 'Active');
-                analytics.ready(performance.now() - startedAt);
+
 
                 await populateTemplateList();
                 await loadGroundTruth();
@@ -540,8 +512,7 @@
                 } else {
                     showLoading('Dynamsoft Barcode Reader failed to load: ' + message);
                 }
-                analytics.error((ex && ex.errorCode) || -1,
-                    onlineKeyBlocked ? 'insecure_context_online_key' : message);
+
             }
         })();
 
@@ -2560,7 +2531,7 @@
         if (stage.section) card.appendChild(el('span', 'stage-kind', stage.section));
 
         card.addEventListener('click', function () {
-            analytics.action('stage_inspect', { stage: stage.id });
+
             selectStage(stage.id);
         });
         return card;
@@ -2584,7 +2555,7 @@
         // mistaken for one more SDK stage.
         card.appendChild(el('span', 'stage-kind', 'drawn by this page'));
         card.addEventListener('click', function () {
-            analytics.action('stage_inspect', { stage: 'final' });
+
             selectStage('final');
         });
         return card;
@@ -3728,14 +3699,14 @@
 
             if (result && result.errorCode) {
                 logRun('warn', 'capture() reported [' + result.errorCode + '] ' + result.errorString);
-                analytics.fail('tune', 'image');
+
             } else if (barcodes.length) {
                 logRun('ok', barcodes.length + (barcodes.length === 1 ? ' barcode' : ' barcodes')
                     + ' decoded from \u201c' + state.sourceLabel + '\u201d (' + reason + ').');
-                analytics.success('tune', 'image', { barcodes: barcodes.length });
+
             } else {
                 logRun('warn', 'No barcode decoded from \u201c' + state.sourceLabel + '\u201d (' + reason + ').');
-                analytics.fail('tune', 'image');
+
             }
         } catch (ex) {
             var message = (ex && (ex.message || ex.errorString)) || String(ex);
@@ -3945,7 +3916,7 @@
         renderParamUI();
         renderJson();
         logRun('info', 'The template was replaced from the JSON editor.');
-        analytics.action('json_apply');
+
         afterChange('json edit', 0);
     }
 
@@ -3966,7 +3937,7 @@
             canvas.getContext('2d', { willReadFrequently: true }).drawImage(image, 0, 0);
             URL.revokeObjectURL(url);
             setSource(canvas, file.name, expected || null);
-            analytics.start('tune', 'image_file');
+
         };
         image.onerror = function () {
             URL.revokeObjectURL(url);
@@ -4058,7 +4029,7 @@
                 + '\u201cTake the photo\u201d.';
             logRun('info', 'Camera opened as a viewfinder. Live frames are not decoded; press '
                 + '\u201cTake the photo\u201d to scan one.');
-            analytics.action('camera_open');
+
         } catch (ex) {
             logRun('bad', 'Camera access failed: ' + ((ex && ex.message) || ex));
             stopCamera();
@@ -4077,7 +4048,6 @@
         canvas.height = video.videoHeight;
         canvas.getContext('2d', { willReadFrequently: true }).drawImage(video, 0, 0);
 
-        analytics.start('tune', 'camera');
         // The frame is copied into the canvas above, so the stream can go now: the
         // run and every later edit work on the still.
         setSource(canvas, 'camera photo');
@@ -4183,7 +4153,7 @@
         dom['recipe_help'].textContent = recipe.label + ' \u2014 ' + recipe.help
             + (ctx.notApplied.length ? '  (not present in this template: ' + ctx.notApplied.join(', ') + ')' : '');
         logRun('info', 'Recipe applied: ' + recipe.label);
-        analytics.action('recipe', { recipe: recipe.id });
+
         // A recipe is applied and measured in the same gesture: the visitor
         // clicked a starting point, not a document to stare at.
         afterChange('recipe ' + recipe.id, 0);
@@ -4230,7 +4200,7 @@
 
         var rows = [];
         setRunning(true, 'comparing ' + candidates.length + ' templates\u2026');
-        analytics.action('compare_templates', { templates: candidates.length });
+
 
         try {
             for (var i = 0; i < candidates.length; i++) {
@@ -4274,7 +4244,7 @@
             dom['compare_status'].textContent = 'Compared ' + candidates.length + ' templates on '
                 + '\u201c' + state.sourceLabel + '\u201d, then put your template back.';
             logRun('info', 'Compared ' + candidates.length + ' templates on \u201c' + state.sourceLabel + '\u201d.');
-            analytics.action('compare_templates_done', { templates: candidates.length });
+
             renderJson();
             requestRun('after the template comparison');
         }
@@ -4339,7 +4309,7 @@
         renderJson();
         dom['recipe_help'].textContent = '';
         logRun('info', 'Every parameter went back to the loaded preset.');
-        analytics.action('reset_all');
+
         afterChange('reset', 0);
     }
 
@@ -4368,7 +4338,7 @@
             var value = dom['sample_select'].value;
             if (!value) return;
             stopCamera();
-            analytics.action('sample_image', { sample: value });
+
             loadSample(value);
         });
 
@@ -4386,7 +4356,7 @@
                 state._runTimer = null;
             }
             clearChangesPending();
-            analytics.action('run_click');
+
             feedback.run('Scanning\u2026', function () {
                 return requestRun('run button');
             });
@@ -4394,7 +4364,7 @@
 
         dom['auto_run'].addEventListener('change', function () {
             state.autoRun = dom['auto_run'].checked;
-            analytics.action('auto_run', { on: state.autoRun });
+
             if (state.autoRun) {
                 // Whatever was waiting for the button runs now.
                 if (state.changesPending) scheduleRun(0, 'auto-run turned on');
@@ -4435,7 +4405,7 @@
                     + 'and copy it by hand.';
                 dom['json_status'].className = 'hint hint-bad';
             }
-            analytics.action('json_copy');
+
         });
         dom['json_download'].addEventListener('click', function () {
             downloadText(state.templateName + '.json', dom['json_editor'].value);
@@ -4443,7 +4413,7 @@
                 + 'initSettings(), then capture with the name it carries: '
                 + 'capture(image, \u201c' + state.templateName + '\u201d).';
             dom['json_status'].className = 'hint hint-ok';
-            analytics.action('json_download');
+
         });
         dom['changes_download'].addEventListener('click', function () {
             var doc = changesDocument();
@@ -4452,7 +4422,7 @@
                 + ' changed parameter' + (doc.changedParameterCount === 1 ? '' : 's')
                 + ' relative to \u201c' + doc.basedOn + '\u201d.';
             dom['json_status'].className = 'hint hint-ok';
-            analytics.action('changes_download', { changed: doc.changedParameterCount });
+
         });
         dom['changes_copy'].addEventListener('click', async function () {
             var doc = changesDocument();
@@ -4466,7 +4436,7 @@
                     + '\u201cDownload just my changes\u201d instead.';
                 dom['json_status'].className = 'hint hint-bad';
             }
-            analytics.action('changes_copy', { changed: doc.changedParameterCount });
+
         });
 
         // The export lives at the bottom of the page, which is the right place for a
@@ -4482,7 +4452,7 @@
             dom['json_download'].focus({ preventScroll: true });
             logRun('info', 'The template is exported from \u201cThe template being applied\u201d below: '
                 + 'the full document, or just the parameters you changed.');
-            analytics.action('export_jump');
+
         });
 
         dom['roi_toggle'].addEventListener('change', function () {

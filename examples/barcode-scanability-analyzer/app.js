@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const $=id=>document.getElementById(id), analytics=window.DemoAnalytics;
+  const $=id=>document.getElementById(id);
   // Identical to Barcode Parameter Tuner and the other hosted CodePool demos.
   const CODEPOOL_LICENSE_KEY='DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAwLTEwMTY0ODQ5MCIsIm1haW5TZXJ2ZXJVUkwiOiJodHRwczovL21sdHMuZHluYW1zb2Z0LmNvbS8iLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMCIsInN0YW5kYnlTZXJ2ZXJVUkwiOiJodHRwczovL3NsdHMuZHluYW1zb2Z0LmNvbS8iLCJjaGVja0NvZGUiOjE0MDA4MDY1Mjl9';
   const TRIAL_LICENSE_KEY='DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==';
@@ -31,8 +31,6 @@
       const host=location.hostname.toLowerCase(), bound=host==='dynamsoft.com'||host.endsWith('.dynamsoft.com');
       let custom;try{custom=new URLSearchParams(location.search).get('license')||localStorage.getItem('dy-demo-license');}catch(_){}
       const key=custom||(bound?CODEPOOL_LICENSE_KEY:TRIAL_LICENSE_KEY);
-      if(!bound&&!custom)analytics?.action('license_fallback',{host,secure:window.isSecureContext});
-      const start=performance.now();
       Dynamsoft.Core.CoreModule.engineResourcePaths.rootDirectory='https://cdn.jsdelivr.net/npm/';
       await Dynamsoft.License.LicenseManager.initLicense(key,true);
       await Dynamsoft.Core.CoreModule.loadWasm(['DBR']);
@@ -40,9 +38,9 @@
       const receiver=new Dynamsoft.CVR.IntermediateResultReceiver();
       receiver.onLocalizedBarcodesReceived=unit=>{candidates.push(...(unit.localizedBarcodes||[]));};
       await router.getIntermediateResultManager().addResultReceiver(receiver);
-      analytics?.ready(performance.now()-start);
+
       return router;
-    })().catch(e=>{enginePromise=null;analytics?.error(e.errorCode||-1,'analyzer_engine_initialization_failed');throw e;});
+    })().catch(e=>{enginePromise=null;throw e;});
     return enginePromise;
   }
   function node(tag,text,className){const n=document.createElement(tag);n.textContent=text;if(className)n.className=className;return n;}
@@ -106,7 +104,7 @@
     return intersection/Math.max(1,Math.min((x.r-x.l)*(x.b-x.t),(y.r-y.l)*(y.b-y.t)))>.65;
   }
   async function analyze(){
-    if(!source||busy)return;busy=true;controls();status('Loading reader and analyzing image…');const start=performance.now();analytics?.start('analyze',sourceType);
+    if(!source||busy)return;busy=true;controls();status('Loading reader and analyzing image…');const start=performance.now();
     try{
       const cvr=await engine();candidates=[];
       const data=source.getContext('2d').getImageData(0,0,source.width,source.height);
@@ -119,7 +117,6 @@
       autoReports=autoRegions.map(item=>ScanabilityDiagnostics.inspect(pixels,item,autoRegions.length));
       fullDecodeState='complete';fullDuration=Math.round(performance.now()-start);rebuild(!!manualSelection);
       status(`Analysis complete in ${fullDuration} ms.${decoded.length?'':' No decode? Draw a region to inspect the image.'} Measurements refer to the original image.`);
-      if(decoded.length)analytics?.success('analyze',sourceType,{barcode_count:decoded.length});else analytics?.fail('analyze',sourceType);
     }catch(e){fullDecodeState='error';fullDuration=null;autoRegions=[];autoReports=[];rebuild(!!manualSelection);status('Reader unavailable. You can still draw a region for image analysis. '+((e&&e.message)||String(e)));}finally{busy=false;controls();}
   }
   function stopCamera(){stream?.getTracks().forEach(t=>t.stop());stream=null;$('video').srcObject=null;$('video').hidden=true;$('shoot').hidden=true;$('camera').textContent='Use camera';}
@@ -151,7 +148,7 @@
     manualSelection=previous||{manual:true,decoded:false,rect,location:{points:[{x:rect.x,y:rect.y},{x:rect.x+rect.width,y:rect.y},{x:rect.x+rect.width,y:rect.y+rect.height},{x:rect.x,y:rect.y+rect.height}]},cropRetry:{state:'not_tested'}};
     fillCoordinates(rect);setDrawing(false);if(!unchanged)$('manual_decode_result').textContent='Image analysis is ready. Crop decoding has not been tested.';rebuild(true);
     $('selection_feedback').classList.remove('error');$('selection_feedback').textContent=`Selected area: (${rect.x}, ${rect.y}), ${rect.width} × ${rect.height} px. The blue box and image measurements are updated. Use the decoding buttons below to test this area.`;
-    status('Selected region analyzed from image pixels. No successful SDK decode is required.');analytics?.action('manual_region_analysis');
+    status('Selected region analyzed from image pixels. No successful SDK decode is required.');
     return true;
   }
   function imagePoint(event){const box=$('preview').getBoundingClientRect();return {x:Math.round(Math.max(0,Math.min(source.width,(event.clientX-box.left)*source.width/box.width))),y:Math.round(Math.max(0,Math.min(source.height,(event.clientY-box.top)*source.height/box.height)))};}
@@ -268,8 +265,8 @@
   ['dragenter','dragover'].forEach(e=>$('drop').addEventListener(e,event=>{event.preventDefault();$('drop').classList.add('dragging');}));$('drop').addEventListener('dragleave',()=>$('drop').classList.remove('dragging'));$('drop').addEventListener('drop',event=>{event.preventDefault();$('drop').classList.remove('dragging');file(event.dataTransfer.files[0]);});
   $('camera').addEventListener('click',async()=>{if(stream){stopCamera();return;}if(!navigator.mediaDevices?.getUserMedia){status('Camera access requires HTTPS or localhost and a supported browser.');return;}$('camera').disabled=true;try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});$('video').srcObject=stream;$('video').hidden=false;await $('video').play();$('shoot').hidden=false;$('camera').textContent='Stop camera';status('Frame the complete barcode with a clear margin, then capture.');}catch(e){stopCamera();status('Camera could not open. Allow camera access or upload an image.');}finally{controls();}});
   $('shoot').addEventListener('click',()=>{const v=$('video');if(!v.videoWidth){status('Wait for the camera image before capturing.');return;}++revision;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d',{willReadFrequently:true}).drawImage(v,0,0);stopCamera();setSource(c,'Camera frame','camera');analyze();});
-  $('tuner').addEventListener('click',async()=>{$('tuner').disabled=true;try{const blob=await new Promise(resolve=>source.toBlob(resolve,'image/png'));if(!blob)throw new Error('Image export failed.');const id=await DemoImageHandoff.put(blob,sourceName);analytics?.action('open_parameter_tuner');location.href='parameter-tuner/?imageHandoff='+encodeURIComponent(id);}catch(e){status('Image transfer failed. Download or save your source image and upload it in Parameter Tuner.');controls();}});
-  $('export').addEventListener('click',()=>{if(!lastRun)return;const url=URL.createObjectURL(new Blob([JSON.stringify(lastRun,null,2)],{type:'application/json'}));const a=node('a','');a.href=url;a.download='barcode-scanability-report.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);analytics?.action('export_report');});
+  $('tuner').addEventListener('click',async()=>{$('tuner').disabled=true;try{const blob=await new Promise(resolve=>source.toBlob(resolve,'image/png'));if(!blob)throw new Error('Image export failed.');const id=await DemoImageHandoff.put(blob,sourceName);location.href='parameter-tuner/?imageHandoff='+encodeURIComponent(id);}catch(e){status('Image transfer failed. Download or save your source image and upload it in Parameter Tuner.');controls();}});
+  $('export').addEventListener('click',()=>{if(!lastRun)return;const url=URL.createObjectURL(new Blob([JSON.stringify(lastRun,null,2)],{type:'application/json'}));const a=node('a','');a.href=url;a.download='barcode-scanability-report.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
   window.addEventListener('pagehide',stopCamera);
   sample();
 })();

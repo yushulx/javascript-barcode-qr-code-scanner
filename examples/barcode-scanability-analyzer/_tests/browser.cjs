@@ -8,8 +8,9 @@ async function main(){
   const executablePath=[process.env.CHROME_PATH,'C:/Program Files/Google/Chrome/Application/chrome.exe','C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].filter(Boolean).find(p=>fs.existsSync(p));
   const browser=await chromium.launch({executablePath,headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
   try{
-    const page=await browser.newPage({viewport:{width:1440,height:1100}}),errors=[];
+    const page=await browser.newPage({viewport:{width:1440,height:1100}}),errors=[],trackingRequests=[];
     page.on('pageerror',e=>errors.push(e.message));
+    page.on('request',r=>{if(/googletagmanager\.com|google-analytics\.com/.test(r.url()))trackingRequests.push(r.url());});
     await page.goto(analyzerUrl);
     await page.waitForFunction(()=>document.querySelector('#status').textContent.startsWith('Analysis complete'),{},{timeout:180000});
     const baseline=await page.locator('#outcome').innerText();assert.match(baseline,/\d+ decoded/);assert.ok(parseInt(baseline)>0,baseline);
@@ -32,7 +33,7 @@ async function main(){
     assert.match(await page.locator('#summary').innerText(),/crop decode not tested/);
     await page.click('#manual_decode');await page.waitForFunction(()=>document.querySelector('#manual_decode_result').textContent.includes('decoded in the selected area'),{},{timeout:90000});
     assert.match(await page.locator('#summary').innerText(),/crop decode succeeded/);assert.match(await page.locator('#payload').innerText(),/Decoded text/);
-    await page.click('#compare');await page.waitForFunction(()=>document.querySelector('#comparison_status').textContent.includes('already decodes'),{},{timeout:90000});
+    await page.click('#compare');await page.waitForFunction(()=>document.querySelector('#status').textContent.startsWith('Decoding comparisons complete'),{},{timeout:90000});assert.ok((await page.locator('#comparison_status').innerText()).includes('already decodes'),await page.locator('#comparison_status').innerText());
     assert.equal(await page.locator('.experiment').count(),5);console.log('Controlled image tests with a valid barcode passed');
     await page.click('#manual_clear');console.log('Selected-area successful decode and payload passed');
     const oldName=await page.locator('#meta').innerText();
@@ -68,7 +69,7 @@ async function main(){
     assert.equal(await page.locator('.check').filter({has:page.locator('strong',{hasText:'Module size'})}).count(),0);
     await page.click('#manual_decode');await page.waitForFunction(()=>document.querySelector('#manual_decode_result').textContent.includes('also failed'),{},{timeout:90000});
     assert.match(await page.locator('#finding_cards').innerText(),/Contrast/);
-    await page.click('#compare');await page.waitForFunction(()=>document.querySelector('#comparison_status').textContent.includes('cause remains unexplained'),{},{timeout:90000});
+    await page.click('#compare');await page.waitForFunction(()=>document.querySelector('#status').textContent.startsWith('Decoding comparisons complete'),{},{timeout:90000});assert.ok((await page.locator('#comparison_status').innerText()).includes('cause remains unexplained'),await page.locator('#comparison_status').innerText());
     assert.equal(await page.locator('.experiment').count(),5);
     const manualDownloadPromise=page.waitForEvent('download');await page.click('#export');const manualDownload=await manualDownloadPromise;
     const manualReport=JSON.parse(fs.readFileSync(await manualDownload.path(),'utf8'));const selected=manualReport.regions.find(r=>r.source==='user_selection');
@@ -96,6 +97,10 @@ async function main(){
         assert.ok(await page.locator('.check.warn').count()>0);
         await page.setViewportSize({width:1440,height:1100});
         await page.locator('.workspace').screenshot({path:path.join(require('node:os').tmpdir(),'scanability-report-statuses.png')});
+        await page.click('#manual_toggle');await page.fill('#selection_x','105');await page.fill('#selection_y','95');await page.fill('#selection_w','180');await page.fill('#selection_h','100');await page.locator('#selection_h').press('Tab');
+        await page.evaluate(()=>window.scrollTo(0,0));
+        await page.screenshot({path:path.resolve(__dirname,'../screenshots/region-analysis.png')});
+        await page.click('#manual_clear');
       }
     }
     // Deliberately block the SDK script: region diagnostics must remain useful without a reader.
@@ -110,7 +115,7 @@ async function main(){
     await offline.click('#manual_decode');await offline.waitForFunction(()=>document.querySelector('#manual_decode_result').textContent.includes('unavailable'));
     assert.equal(await offline.locator('#checks .check').count(),7);await offline.close();
     console.log('SDK unavailable: manual analysis, export and graceful crop retry error passed');
-    assert.deepEqual(errors,[]);console.log('PASS: all samples, selection, one-shot handoff, invalid file, blank image, report, mobile layout, camera and no page errors');
+    assert.deepEqual(errors,[]);assert.deepEqual(trackingRequests,[]);assert.equal(await page.evaluate(()=>typeof window.DemoAnalytics),'undefined');console.log('No Google Tag Manager or analytics requests across analyzer and tuner');console.log('PASS: all samples, selection, one-shot handoff, invalid file, blank image, report, mobile layout, camera and no page errors');
   }finally{await browser.close();}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

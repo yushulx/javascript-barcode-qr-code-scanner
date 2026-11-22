@@ -18,38 +18,18 @@
     <meta property="og:image" content="https://www.dynamsoft.com/codepool/demos/barcode-parameter-tuner/thumbnail.png">
     <meta name="twitter:card" content="summary_large_image">
 
-    <!-- Google Tag Manager -->
-    <script>(function (w, d, s, l, i) {
-            w[l] = w[l] || []; w[l].push({
-                'gtm.start':
-                    new Date().getTime(), event: 'gtm.js'
-            }); var f = d.getElementsByTagName(s)[0],
-                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
-                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
-        })(window, document, 'script', 'dataLayer', 'GTM-538F83');</script>
-    <!-- End Google Tag Manager -->
-
     <!--
       ASSET VERSION (?v=): the site serves these files with
       Cache-Control: max-age=86400, so browsers trust their cached copy for a
       full day. Bump the ?v= value on EVERY change to styles.css, app.js,
-      parameters.js, dynamsoft-logo.svg or shared/analytics.js, otherwise
+      parameters.js, dynamsoft-logo.svg, otherwise
       returning visitors keep the stale copy for up to 24h.
     -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css?v=20260921W">
     <script src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.6.3200/dist/dbr.bundle.js"></script>
-    <script src="../shared/image-handoff.js?v=20261008a"></script>
-    <script>
-        /* When this directory is served directly at `/`, the repository's shared
-           helpers are outside the web root. app.js has self-contained fallbacks
-           for that layout; regular Codepool routes still load the shared helpers. */
-        if (/\/barcode-parameter-tuner\//.test(window.location.pathname)) {
-            document.write('<script src="../shared/analytics.js?v=20260920c"><\/script>');
-            document.write('<script src="../shared/scanner-feedback.js?v=20260920c"><\/script>');
-        }
-    </script>
+    <script src="../image-handoff.js?v=20261008a"></script>
 
     <script type="application/ld+json">
     {
@@ -89,27 +69,20 @@
 </head>
 
 <body>
-    <!-- Google Tag Manager (noscript) -->
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-538F83" height="0" width="0"
-            style="display:none;visibility:hidden"></iframe></noscript>
-    <!-- End Google Tag Manager (noscript) -->
 
     <header class="site-header">
         <div class="site-header-inner">
-            <a class="brand" href="https://www.dynamsoft.com/" data-demo-cta="brand"
+            <a class="brand" href="https://www.dynamsoft.com/"
                 aria-label="Dynamsoft — back to dynamsoft.com">
                 <img class="brand-logo" src="dynamsoft-logo.svg?v=20260920c" width="159" height="39" alt="Dynamsoft">
             </a>
             <span class="brand-divider" aria-hidden="true"></span>
             <span class="brand-product"><span class="brand-tag">Free</span>Barcode Reader Parameter Tuner</span>
             <nav class="header-nav" aria-label="Dynamsoft">
-                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/"
-                    data-demo-cta="barcode-reader">Barcode Reader</a>
-                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/docs/"
-                    data-demo-cta="docs">Documentation</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/overview/">Barcode Reader</a>
+                <a class="nav-link" href="https://www.dynamsoft.com/barcode-reader/docs/">Documentation</a>
                 <a class="btn btn-primary"
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
-                    data-demo-cta="trial">30-Day Free Trial</a>
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">30-Day Free Trial</a>
             </nav>
         </div>
     </header>
@@ -397,15 +370,14 @@
             <div class="footer-links">
                 <span>
                     Built with
-                    <a href="https://www.dynamsoft.com/barcode-reader/overview/" data-demo-cta="barcode-reader">Dynamsoft
+                    <a href="https://www.dynamsoft.com/barcode-reader/overview/">Dynamsoft
                         Barcode Reader</a> — the same engine and the same templates as a shipped scanner, exposed
                     parameter by parameter.
                 </span>
-                <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/" data-demo-cta="scanner">Open the barcode scanner</a>
-                <a href="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/" data-demo-cta="generator">Build a stress-test dataset</a>
+                <a href="https://www.dynamsoft.com/codepool/demos/barcode-scanner/">Open the barcode scanner</a>
+                <a href="https://www.dynamsoft.com/codepool/demos/barcode-qrcode-generator/">Build a stress-test dataset</a>
                 <a class="btn btn-primary footer-cta"
-                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform"
-                    data-demo-cta="trial">Get a 30-day free trial license</a>
+                    href="https://www.dynamsoft.com/customer/license/trialLicense/?product=dcv&amp;package=cross-platform">Get a 30-day free trial license</a>
             </div>
         </div>
     </footer>
@@ -418,7 +390,7 @@
     <!-- Parameter metadata: enums, labels, help text and the pipeline table -->
     <script src="parameters.js?v=20260921W"></script>
     <!-- Template reading, the editors, the run loop and the stage strip -->
-    <script src="app.js?v=20261008a"></script>
+    <script src="app.js?v=20261008f"></script>
 </body>
 
 </html>
