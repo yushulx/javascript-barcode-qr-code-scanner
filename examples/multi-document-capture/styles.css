@@ -723,3 +723,27 @@ button {
         height: 34px;
     }
 }
+
+/* Wide screens: center the control bars instead of stretching their
+   contents to the far edges of the viewport. */
+@media (min-width: 900px) {
+    .bottom-controls {
+        padding-left: max(24px, calc((100vw - 720px) / 2));
+        padding-right: max(24px, calc((100vw - 720px) / 2));
+    }
+
+    .thumbnail-bar {
+        padding-left: max(8px, calc((100vw - 720px) / 2));
+        padding-right: max(8px, calc((100vw - 720px) / 2));
+    }
+
+    .top-action-bar {
+        grid-template-columns: repeat(6, minmax(0, 120px));
+        justify-content: center;
+    }
+
+    .filter-bar {
+        grid-template-columns: repeat(3, minmax(0, 200px));
+        justify-content: center;
+    }
+}

@@ -845,8 +845,22 @@ button,
         justify-content: space-between;
     }
 
+    /* Let the select and the mode toggle shrink below their intrinsic
+       width so they stay inside the card on 320px-wide screens. */
+    .top-controls>*,
+    .form-select,
+    .toggle-group {
+        min-width: 0;
+    }
+
     .benchmark-controls {
         flex-direction: column;
         align-items: flex-start;
+    }
+}
+
+@media (max-width: 380px) {
+    .toggle-btn {
+        padding: 10px 12px;
     }
 }

@@ -12,6 +12,9 @@ body {
     background-color: var(--bg-color);
     color: var(--text);
     height: 100vh;
+    /* dvh keeps the full-height layout inside the visible area on mobile
+       browsers whose toolbars change the viewport height. */
+    height: 100dvh;
     overflow: hidden;
 }
 
@@ -27,12 +30,16 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
     border-bottom: 1px solid var(--border);
 }
 
 .license-bar {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 input[type="text"] {
@@ -42,6 +49,8 @@ input[type="text"] {
     background: #1e1e1e;
     color: white;
     width: 250px;
+    max-width: 100%;
+    min-width: 0;
 }
 
 button {
@@ -97,6 +106,7 @@ main {
     display: flex;
     gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 /* Loading Spinner */
@@ -262,4 +272,101 @@ h3 {
 
 .label {
     color: #569cd6;
+}
+
+/* ------------------------------------------------------------------
+   Responsive layout
+   Below 768px the side-by-side panels stack vertically and the page
+   scrolls, so the results panel is never squeezed into a sliver.
+   ------------------------------------------------------------------ */
+@media (max-width: 768px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: auto;
+    }
+
+    .app-container {
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+
+    header {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px 15px;
+    }
+
+    header h1 {
+        margin: 0;
+        font-size: 1.35rem;
+        line-height: 1.3;
+    }
+
+    .license-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    input[type="text"] {
+        width: 100%;
+    }
+
+    .license-bar button {
+        min-height: 40px;
+    }
+
+    .trial-link {
+        align-self: flex-start;
+    }
+
+    main {
+        flex-direction: column;
+        overflow: visible;
+    }
+
+    .left-panel,
+    .right-panel {
+        flex: none;
+    }
+
+    .left-panel {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .right-panel {
+        overflow-y: visible;
+    }
+
+    .toolbar {
+        gap: 8px;
+    }
+
+    .toolbar button {
+        flex: 1 1 auto;
+        min-height: 40px;
+    }
+
+    #status {
+        flex: 1 1 100%;
+        font-size: 0.85em;
+        line-height: 1.4;
+    }
+
+    .viewer-container {
+        flex: none;
+        height: 45vh;
+        min-height: 280px;
+    }
+
+    /* MRZ lines are long unbroken strings: wrap them instead of forcing a
+       horizontal scrollbar inside the result box. */
+    .data-box {
+        font-size: 0.82em;
+        overflow-wrap: anywhere;
+    }
 }
